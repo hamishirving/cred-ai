@@ -25,12 +25,19 @@ export const myProvider = isTestEnvironment
     })()
   : customProvider({
       languageModels: {
-        "chat-model": gateway.languageModel("xai/grok-2-vision-1212"),
+        // Anthropic Claude - excellent tool support
+        "chat-model": gateway.languageModel(
+          "anthropic/claude-sonnet-4-20250514"
+        ),
         "chat-model-reasoning": wrapLanguageModel({
-          model: gateway.languageModel("xai/grok-3-mini"),
-          middleware: extractReasoningMiddleware({ tagName: "think" }),
+          model: gateway.languageModel("anthropic/claude-sonnet-4-20250514"),
+          middleware: extractReasoningMiddleware({ tagName: "thinking" }),
         }),
-        "title-model": gateway.languageModel("xai/grok-2-1212"),
-        "artifact-model": gateway.languageModel("xai/grok-2-1212"),
+        "title-model": gateway.languageModel(
+          "anthropic/claude-sonnet-4-20250514"
+        ),
+        "artifact-model": gateway.languageModel(
+          "anthropic/claude-sonnet-4-20250514"
+        ),
       },
     });

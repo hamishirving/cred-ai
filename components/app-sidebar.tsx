@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "next-auth";
@@ -67,9 +68,14 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   setOpenMobile(false);
                 }}
               >
-                <span className="cursor-pointer rounded-md px-2 font-semibold text-lg hover:bg-muted">
-                  Chatbot
-                </span>
+                <Image
+                  alt="Logo"
+                  className="dark:invert"
+                  height={20}
+                  priority
+                  src="/logo.svg"
+                  width={120}
+                />
               </Link>
               <div className="flex flex-row gap-1">
                 {user && (

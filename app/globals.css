@@ -4,7 +4,7 @@
 @source '../node_modules/streamdown/dist/index.js';
 
 /* Add KaTeX CSS for math rendering */
-@import 'katex/dist/katex.min.css';
+@import "katex/dist/katex.min.css";
 
 /* custom variant for setting dark mode programmatically */
 @custom-variant dark (&:is(.dark, .dark *));
@@ -15,78 +15,102 @@
 
 /* define design tokens (light mode) */
 :root {
-  --background: hsl(0 0% 100%);
-  --foreground: hsl(240 10% 3.9%);
-  --card: hsl(0 0% 100%);
-  --card-foreground: hsl(240 10% 3.9%);
-  --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(240 10% 3.9%);
-  --primary: hsl(240 5.9% 10%);
-  --primary-foreground: hsl(0 0% 98%);
-  --secondary: hsl(240 4.8% 95.9%);
-  --secondary-foreground: hsl(240 5.9% 10%);
-  --muted: hsl(240 4.8% 95.9%);
-  --muted-foreground: hsl(240 3.8% 46.1%);
-  --accent: hsl(240 4.8% 95.9%);
-  --accent-foreground: hsl(240 5.9% 10%);
-  --destructive: hsl(0 84.2% 60.2%);
-  --destructive-foreground: hsl(0 0% 98%);
-  --border: hsl(240 5.9% 90%);
-  --input: hsl(240 5.9% 90%);
-  --ring: hsl(240 10% 3.9%);
-  --chart-1: hsl(12 76% 61%);
-  --chart-2: hsl(173 58% 39%);
-  --chart-3: hsl(197 37% 24%);
-  --chart-4: hsl(43 74% 66%);
-  --chart-5: hsl(27 87% 67%);
-  --sidebar-background: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(240 5.3% 26.1%);
-  --sidebar-primary: hsl(240 5.9% 10%);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(240 4.8% 95.9%);
-  --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  /* Brand colors */
+  --brand-blue: #4444cf;
+  --brand-dark-blue: #3030bc;
+  --brand-black: #282b31;
+  --brand-grey: #6e7391;
+  --brand-light-grey: #abafbf;
+  --brand-lightest-grey: #dedde5;
+  --brand-dividers: #dfe1e9;
+  --brand-dark-bg: #eaeefa;
+  --brand-light-bg: #f3f5fa;
+  --brand-light-blue: #f8f9ff;
+  --brand-lightest-blue: #fcfdff;
+
+  /* Semantic colors */
+  --positive: #3dc46a;
+  --positive-dark: #2e9851;
+  --positive-bg: #f4fef3;
+  --negative: #f32e65;
+  --negative-dark: #da0c46;
+  --negative-bg: #fff6f9;
+  --warning: #fdbb00;
+  --warning-dark: #c29000;
+  --warning-bg: #fff9eb;
+
+  --background: #ffffff;
+  --foreground: #282b31;
+  --card: #ffffff;
+  --card-foreground: #282b31;
+  --popover: #ffffff;
+  --popover-foreground: #282b31;
+  --primary: #4444cf;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f5fa;
+  --secondary-foreground: #282b31;
+  --muted: #f3f5fa;
+  --muted-foreground: #6e7391;
+  --accent: #eaeefa;
+  --accent-foreground: #3030bc;
+  --destructive: #f32e65;
+  --destructive-foreground: #ffffff;
+  --border: #dfe1e9;
+  --input: #dfe1e9;
+  --ring: #4444cf;
+  --chart-1: #4444cf;
+  --chart-2: #3dc46a;
+  --chart-3: #fdbb00;
+  --chart-4: #f32e65;
+  --chart-5: #3030bc;
+  --sidebar-background: #f8f9ff;
+  --sidebar-foreground: #282b31;
+  --sidebar-primary: #4444cf;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eaeefa;
+  --sidebar-accent-foreground: #3030bc;
+  --sidebar-border: #dfe1e9;
+  --sidebar-ring: #4444cf;
   /* border radius unit */
   --radius: 0.5rem;
-  --sidebar: hsl(0 0% 98%);
+  --sidebar: #f8f9ff;
 }
 
 /* define design tokens (dark mode) */
 .dark {
-  --background: hsl(240 10% 3.9%);
-  --foreground: hsl(0 0% 98%);
-  --card: hsl(240 10% 3.9%);
-  --card-foreground: hsl(0 0% 98%);
-  --popover: hsl(240 10% 3.9%);
-  --popover-foreground: hsl(0 0% 98%);
-  --primary: hsl(0 0% 98%);
-  --primary-foreground: hsl(240 5.9% 10%);
-  --secondary: hsl(240 3.7% 15.9%);
-  --secondary-foreground: hsl(0 0% 98%);
-  --muted: hsl(240 3.7% 15.9%);
-  --muted-foreground: hsl(240 5% 64.9%);
-  --accent: hsl(240 3.7% 15.9%);
-  --accent-foreground: hsl(0 0% 98%);
-  --destructive: hsl(0 62.8% 30.6%);
-  --destructive-foreground: hsl(0 0% 98%);
-  --border: hsl(240 3.7% 15.9%);
-  --input: hsl(240 3.7% 15.9%);
-  --ring: hsl(240 4.9% 83.9%);
-  --chart-1: hsl(220 70% 50%);
-  --chart-2: hsl(160 60% 45%);
-  --chart-3: hsl(30 80% 55%);
-  --chart-4: hsl(280 65% 60%);
-  --chart-5: hsl(340 75% 55%);
-  --sidebar-background: hsl(240 5.9% 10%);
-  --sidebar-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-primary: hsl(224.3 76.3% 48%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(240 3.7% 15.9%);
-  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-border: hsl(240 3.7% 15.9%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
-  --sidebar: hsl(240 5.9% 10%);
+  --background: #1a1b21;
+  --foreground: #f3f5fa;
+  --card: #22242c;
+  --card-foreground: #f3f5fa;
+  --popover: #22242c;
+  --popover-foreground: #f3f5fa;
+  --primary: #5858e0;
+  --primary-foreground: #ffffff;
+  --secondary: #2a2c36;
+  --secondary-foreground: #f3f5fa;
+  --muted: #2a2c36;
+  --muted-foreground: #abafbf;
+  --accent: #32354a;
+  --accent-foreground: #8888e8;
+  --destructive: #da0c46;
+  --destructive-foreground: #ffffff;
+  --border: #3a3d4a;
+  --input: #3a3d4a;
+  --ring: #5858e0;
+  --chart-1: #5858e0;
+  --chart-2: #4ad87a;
+  --chart-3: #fdbb00;
+  --chart-4: #f32e65;
+  --chart-5: #4444cf;
+  --sidebar-background: #1a1b21;
+  --sidebar-foreground: #f3f5fa;
+  --sidebar-primary: #5858e0;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #32354a;
+  --sidebar-accent-foreground: #8888e8;
+  --sidebar-border: #3a3d4a;
+  --sidebar-ring: #5858e0;
+  --sidebar: #1a1b21;
 }
 
 /* define theme */
@@ -317,4 +341,10 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* User message links should be white/light */
+[data-role="user"] a {
+  color: inherit;
+  text-decoration: underline;
 }

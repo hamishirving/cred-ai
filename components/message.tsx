@@ -6,9 +6,12 @@ import { memo, useState } from "react";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
+import { BackendResponse } from "./backend-response";
+import { CustomerCard, CustomerList } from "./customer";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
+import { DynamicForm } from "./dynamic-form";
 import { MessageContent } from "./elements/message";
 import { Response } from "./elements/response";
 import {
@@ -18,6 +21,7 @@ import {
   ToolInput,
   ToolOutput,
 } from "./elements/tool";
+import { EmailDraftComponent } from "./email-draft";
 import { SparklesIcon } from "./icons";
 import { MessageActions } from "./message-actions";
 import { MessageEditor } from "./message-editor";
@@ -134,7 +138,7 @@ const PurePreviewMessage = ({
                       data-testid="message-content"
                       style={
                         message.role === "user"
-                          ? { backgroundColor: "#006cff" }
+                          ? { backgroundColor: "var(--primary)" }
                           : undefined
                       }
                     >
@@ -180,6 +184,119 @@ const PurePreviewMessage = ({
                         errorText={undefined}
                         output={<Weather weatherAtLocation={part.output} />}
                       />
+                    )}
+                  </ToolContent>
+                </Tool>
+              );
+            }
+
+            if (type === "tool-getCustomer") {
+              const { toolCallId, state } = part;
+
+              return (
+                <Tool defaultOpen={true} key={toolCallId}>
+                  <ToolHeader state={state} type="tool-getCustomer" />
+                  <ToolContent>
+                    {state === "input-available" && (
+                      <ToolInput input={part.input} />
+                    )}
+                    {state === "output-available" && (
+                      <ToolOutput
+                        errorText={undefined}
+                        output={
+                          "error" in part.output ? (
+                            <div className="text-red-500">
+                              {String(part.output.error)}
+                            </div>
+                          ) : Array.isArray(part.output) ? (
+                            <CustomerList customers={part.output} />
+                          ) : (
+                            <CustomerCard customer={part.output} />
+                          )
+                        }
+                      />
+                    )}
+                  </ToolContent>
+                </Tool>
+              );
+            }
+
+            if (type === "tool-queryBackend") {
+              const { toolCallId, state } = part;
+
+              return (
+                <Tool defaultOpen={true} key={toolCallId}>
+                  <ToolHeader state={state} type="tool-queryBackend" />
+                  <ToolContent>
+                    {state === "input-available" && (
+                      <ToolInput input={part.input} />
+                    )}
+                    {state === "output-available" && (
+                      <ToolOutput
+                        errorText={undefined}
+                        output={<BackendResponse output={part.output} />}
+                      />
+                    )}
+                  </ToolContent>
+                </Tool>
+              );
+            }
+
+            if (type === "tool-queryDataAgent") {
+              const { toolCallId, state } = part;
+
+              return (
+                <Tool defaultOpen={true} key={toolCallId}>
+                  <ToolHeader state={state} type="tool-queryDataAgent" />
+                  <ToolContent>
+                    {state === "input-available" && (
+                      <ToolInput input={part.input} />
+                    )}
+                    {state === "output-available" && (
+                      <ToolOutput
+                        errorText={undefined}
+                        output={<BackendResponse output={part.output} />}
+                      />
+                    )}
+                  </ToolContent>
+                </Tool>
+              );
+            }
+
+            if (type === "tool-createForm") {
+              const { toolCallId, state } = part;
+
+              return (
+                <Tool defaultOpen={true} key={toolCallId}>
+                  <ToolHeader state={state} type="tool-createForm" />
+                  <ToolContent>
+                    {state === "output-available" && (
+                      <div className="p-4">
+                        <DynamicForm
+                          onSubmit={(data) => {
+                            console.log("Form submitted:", data);
+                            // TODO: Send form data somewhere
+                          }}
+                          schema={part.output}
+                        />
+                      </div>
+                    )}
+                  </ToolContent>
+                </Tool>
+              );
+            }
+
+            if (type === "tool-draftEmail") {
+              const { toolCallId, state } = part;
+
+              return (
+                <Tool defaultOpen={true} key={toolCallId}>
+                  <ToolHeader state={state} type="tool-draftEmail" />
+                  <ToolContent>
+                    {state === "output-available" && (
+                      <div className="p-4">
+                        <EmailDraftComponent email={part.output} />
+                      </div>
                     )}
                   </ToolContent>
                 </Tool>
@@ -328,12 +445,9 @@ export const ThinkingMessage = () => {
         </div>
 
         <div className="flex w-full flex-col gap-2 md:gap-4">
-          <div className="p-0 text-muted-foreground text-sm">
-            Thinking...
-          </div>
+          <div className="p-0 text-muted-foreground text-sm">Thinking...</div>
         </div>
       </div>
     </motion.div>
   );
 };
-

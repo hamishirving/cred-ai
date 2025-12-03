@@ -42,3 +42,5 @@ yarn-error.log*
 /playwright-report/
 /blob-report/
 /playwright/*
+arched-proton-478514-s5-7bbbf72365ff.json
+assets/Screenshot_*.png

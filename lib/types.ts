@@ -2,7 +2,12 @@ import type { InferUITool, UIMessage } from "ai";
 import { z } from "zod";
 import type { ArtifactKind } from "@/components/artifact";
 import type { createDocument } from "./ai/tools/create-document";
+import type { createForm } from "./ai/tools/create-form";
+import type { draftEmail } from "./ai/tools/draft-email";
+import type { getCustomer } from "./ai/tools/get-customer";
 import type { getWeather } from "./ai/tools/get-weather";
+import type { queryBackend } from "./ai/tools/query-backend";
+import type { queryDataAgent } from "./ai/tools/query-data-agent";
 import type { requestSuggestions } from "./ai/tools/request-suggestions";
 import type { updateDocument } from "./ai/tools/update-document";
 import type { Suggestion } from "./db/schema";
@@ -17,6 +22,11 @@ export const messageMetadataSchema = z.object({
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 
 type weatherTool = InferUITool<typeof getWeather>;
+type customerTool = InferUITool<typeof getCustomer>;
+type queryBackendTool = InferUITool<typeof queryBackend>;
+type queryDataAgentTool = InferUITool<typeof queryDataAgent>;
+type createFormTool = InferUITool<typeof createForm>;
+type draftEmailTool = InferUITool<typeof draftEmail>;
 type createDocumentTool = InferUITool<ReturnType<typeof createDocument>>;
 type updateDocumentTool = InferUITool<ReturnType<typeof updateDocument>>;
 type requestSuggestionsTool = InferUITool<
@@ -25,6 +35,11 @@ type requestSuggestionsTool = InferUITool<
 
 export type ChatTools = {
   getWeather: weatherTool;
+  getCustomer: customerTool;
+  queryBackend: queryBackendTool;
+  queryDataAgent: queryDataAgentTool;
+  createForm: createFormTool;
+  draftEmail: draftEmailTool;
   createDocument: createDocumentTool;
   updateDocument: updateDocumentTool;
   requestSuggestions: requestSuggestionsTool;
