@@ -1,0 +1,285 @@
+import type { ProfileDto } from "@/lib/api/types";
+import { formatDate } from "@/lib/utils";
+
+function ComplianceStatusBadge({ status }: { status: string }) {
+	const styles: Record<string, { bg: string; text: string }> = {
+		compliant: {
+			bg: "bg-green-50 dark:bg-green-900/20",
+			text: "text-green-700 dark:text-green-400",
+		},
+		"non-compliant": {
+			bg: "bg-red-50 dark:bg-red-900/20",
+			text: "text-red-700 dark:text-red-400",
+		},
+		"conditionally-compliant": {
+			bg: "bg-amber-50 dark:bg-amber-900/20",
+			text: "text-amber-700 dark:text-amber-400",
+		},
+		unknown: {
+			bg: "bg-gray-50 dark:bg-gray-900/20",
+			text: "text-gray-700 dark:text-gray-400",
+		},
+	};
+
+	const style = styles[status.toLowerCase()] || styles.unknown;
+
+	return (
+		<span
+			className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium text-xs ${style.bg} ${style.text}`}
+		>
+			{status.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+		</span>
+	);
+}
+
+function InfoRow({
+	label,
+	value,
+}: {
+	label: string;
+	value: string | undefined | null;
+}) {
+	if (!value) return null;
+
+	return (
+		<div className="flex items-start gap-3 py-2">
+			<dt className="min-w-[120px] text-muted-foreground text-sm">{label}</dt>
+			<dd className="flex-1 font-medium text-sm">{value}</dd>
+		</div>
+	);
+}
+
+function cleanFieldName(fieldName: string): string {
+	// Remove common prefixes like "Personal Information.", "Emergency Contact.", etc.
+	let cleaned = fieldName
+		.replace(/^Personal Information\./i, "")
+		.replace(/^Emergency Contact\./i, "Emergency Contact ")
+		.replace(/^Address\./i, "");
+
+	// Convert camelCase and PascalCase to spaces
+	cleaned = cleaned.replace(/([a-z])([A-Z])/g, "$1 $2");
+
+	// Replace dots with spaces
+	cleaned = cleaned.replace(/\./g, " ");
+
+	// Clean up multiple spaces
+	cleaned = cleaned.replace(/\s+/g, " ").trim();
+
+	// Capitalize first letter of each word
+	cleaned = cleaned.replace(/\b\w/g, (l) => l.toUpperCase());
+
+	return cleaned;
+}
+
+function parseCustomFieldValue(value: any): string {
+	if (value === null || value === undefined) return "";
+
+	// Handle boolean
+	if (typeof value === "boolean") return value ? "Yes" : "No";
+
+	// Handle arrays
+	if (Array.isArray(value)) {
+		return value
+			.map((item) => {
+				if (typeof item === "object" && item !== null) {
+					// For objects in arrays, try to extract a meaningful value
+					return item.name || item.value || JSON.stringify(item);
+				}
+				return String(item);
+			})
+			.join(", ");
+	}
+
+	// Handle objects
+	if (typeof value === "object") {
+		// Try to extract meaningful fields from objects
+		if (value.name) return value.name;
+		if (value.value !== undefined) return String(value.value);
+		// For complex objects, extract key values
+		const entries = Object.entries(value)
+			.filter(([_, v]) => v !== null && v !== undefined && v !== false)
+			.map(([k, v]) => {
+				const cleanKey = cleanFieldName(k);
+				return v === true ? cleanKey : `${cleanKey}: ${v}`;
+			});
+		return entries.join(", ");
+	}
+
+	return String(value);
+}
+
+export function ProfileCard({ profile }: { profile: ProfileDto }) {
+	const fullName = [
+		profile.title?.defaultValue,
+		profile.firstName,
+		profile.lastName,
+	]
+		.filter(Boolean)
+		.join(" ");
+
+	// Get primary job position (first active one)
+	const primaryJob =
+		profile.jobs.find((job) => job.status === "Active") || profile.jobs[0];
+
+	// Filter out duplicate custom fields that are already shown in main profile
+	const relevantCustomFields = profile.customProfileFields.filter((field) => {
+		const shortName = field.shortName.toLowerCase();
+		// Skip fields that duplicate core profile data
+		return (
+			!shortName.includes("firstname") &&
+			!shortName.includes("lastname") &&
+			!shortName.includes("dateofbirth") &&
+			!shortName.includes("date of birth") &&
+			!shortName.includes("grade") &&
+			!shortName.includes("medicalcategory")
+		);
+	});
+
+	return (
+		<div className="not-prose my-4 overflow-hidden rounded-lg border bg-card shadow-sm">
+			{/* Header Section */}
+			<div className="border-b bg-muted/30 px-6 py-4">
+				<div className="flex items-start justify-between gap-4">
+					<div className="flex-1">
+						<h3 className="mb-1 font-semibold text-xl">{fullName}</h3>
+						{primaryJob && (
+							<p className="text-muted-foreground text-sm">
+								{primaryJob.role.name}
+							</p>
+						)}
+					</div>
+					<ComplianceStatusBadge status={profile.complianceStatus} />
+				</div>
+			</div>
+
+			{/* Main Content - Two Column Layout */}
+			<div className="px-6 py-4">
+				<dl className="grid grid-cols-1 divide-y md:grid-cols-2 md:gap-x-8 md:divide-y-0">
+					<div className="space-y-2">
+						<InfoRow
+							label="Date of Birth"
+							value={
+								profile.birthDate ? formatDate(profile.birthDate) : undefined
+							}
+						/>
+						<InfoRow
+							label="Grade"
+							value={profile.gradeName?.name || profile.gradeName?.code}
+						/>
+						<InfoRow label="Medical Category" value={profile.medicalCategory} />
+					</div>
+					<div className="space-y-2">
+						<InfoRow label="Gender" value={profile.gender} />
+						<InfoRow
+							label="Personnel Type"
+							value={profile.personnelType?.name}
+						/>
+						<InfoRow
+							label="Medical Specialty"
+							value={profile.medicalSpecialty}
+						/>
+					</div>
+				</dl>
+
+				{/* Job Positions */}
+				{profile.jobs.length > 0 && (
+					<div className="mt-6">
+						<h4 className="mb-3 font-semibold text-sm">Job Positions</h4>
+						<div className="space-y-2">
+							{profile.jobs.map((job) => (
+								<div
+									key={job.id}
+									className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2"
+								>
+									<div className="flex-1">
+										<div className="font-medium text-sm">{job.role.name}</div>
+										{job.startDate && (
+											<div className="text-muted-foreground text-xs">
+												Started {formatDate(job.startDate)}
+											</div>
+										)}
+									</div>
+									<div className="flex items-center gap-2">
+										<span
+											className={`rounded-full px-2 py-0.5 text-xs ${
+												job.status === "Active"
+													? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+													: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+											}`}
+										>
+											{job.status}
+										</span>
+										<ComplianceStatusBadge status={job.complianceStatus} />
+									</div>
+								</div>
+							))}
+						</div>
+					</div>
+				)}
+
+				{/* Compliance Tags */}
+				{profile.complianceStatusTags.length > 0 && (
+					<div className="mt-6">
+						<h4 className="mb-3 font-semibold text-sm">Compliance Tags</h4>
+						<div className="flex flex-wrap gap-2">
+							{profile.complianceStatusTags.map((tag) => (
+								<span
+									key={tag.key}
+									className="rounded-md bg-muted px-2.5 py-1 text-xs"
+									title={`${tag.group}: ${tag.name}`}
+								>
+									{tag.name}
+								</span>
+							))}
+						</div>
+					</div>
+				)}
+
+				{/* Custom Fields */}
+				{relevantCustomFields.length > 0 && (
+					<div className="mt-6">
+						<h4 className="mb-3 font-semibold text-sm">
+							Additional Information
+						</h4>
+						<dl className="grid grid-cols-1 divide-y md:grid-cols-2 md:gap-x-8 md:divide-y-0">
+							{relevantCustomFields.map((field, index) => {
+								// Split fields into two columns
+								const isFirstColumn = index % 2 === 0;
+								return (
+									<div
+										key={field.shortName}
+										className={isFirstColumn ? "md:pr-4" : "md:pl-4"}
+									>
+										<InfoRow
+											label={cleanFieldName(field.name)}
+											value={parseCustomFieldValue(field.value)}
+										/>
+									</div>
+								);
+							})}
+						</dl>
+					</div>
+				)}
+
+				{/* Checklists */}
+				{profile.checklists.length > 0 && (
+					<div className="mt-6">
+						<h4 className="mb-3 font-semibold text-sm">
+							Active Checklists ({profile.checklists.length})
+						</h4>
+						<div className="flex flex-wrap gap-2">
+							{profile.checklists.map((checklist) => (
+								<span
+									key={checklist.id}
+									className="rounded-md bg-blue-50 px-2.5 py-1 text-blue-700 text-xs dark:bg-blue-900/30 dark:text-blue-400"
+								>
+									{checklist.status}
+								</span>
+							))}
+						</div>
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}

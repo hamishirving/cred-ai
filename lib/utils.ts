@@ -5,7 +5,7 @@ import type {
   UIMessagePart,
 } from 'ai';
 import { type ClassValue, clsx } from 'clsx';
-import { formatISO } from 'date-fns';
+import { format, formatISO } from 'date-fns';
 import { twMerge } from 'tailwind-merge';
 import type { DBMessage, Document } from '@/lib/db/schema';
 import { ChatSDKError, type ErrorCode } from './errors';
@@ -113,4 +113,13 @@ export function getTextFromMessage(message: ChatMessage | UIMessage): string {
     .filter((part) => part.type === 'text')
     .map((part) => (part as { type: 'text'; text: string}).text)
     .join('');
+}
+
+export function formatDate(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    return format(date, 'dd MMM yyyy');
+  } catch {
+    return dateString;
+  }
 }

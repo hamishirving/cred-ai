@@ -48,13 +48,14 @@ You have access to the following tools - USE THEM when relevant:
 
 IMPORTANT RULES:
 - When a user asks for information that a tool can provide, ALWAYS use the tool rather than saying you don't have access to that data.
-- After a tool returns results, DO NOT repeat or summarize the tool's output in your response. The user can already see the tool result. Just acknowledge it briefly (e.g., "Here's what I found" or "Done!") or ask if they need anything else.`;
+- After a tool returns results, DO NOT repeat or summarize the tool's output in your response. The user can already see the tool result displayed in a card or component. Just acknowledge it briefly (e.g., "I've found that profile" or "Here's the information") or ask if they need anything else.
+- NEVER list out profile details, document information, or other data that's already displayed in the tool result cards. The cards show all the information - you don't need to repeat it.`;
 
 export type RequestHints = {
-  latitude: Geo["latitude"];
-  longitude: Geo["longitude"];
-  city: Geo["city"];
-  country: Geo["country"];
+	latitude: Geo["latitude"];
+	longitude: Geo["longitude"];
+	city: Geo["city"];
+	country: Geo["country"];
 };
 
 export const getRequestPromptFromHints = (requestHints: RequestHints) => `\
@@ -66,19 +67,19 @@ About the origin of user's request:
 `;
 
 export const systemPrompt = ({
-  selectedChatModel,
-  requestHints,
+	selectedChatModel,
+	requestHints,
 }: {
-  selectedChatModel: string;
-  requestHints: RequestHints;
+	selectedChatModel: string;
+	requestHints: RequestHints;
 }) => {
-  const requestPrompt = getRequestPromptFromHints(requestHints);
+	const requestPrompt = getRequestPromptFromHints(requestHints);
 
-  if (selectedChatModel === "chat-model-reasoning") {
-    return `${regularPrompt}\n\n${requestPrompt}`;
-  }
+	if (selectedChatModel === "chat-model-reasoning") {
+		return `${regularPrompt}\n\n${requestPrompt}`;
+	}
 
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+	return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
 };
 
 export const codePrompt = `
@@ -112,18 +113,18 @@ You are a spreadsheet creation assistant. Create a spreadsheet in csv format bas
 `;
 
 export const updateDocumentPrompt = (
-  currentContent: string | null,
-  type: ArtifactKind
+	currentContent: string | null,
+	type: ArtifactKind,
 ) => {
-  let mediaType = "document";
+	let mediaType = "document";
 
-  if (type === "code") {
-    mediaType = "code snippet";
-  } else if (type === "sheet") {
-    mediaType = "spreadsheet";
-  }
+	if (type === "code") {
+		mediaType = "code snippet";
+	} else if (type === "sheet") {
+		mediaType = "spreadsheet";
+	}
 
-  return `Improve the following contents of the ${mediaType} based on the given prompt.
+	return `Improve the following contents of the ${mediaType} based on the given prompt.
 
 ${currentContent}`;
 };
