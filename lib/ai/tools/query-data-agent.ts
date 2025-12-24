@@ -44,7 +44,7 @@ Pass the user's question directly as the prompt.`,
     prompt,
   }): Promise<{ data: unknown } | { error: string }> => {
     const url = `${BASE_URL}/projects/${BILLING_PROJECT}/locations/global:chat`;
-console.log("[queryDataAgent] Request URL:", url);
+    console.log("[queryDataAgent] Request URL:", url);
     console.log("[queryDataAgent] Prompt:", prompt);
 
     try {

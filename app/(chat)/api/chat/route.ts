@@ -9,10 +9,6 @@ import {
 } from "ai";
 import { unstable_cache as cache } from "next/cache";
 import { after } from "next/server";
-import {
-  createResumableStreamContext,
-  type ResumableStreamContext,
-} from "resumable-stream";
 import type { ModelCatalog } from "tokenlens/core";
 import { fetchModels } from "tokenlens/fetch";
 import { getUsage } from "tokenlens/helpers";
@@ -31,6 +27,10 @@ import { queryBackend } from "@/lib/ai/tools/query-backend";
 import { queryDataAgent } from "@/lib/ai/tools/query-data-agent";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
+import { lookupProfile } from "@/lib/ai/tools/lookup-profile";
+import { getDocuments } from "@/lib/ai/tools/get-profile-documents";
+import { getMetadata } from "@/lib/ai/tools/get-org-metadata";
+import { manageProfile } from "@/lib/ai/tools/manage-profile";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
   createStreamId,
@@ -52,8 +52,6 @@ import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 export const maxDuration = 60;
 
-let globalStreamContext: ResumableStreamContext | null = null;
-
 const getTokenlensCatalog = cache(
   async (): Promise<ModelCatalog | undefined> => {
     try {
@@ -70,33 +68,14 @@ const getTokenlensCatalog = cache(
   { revalidate: 24 * 60 * 60 } // 24 hours
 );
 
-export function getStreamContext() {
-  if (!globalStreamContext) {
-    try {
-      globalStreamContext = createResumableStreamContext({
-        waitUntil: after,
-      });
-    } catch (error: any) {
-      if (error.message.includes("REDIS_URL")) {
-        console.log(
-          " > Resumable streams are disabled due to missing REDIS_URL"
-        );
-      } else {
-        console.error(error);
-      }
-    }
-  }
-
-  return globalStreamContext;
-}
-
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
 
   try {
     const json = await request.json();
     requestBody = postRequestBodySchema.parse(json);
-  } catch (_) {
+  } catch (error) {
+    console.error("[Chat API] Request validation failed:", error);
     return new ChatSDKError("bad_request:api").toResponse();
   }
 
@@ -183,11 +162,11 @@ export async function POST(request: Request) {
     let finalMergedUsage: AppUsage | undefined;
 
     const stream = createUIMessageStream({
-      execute: ({ writer: dataStream }) => {
+      execute: async ({ writer: dataStream }) => {
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
           system: systemPrompt({ selectedChatModel, requestHints }),
-          messages: convertToModelMessages(uiMessages),
+          messages: await convertToModelMessages(uiMessages),
           stopWhen: stepCountIs(5),
           experimental_activeTools:
             selectedChatModel === "chat-model-reasoning"
@@ -197,6 +176,10 @@ export async function POST(request: Request) {
                   "getCustomer",
                   "queryBackend",
                   "queryDataAgent",
+                  "lookupProfile",
+                  "getDocuments",
+                  "getMetadata",
+                  "manageProfile",
                   "createForm",
                   "draftEmail",
                   "createDocument",
@@ -209,6 +192,10 @@ export async function POST(request: Request) {
             getCustomer,
             queryBackend,
             queryDataAgent,
+            lookupProfile,
+            getDocuments,
+            getMetadata,
+            manageProfile,
             createForm,
             draftEmail,
             createDocument: createDocument({ session, dataStream }),
@@ -293,32 +280,12 @@ export async function POST(request: Request) {
       },
     });
 
-    // const streamContext = getStreamContext();
-
-    // if (streamContext) {
-    //   return new Response(
-    //     await streamContext.resumableStream(streamId, () =>
-    //       stream.pipeThrough(new JsonToSseTransformStream())
-    //     )
-    //   );
-    // }
-
     return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
   } catch (error) {
     const vercelId = request.headers.get("x-vercel-id");
 
     if (error instanceof ChatSDKError) {
       return error.toResponse();
-    }
-
-    // Check for Vercel AI Gateway credit card error
-    if (
-      error instanceof Error &&
-      error.message?.includes(
-        "AI Gateway requires a valid credit card on file to service requests"
-      )
-    ) {
-      return new ChatSDKError("bad_request:activate_gateway").toResponse();
     }
 
     console.error("Unhandled error in chat API:", error, { vercelId });

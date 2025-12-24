@@ -1,95 +1,57 @@
-import { compare } from "bcrypt-ts";
-import NextAuth, { type DefaultSession } from "next-auth";
-import type { DefaultJWT } from "next-auth/jwt";
-import Credentials from "next-auth/providers/credentials";
-import { DUMMY_PASSWORD } from "@/lib/constants";
-import { createGuestUser, getUser } from "@/lib/db/queries";
-import { authConfig } from "./auth.config";
+import { createClient } from "@/lib/supabase/server";
+import { syncUserToDatabase } from "@/lib/db/sync-user";
 
 export type UserType = "guest" | "regular";
 
-declare module "next-auth" {
-  interface Session extends DefaultSession {
+export async function auth() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    return null;
+  }
+
+  // Check if user is anonymous using the is_anonymous claim
+  const isAnonymous = user.is_anonymous || false;
+  const email = user.email || `anonymous-${user.id}`;
+
+  // Sync user to our database
+  await syncUserToDatabase(user.id, email);
+
+  return {
     user: {
-      id: string;
-      type: UserType;
-    } & DefaultSession["user"];
-  }
-
-  // biome-ignore lint/nursery/useConsistentTypeDefinitions: "Required"
-  interface User {
-    id?: string;
-    email?: string | null;
-    type: UserType;
-  }
+      id: user.id,
+      type: (isAnonymous ? "guest" : "regular") as UserType,
+      email: email,
+    },
+  };
 }
 
-declare module "next-auth/jwt" {
-  interface JWT extends DefaultJWT {
-    id: string;
-    type: UserType;
+// Sign in anonymously - for use in server actions
+export async function signInAnonymously() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInAnonymously();
+
+  if (error) {
+    throw error;
   }
+
+  return data;
 }
 
-export const {
-  handlers: { GET, POST },
-  auth,
-  signIn,
-  signOut,
-} = NextAuth({
-  ...authConfig,
-  providers: [
-    Credentials({
-      credentials: {},
-      async authorize({ email, password }: any) {
-        const users = await getUser(email);
+export async function signOut() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+}
 
-        if (users.length === 0) {
-          await compare(password, DUMMY_PASSWORD);
-          return null;
-        }
+// Mock handlers for compatibility
+export const handlers = {
+  GET: async () => new Response("Use Supabase auth", { status: 501 }),
+  POST: async () => new Response("Use Supabase auth", { status: 501 }),
+};
 
-        const [user] = users;
-
-        if (!user.password) {
-          await compare(password, DUMMY_PASSWORD);
-          return null;
-        }
-
-        const passwordsMatch = await compare(password, user.password);
-
-        if (!passwordsMatch) {
-          return null;
-        }
-
-        return { ...user, type: "regular" };
-      },
-    }),
-    Credentials({
-      id: "guest",
-      credentials: {},
-      async authorize() {
-        const [guestUser] = await createGuestUser();
-        return { ...guestUser, type: "guest" };
-      },
-    }),
-  ],
-  callbacks: {
-    jwt({ token, user }) {
-      if (user) {
-        token.id = user.id as string;
-        token.type = user.type;
-      }
-
-      return token;
-    },
-    session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id;
-        session.user.type = token.type;
-      }
-
-      return session;
-    },
-  },
-});
+export const signIn = signInAnonymously;

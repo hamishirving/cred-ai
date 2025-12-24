@@ -436,12 +436,13 @@ function PureAttachmentsButton({
     <Button
       className="aspect-square h-8 rounded-lg p-1 transition-colors hover:bg-accent"
       data-testid="attachments-button"
-      disabled={status !== "ready" || isReasoningModel}
+      disabled={true}
       onClick={(event) => {
         event.preventDefault();
         fileInputRef.current?.click();
       }}
       variant="ghost"
+      title="File uploads temporarily disabled"
     >
       <PaperclipIcon size={14} style={{ width: 14, height: 14 }} />
     </Button>

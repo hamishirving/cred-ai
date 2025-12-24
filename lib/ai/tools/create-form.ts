@@ -75,5 +75,4 @@ IMPORTANT: Keep forms SHORT and SIMPLE:
       submitLabel: input.submitLabel,
     };
   },
-});
-
+})

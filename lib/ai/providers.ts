@@ -1,10 +1,15 @@
-import { gateway } from "@ai-sdk/gateway";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import {
   customProvider,
   extractReasoningMiddleware,
   wrapLanguageModel,
 } from "ai";
 import { isTestEnvironment } from "../constants";
+
+// Initialize Anthropic provider with API key
+const anthropic = createAnthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
 
 export const myProvider = isTestEnvironment
   ? (() => {
@@ -25,19 +30,13 @@ export const myProvider = isTestEnvironment
     })()
   : customProvider({
       languageModels: {
-        // Anthropic Claude - excellent tool support
-        "chat-model": gateway.languageModel(
-          "anthropic/claude-sonnet-4-20250514"
-        ),
+        // Anthropic Claude - AI SDK 6 supports Claude 4.5 models
+        "chat-model": anthropic("claude-sonnet-4-5"),
         "chat-model-reasoning": wrapLanguageModel({
-          model: gateway.languageModel("anthropic/claude-sonnet-4-20250514"),
+          model: anthropic("claude-sonnet-4-5"),
           middleware: extractReasoningMiddleware({ tagName: "thinking" }),
         }),
-        "title-model": gateway.languageModel(
-          "anthropic/claude-sonnet-4-20250514"
-        ),
-        "artifact-model": gateway.languageModel(
-          "anthropic/claude-sonnet-4-20250514"
-        ),
+        "title-model": anthropic("claude-haiku-4-5"),
+        "artifact-model": anthropic("claude-sonnet-4-5"),
       },
     });

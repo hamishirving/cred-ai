@@ -1,6 +1,5 @@
+import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
-import { guestRegex, isDevelopmentEnvironment } from "./lib/constants";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -13,31 +12,40 @@ export async function middleware(request: NextRequest) {
     return new Response("pong", { status: 200 });
   }
 
-  if (pathname.startsWith("/api/auth")) {
-    return NextResponse.next();
-  }
-
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
+  let supabaseResponse = NextResponse.next({
+    request,
   });
 
-  if (!token) {
-    const redirectUrl = encodeURIComponent(request.url);
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          supabaseResponse = NextResponse.next({
+            request,
+          });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
 
-    return NextResponse.redirect(
-      new URL(`/api/auth/guest?redirectUrl=${redirectUrl}`, request.url)
-    );
-  }
+  // IMPORTANT: Avoid writing any logic between createServerClient and
+  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
+  // issues with users being randomly logged out.
 
-  const isGuest = guestRegex.test(token?.email ?? "");
+  await supabase.auth.getUser();
 
-  if (token && !isGuest && ["/login", "/register"].includes(pathname)) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
-  return NextResponse.next();
+  return supabaseResponse;
 }
 
 export const config = {
@@ -45,9 +53,6 @@ export const config = {
     "/",
     "/chat/:id",
     "/api/:path*",
-    "/login",
-    "/register",
-
     /*
      * Match all request paths except for the ones starting with:
      * - _next/static (static files)
