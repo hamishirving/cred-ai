@@ -49,65 +49,6 @@ function InfoRow({
 	);
 }
 
-function cleanFieldName(fieldName: string): string {
-	// Remove common prefixes like "Personal Information.", "Emergency Contact.", etc.
-	let cleaned = fieldName
-		.replace(/^Personal Information\./i, "")
-		.replace(/^Emergency Contact\./i, "Emergency Contact ")
-		.replace(/^Address\./i, "");
-
-	// Convert camelCase and PascalCase to spaces
-	cleaned = cleaned.replace(/([a-z])([A-Z])/g, "$1 $2");
-
-	// Replace dots with spaces
-	cleaned = cleaned.replace(/\./g, " ");
-
-	// Clean up multiple spaces
-	cleaned = cleaned.replace(/\s+/g, " ").trim();
-
-	// Capitalize first letter of each word
-	cleaned = cleaned.replace(/\b\w/g, (l) => l.toUpperCase());
-
-	return cleaned;
-}
-
-function parseCustomFieldValue(value: any): string {
-	if (value === null || value === undefined) return "";
-
-	// Handle boolean
-	if (typeof value === "boolean") return value ? "Yes" : "No";
-
-	// Handle arrays
-	if (Array.isArray(value)) {
-		return value
-			.map((item) => {
-				if (typeof item === "object" && item !== null) {
-					// For objects in arrays, try to extract a meaningful value
-					return item.name || item.value || JSON.stringify(item);
-				}
-				return String(item);
-			})
-			.join(", ");
-	}
-
-	// Handle objects
-	if (typeof value === "object") {
-		// Try to extract meaningful fields from objects
-		if (value.name) return value.name;
-		if (value.value !== undefined) return String(value.value);
-		// For complex objects, extract key values
-		const entries = Object.entries(value)
-			.filter(([_, v]) => v !== null && v !== undefined && v !== false)
-			.map(([k, v]) => {
-				const cleanKey = cleanFieldName(k);
-				return v === true ? cleanKey : `${cleanKey}: ${v}`;
-			});
-		return entries.join(", ");
-	}
-
-	return String(value);
-}
-
 export function ProfileCard({ profile }: { profile: ProfileDto }) {
 	const fullName = [
 		profile.title?.defaultValue,
@@ -120,20 +61,6 @@ export function ProfileCard({ profile }: { profile: ProfileDto }) {
 	// Get primary job position (first active one)
 	const primaryJob =
 		profile.jobs.find((job) => job.status === "Active") || profile.jobs[0];
-
-	// Filter out duplicate custom fields that are already shown in main profile
-	const relevantCustomFields = profile.customProfileFields.filter((field) => {
-		const shortName = field.shortName.toLowerCase();
-		// Skip fields that duplicate core profile data
-		return (
-			!shortName.includes("firstname") &&
-			!shortName.includes("lastname") &&
-			!shortName.includes("dateofbirth") &&
-			!shortName.includes("date of birth") &&
-			!shortName.includes("grade") &&
-			!shortName.includes("medicalcategory")
-		);
-	});
 
 	return (
 		<div className="not-prose my-4 overflow-hidden rounded-lg border bg-card shadow-sm">
@@ -155,7 +82,7 @@ export function ProfileCard({ profile }: { profile: ProfileDto }) {
 			{/* Main Content - Two Column Layout */}
 			<div className="px-6 py-4">
 				<dl className="grid grid-cols-1 divide-y md:grid-cols-2 md:gap-x-8 md:divide-y-0">
-					<div className="space-y-2">
+					<div className="space-y-1">
 						<InfoRow
 							label="Date of Birth"
 							value={
@@ -168,7 +95,7 @@ export function ProfileCard({ profile }: { profile: ProfileDto }) {
 						/>
 						<InfoRow label="Medical Category" value={profile.medicalCategory} />
 					</div>
-					<div className="space-y-2">
+					<div className="space-y-1">
 						<InfoRow label="Gender" value={profile.gender} />
 						<InfoRow
 							label="Personnel Type"
@@ -232,32 +159,6 @@ export function ProfileCard({ profile }: { profile: ProfileDto }) {
 								</span>
 							))}
 						</div>
-					</div>
-				)}
-
-				{/* Custom Fields */}
-				{relevantCustomFields.length > 0 && (
-					<div className="mt-6">
-						<h4 className="mb-3 font-semibold text-sm">
-							Additional Information
-						</h4>
-						<dl className="grid grid-cols-1 divide-y md:grid-cols-2 md:gap-x-8 md:divide-y-0">
-							{relevantCustomFields.map((field, index) => {
-								// Split fields into two columns
-								const isFirstColumn = index % 2 === 0;
-								return (
-									<div
-										key={field.shortName}
-										className={isFirstColumn ? "md:pr-4" : "md:pl-4"}
-									>
-										<InfoRow
-											label={cleanFieldName(field.name)}
-											value={parseCustomFieldValue(field.value)}
-										/>
-									</div>
-								);
-							})}
-						</dl>
 					</div>
 				)}
 
