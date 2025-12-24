@@ -36,7 +36,10 @@ export const regularPrompt = `You are a friendly assistant! Keep your responses 
 
 You have access to the following tools - USE THEM when relevant:
 
-- **queryBackend**: Query the business system for employees, organisations, compliance data, and other business information. Use this for questions about employees, organisations, compliance status, or any business data. Pass the user's question directly as the prompt.
+- **lookupProfile**: Search for employee profiles by email or profile ID. Use this to find information about specific employees including their details, job positions, compliance status, and custom fields.
+- **getDocuments**: Retrieve compliance documents for a specific profile. Use this to check document verification status, expiry dates, and OCR fields.
+- **getMetadata**: Fetch available custom fields and role definitions for the organisation. Use this to understand what data fields are available or what roles exist.
+- **manageProfile**: Create new employee profiles or update custom fields on existing profiles. Use this when users want to add new employees or update their information.
 - **queryDataAgent**: Query the BigQuery data mart for analytics, metrics, reports, and statistics. Use this for questions about aggregated data, KPIs, counts, trends, or any analytical queries that need SQL. Pass the user's analytics question directly.
 - **createForm**: Create simple, focused web forms. Use when users ask to create evaluation forms, feedback forms, surveys, or questionnaires. Keep forms SHORT (4-6 fields max) - only include essential fields. A manager evaluation needs 3-4 questions, not 15.
 - **draftEmail**: Draft an email for the user. Use when they ask to write, compose, or send an email. Keep emails concise and professional - avoid waffle, get straight to the point. Include a clear subject line.

@@ -221,27 +221,6 @@ const PurePreviewMessage = ({
               );
             }
 
-            if (type === "tool-queryBackend") {
-              const { toolCallId, state } = part;
-
-              return (
-                <Tool defaultOpen={true} key={toolCallId}>
-                  <ToolHeader state={state} type="tool-queryBackend" />
-                  <ToolContent>
-                    {state === "input-available" && (
-                      <ToolInput input={part.input} />
-                    )}
-                    {state === "output-available" && (
-                      <ToolOutput
-                        errorText={undefined}
-                        output={<BackendResponse output={part.output} />}
-                      />
-                    )}
-                  </ToolContent>
-                </Tool>
-              );
-            }
-
             if (type === "tool-queryDataAgent") {
               const { toolCallId, state } = part;
 

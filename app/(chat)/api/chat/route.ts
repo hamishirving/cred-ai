@@ -8,7 +8,6 @@ import {
   streamText,
 } from "ai";
 import { unstable_cache as cache } from "next/cache";
-import { after } from "next/server";
 import type { ModelCatalog } from "tokenlens/core";
 import { fetchModels } from "tokenlens/fetch";
 import { getUsage } from "tokenlens/helpers";
@@ -22,15 +21,14 @@ import { createDocument } from "@/lib/ai/tools/create-document";
 import { createForm } from "@/lib/ai/tools/create-form";
 import { draftEmail } from "@/lib/ai/tools/draft-email";
 import { getCustomer } from "@/lib/ai/tools/get-customer";
+import { getMetadata } from "@/lib/ai/tools/get-org-metadata";
+import { getDocuments } from "@/lib/ai/tools/get-profile-documents";
 import { getWeather } from "@/lib/ai/tools/get-weather";
-import { queryBackend } from "@/lib/ai/tools/query-backend";
+import { lookupProfile } from "@/lib/ai/tools/lookup-profile";
+import { manageProfile } from "@/lib/ai/tools/manage-profile";
 import { queryDataAgent } from "@/lib/ai/tools/query-data-agent";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
-import { lookupProfile } from "@/lib/ai/tools/lookup-profile";
-import { getDocuments } from "@/lib/ai/tools/get-profile-documents";
-import { getMetadata } from "@/lib/ai/tools/get-org-metadata";
-import { manageProfile } from "@/lib/ai/tools/manage-profile";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
   createStreamId,
@@ -174,7 +172,6 @@ export async function POST(request: Request) {
               : [
                   "getWeather",
                   "getCustomer",
-                  "queryBackend",
                   "queryDataAgent",
                   "lookupProfile",
                   "getDocuments",
@@ -190,7 +187,6 @@ export async function POST(request: Request) {
           tools: {
             getWeather,
             getCustomer,
-            queryBackend,
             queryDataAgent,
             lookupProfile,
             getDocuments,

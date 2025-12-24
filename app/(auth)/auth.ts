@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import { syncUserToDatabase } from "@/lib/db/sync-user";
+import { createClient } from "@/lib/supabase/server";
 
 export type UserType = "guest" | "regular";
 
@@ -26,7 +26,7 @@ export async function auth() {
     user: {
       id: user.id,
       type: (isAnonymous ? "guest" : "regular") as UserType,
-      email: email,
+      email,
     },
   };
 }
