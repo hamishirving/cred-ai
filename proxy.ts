@@ -1,5 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function proxy(request: NextRequest) {
 	let supabaseResponse = NextResponse.next({
@@ -37,7 +37,8 @@ export async function proxy(request: NextRequest) {
 	} = await supabase.auth.getUser();
 
 	// Protected routes - redirect to login if not authenticated
-	const isAuthPage = request.nextUrl.pathname.startsWith("/login") ||
+	const isAuthPage =
+		request.nextUrl.pathname.startsWith("/login") ||
 		request.nextUrl.pathname.startsWith("/register");
 
 	if (!user && !isAuthPage) {

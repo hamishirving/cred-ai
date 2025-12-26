@@ -19,11 +19,12 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
 
 	const session = await auth();
 
-	if (chat.visibility === "private") {
-		if (!session.user) {
-			return notFound();
-		}
+	// Middleware ensures user is authenticated, but check for type safety
+	if (!session?.user) {
+		return notFound();
+	}
 
+	if (chat.visibility === "private") {
 		if (session.user.id !== chat.userId) {
 			return notFound();
 		}
@@ -48,7 +49,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
 					initialLastContext={chat.lastContext ?? undefined}
 					initialMessages={uiMessages}
 					initialVisibilityType={chat.visibility}
-					isReadonly={session?.user?.id !== chat.userId}
+					isReadonly={session.user.id !== chat.userId}
 				/>
 				<DataStreamHandler />
 			</>
@@ -64,7 +65,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
 				initialLastContext={chat.lastContext ?? undefined}
 				initialMessages={uiMessages}
 				initialVisibilityType={chat.visibility}
-				isReadonly={session?.user?.id !== chat.userId}
+				isReadonly={session.user.id !== chat.userId}
 			/>
 			<DataStreamHandler />
 		</>

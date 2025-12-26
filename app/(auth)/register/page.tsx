@@ -3,9 +3,8 @@ import { redirect } from "next/navigation";
 
 import { AuthForm } from "@/components/auth-form";
 import { SubmitButton } from "@/components/submit-button";
-
-import { auth } from "../auth";
 import { signUpWithEmail } from "../actions";
+import { auth } from "../auth";
 
 export default async function RegisterPage() {
 	const session = await auth();

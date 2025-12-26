@@ -1,14 +1,14 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
 export async function signUpWithEmail(formData: FormData) {
 	const email = formData.get("email") as string;
 	const password = formData.get("password") as string;
 
 	if (!email || !password) {
-		return { error: "Email and password are required" };
+		throw new Error("Email and password are required");
 	}
 
 	const supabase = await createClient();
@@ -19,7 +19,7 @@ export async function signUpWithEmail(formData: FormData) {
 	});
 
 	if (error) {
-		return { error: error.message };
+		throw new Error(error.message);
 	}
 
 	// Redirect to home after successful signup
@@ -31,7 +31,7 @@ export async function signInWithEmail(formData: FormData) {
 	const password = formData.get("password") as string;
 
 	if (!email || !password) {
-		return { error: "Email and password are required" };
+		throw new Error("Email and password are required");
 	}
 
 	const supabase = await createClient();
@@ -42,7 +42,7 @@ export async function signInWithEmail(formData: FormData) {
 	});
 
 	if (error) {
-		return { error: error.message };
+		throw new Error(error.message);
 	}
 
 	// Redirect to home after successful login

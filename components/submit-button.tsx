@@ -8,10 +8,10 @@ import { Button } from "./ui/button";
 
 export function SubmitButton({
 	children,
-	isSuccessful,
+	isSuccessful = false,
 }: {
 	children: React.ReactNode;
-	isSuccessful: boolean;
+	isSuccessful?: boolean;
 }) {
 	const { pending } = useFormStatus();
 

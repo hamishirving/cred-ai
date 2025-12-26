@@ -1,7 +1,7 @@
 export interface User {
 	id: string;
 	email: string;
-	type: "guest" | "regular";
+	type: "regular";
 }
 
 export interface Session {
