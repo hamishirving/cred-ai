@@ -27,8 +27,6 @@ export function SidebarUserNav({ user }: { user: User }) {
 	const { session, isLoading } = useAuth();
 	const { setTheme, resolvedTheme } = useTheme();
 
-	const isGuest = session?.user?.type === "guest";
-
 	return (
 		<SidebarMenu>
 			<SidebarMenuItem>
@@ -55,11 +53,11 @@ export function SidebarUserNav({ user }: { user: User }) {
 									alt={user.email ?? "User Avatar"}
 									className="rounded-full"
 									height={24}
-									src={`https://avatar.vercel.sh/${user.email}`}
+									src={`https://avatar.vercel.sh/${user.email || "user"}`}
 									width={24}
 								/>
 								<span className="truncate" data-testid="user-email">
-									{isGuest ? "Guest" : user?.email}
+									{user?.email || "User"}
 								</span>
 								<ChevronUp className="ml-auto" />
 							</SidebarMenuButton>
@@ -94,17 +92,13 @@ export function SidebarUserNav({ user }: { user: User }) {
 										return;
 									}
 
-									if (isGuest) {
-										router.push("/login");
-									} else {
-										const supabase = createClient();
-										await supabase.auth.signOut();
-										router.push("/");
-									}
+									const supabase = createClient();
+									await supabase.auth.signOut();
+									router.push("/login");
 								}}
 								type="button"
 							>
-								{isGuest ? "Login to your account" : "Sign out"}
+								Sign out
 							</button>
 						</DropdownMenuItem>
 					</DropdownMenuContent>

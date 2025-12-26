@@ -7,15 +7,10 @@ import { generateUUID } from "@/lib/utils";
 import { auth } from "../(auth)/auth";
 
 export default async function Page() {
-	const session = await auth();
-
-	if (!session) {
-		redirect("/api/auth/guest");
-	}
+	// Access cookies first to opt out of static rendering
+	const cookieStore = await cookies();
 
 	const id = generateUUID();
-
-	const cookieStore = await cookies();
 	const modelIdFromCookie = cookieStore.get("chat-model");
 
 	if (!modelIdFromCookie) {

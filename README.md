@@ -2,6 +2,8 @@
 
 An AI-powered chatbot for employee data management, built with Next.js, Supabase, and Anthropic Claude.
 
+**Note:** This is a playground application for internal testing and demonstration purposes.
+
 ## Features
 
 - **Next.js App Router**
@@ -15,7 +17,7 @@ An AI-powered chatbot for employee data management, built with Next.js, Supabase
 
 - **Supabase Backend**
   - PostgreSQL database with connection pooling
-  - Anonymous authentication for instant access
+  - Email/password authentication
   - SSR-ready auth with automatic session management
 
 - **Drizzle ORM**
@@ -36,7 +38,7 @@ An AI-powered chatbot for employee data management, built with Next.js, Supabase
 
 - **Frontend**: Next.js 15, React 19, TypeScript
 - **Database**: Supabase Postgres + Drizzle ORM
-- **Authentication**: Supabase Auth (anonymous sign-ins)
+- **Authentication**: Supabase Auth (email/password)
 - **AI Provider**: Anthropic Claude 4.5 (direct API)
 - **Styling**: Tailwind CSS, shadcn/ui
 - **External API**: Credentially Public API v2.0.0
@@ -90,17 +92,12 @@ See `.env.example` for more details.
    # Edit .env.local with your credentials
    ```
 
-4. **Enable anonymous auth in Supabase**
-   - Go to your Supabase dashboard
-   - Navigate to **Authentication** → **Providers**
-   - Enable **Anonymous Users**
-
-5. **Run database migrations**
+4. **Run database migrations**
    ```bash
    pnpm db:migrate
    ```
 
-6. **Start the development server**
+5. **Start the development server**
    ```bash
    pnpm dev
    ```
@@ -148,10 +145,10 @@ Tools are defined in `lib/ai/tools/` and registered in `app/(chat)/api/chat/rout
 
 ## Authentication
 
-The app uses Supabase anonymous authentication:
+The app uses Supabase email/password authentication:
 
-- Users are automatically signed in anonymously on first visit
-- Anonymous users get full functionality without registration
+- Users must sign up with email and password to access the application
+- Unauthenticated users are redirected to the login page
 - User sessions are managed via SSR-safe Supabase client
 - User data is automatically synced from Supabase auth to the app's User table
 

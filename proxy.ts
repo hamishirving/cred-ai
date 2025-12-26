@@ -1,17 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
-import { type NextRequest, NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-export default async function proxy(request: NextRequest) {
-	const { pathname } = request.nextUrl;
-
-	/*
-	 * Playwright starts the dev server and requires a 200 status to
-	 * begin the tests, so this ensures that the tests can start
-	 */
-	if (pathname.startsWith("/ping")) {
-		return new Response("pong", { status: 200 });
-	}
-
+export async function proxy(request: NextRequest) {
 	let supabaseResponse = NextResponse.next({
 		request,
 	});
@@ -25,12 +15,14 @@ export default async function proxy(request: NextRequest) {
 					return request.cookies.getAll();
 				},
 				setAll(cookiesToSet) {
-					cookiesToSet.forEach(({ name, value }) =>
+					// biome-ignore lint/complexity/noForEach: Supabase pattern
+					cookiesToSet.forEach(({ name, value, options }) =>
 						request.cookies.set(name, value),
 					);
 					supabaseResponse = NextResponse.next({
 						request,
 					});
+					// biome-ignore lint/complexity/noForEach: Supabase pattern
 					cookiesToSet.forEach(({ name, value, options }) =>
 						supabaseResponse.cookies.set(name, value, options),
 					);
@@ -39,26 +31,42 @@ export default async function proxy(request: NextRequest) {
 		},
 	);
 
-	// IMPORTANT: Avoid writing any logic between createServerClient and
-	// supabase.auth.getUser(). A simple mistake could make it very hard to debug
-	// issues with users being randomly logged out.
+	// Refresh session if expired
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
 
-	await supabase.auth.getUser();
+	// Protected routes - redirect to login if not authenticated
+	const isAuthPage = request.nextUrl.pathname.startsWith("/login") ||
+		request.nextUrl.pathname.startsWith("/register");
+
+	if (!user && !isAuthPage) {
+		// Redirect to login page
+		const url = request.nextUrl.clone();
+		url.pathname = "/login";
+		return NextResponse.redirect(url);
+	}
+
+	// If user is authenticated and trying to access auth pages, redirect to home
+	if (user && isAuthPage) {
+		const url = request.nextUrl.clone();
+		url.pathname = "/";
+		return NextResponse.redirect(url);
+	}
 
 	return supabaseResponse;
 }
 
 export const config = {
 	matcher: [
-		"/",
-		"/chat/:id",
-		"/api/:path*",
 		/*
-		 * Match all request paths except for the ones starting with:
+		 * Match all request paths except:
 		 * - _next/static (static files)
 		 * - _next/image (image optimization files)
-		 * - favicon.ico, sitemap.xml, robots.txt (metadata files)
+		 * - favicon.ico (favicon file)
+		 * - public folder
+		 * - api routes
 		 */
-		"/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+		"/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
 	],
 };

@@ -16,14 +16,11 @@ export function useAuth() {
 			.getSession()
 			.then(({ data: { session: supabaseSession } }) => {
 				if (supabaseSession?.user) {
-					const isAnonymous = supabaseSession.user.is_anonymous || false;
 					setSession({
 						user: {
 							id: supabaseSession.user.id,
-							email:
-								supabaseSession.user.email ||
-								`anonymous-${supabaseSession.user.id}`,
-							type: isAnonymous ? "guest" : "regular",
+							email: supabaseSession.user.email || "",
+							type: "regular",
 						},
 					});
 				}
@@ -35,14 +32,11 @@ export function useAuth() {
 			data: { subscription },
 		} = supabase.auth.onAuthStateChange((_event, supabaseSession) => {
 			if (supabaseSession?.user) {
-				const isAnonymous = supabaseSession.user.is_anonymous || false;
 				setSession({
 					user: {
 						id: supabaseSession.user.id,
-						email:
-							supabaseSession.user.email ||
-							`anonymous-${supabaseSession.user.id}`,
-						type: isAnonymous ? "guest" : "regular",
+						email: supabaseSession.user.email || "",
+						type: "regular",
 					},
 				});
 			} else {
