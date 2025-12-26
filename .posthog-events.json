@@ -1,0 +1,62 @@
+[
+	{
+		"event": "user_signed_up",
+		"description": "User completed registration with email and password",
+		"file": "app/(auth)/actions.ts"
+	},
+	{
+		"event": "user_signed_in",
+		"description": "User successfully logged in with email and password",
+		"file": "app/(auth)/actions.ts"
+	},
+	{
+		"event": "user_signed_out",
+		"description": "User signed out from the application",
+		"file": "components/sign-out-form.tsx"
+	},
+	{
+		"event": "message_sent",
+		"description": "User sent a chat message to the AI assistant",
+		"file": "components/multimodal-input.tsx"
+	},
+	{
+		"event": "suggested_action_clicked",
+		"description": "User clicked on a suggested action to start a conversation",
+		"file": "components/suggested-actions.tsx"
+	},
+	{
+		"event": "response_upvoted",
+		"description": "User upvoted an AI response for quality feedback",
+		"file": "components/message-actions.tsx"
+	},
+	{
+		"event": "response_downvoted",
+		"description": "User downvoted an AI response for quality feedback",
+		"file": "components/message-actions.tsx"
+	},
+	{
+		"event": "response_copied",
+		"description": "User copied an AI response to clipboard",
+		"file": "components/message-actions.tsx"
+	},
+	{
+		"event": "model_changed",
+		"description": "User changed the AI model selection",
+		"file": "components/multimodal-input.tsx"
+	},
+	{
+		"event": "chat_deleted",
+		"description": "User deleted a chat from their history",
+		"file": "components/sidebar-history.tsx"
+	},
+	{
+		"event": "artifact_opened",
+		"description": "User opened an artifact to view/edit content",
+		"file": "components/artifact.tsx"
+	},
+	{
+		"event": "document_saved",
+		"description": "User saved changes to a document artifact",
+		"file": "components/artifact.tsx"
+	}
+]

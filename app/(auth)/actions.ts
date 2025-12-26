@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { getPostHogClient } from "@/lib/posthog-server";
 import { createClient } from "@/lib/supabase/server";
 
 export async function signUpWithEmail(formData: FormData) {
@@ -20,6 +21,29 @@ export async function signUpWithEmail(formData: FormData) {
 
 	if (error) {
 		throw new Error(error.message);
+	}
+
+	// Track sign-up event on server side
+	const posthog = getPostHogClient();
+	if (data.user) {
+		posthog.capture({
+			distinctId: data.user.id,
+			event: "user_signed_up",
+			properties: {
+				email: email,
+				source: "email",
+			},
+		});
+
+		// Identify user on server side
+		posthog.identify({
+			distinctId: data.user.id,
+			properties: {
+				email: email,
+			},
+		});
+
+		await posthog.shutdown();
 	}
 
 	// Redirect to home after successful signup
@@ -43,6 +67,29 @@ export async function signInWithEmail(formData: FormData) {
 
 	if (error) {
 		throw new Error(error.message);
+	}
+
+	// Track sign-in event on server side
+	const posthog = getPostHogClient();
+	if (data.user) {
+		posthog.capture({
+			distinctId: data.user.id,
+			event: "user_signed_in",
+			properties: {
+				email: email,
+				source: "email",
+			},
+		});
+
+		// Identify user on server side
+		posthog.identify({
+			distinctId: data.user.id,
+			properties: {
+				email: email,
+			},
+		});
+
+		await posthog.shutdown();
 	}
 
 	// Redirect to home after successful login

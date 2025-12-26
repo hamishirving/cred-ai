@@ -2,12 +2,14 @@ import type { UseChatHelpers } from "@ai-sdk/react";
 import { formatDistance } from "date-fns";
 import equal from "fast-deep-equal";
 import { AnimatePresence, motion } from "framer-motion";
+import posthog from "posthog-js";
 import {
 	type Dispatch,
 	memo,
 	type SetStateAction,
 	useCallback,
 	useEffect,
+	useRef,
 	useState,
 } from "react";
 import useSWR, { useSWRConfig } from "swr";
@@ -156,6 +158,14 @@ function PureArtifact({
 							}),
 						});
 
+						// Track document saved event
+						posthog.capture("document_saved", {
+							document_id: artifact.documentId,
+							artifact_kind: artifact.kind,
+							artifact_title: artifact.title,
+							content_length: updatedContent.length,
+						});
+
 						setIsContentDirty(false);
 
 						const newDocument = {
@@ -228,6 +238,29 @@ function PureArtifact({
 	};
 
 	const [isToolbarVisible, setIsToolbarVisible] = useState(false);
+
+	// Track artifact opened event when artifact becomes visible
+	const hasTrackedOpen = useRef(false);
+	useEffect(() => {
+		if (artifact.isVisible && !hasTrackedOpen.current) {
+			posthog.capture("artifact_opened", {
+				chat_id: chatId,
+				document_id: artifact.documentId,
+				artifact_kind: artifact.kind,
+				artifact_title: artifact.title,
+			});
+			hasTrackedOpen.current = true;
+		} else if (!artifact.isVisible) {
+			// Reset when artifact is closed so we can track again on next open
+			hasTrackedOpen.current = false;
+		}
+	}, [
+		artifact.isVisible,
+		artifact.documentId,
+		artifact.kind,
+		artifact.title,
+		chatId,
+	]);
 
 	/*
 	 * NOTE: if there are no documents, or if

@@ -1,4 +1,4 @@
-import type { DocumentDto } from "@/lib/api/types";
+import { formatDistanceToNow } from "date-fns";
 import {
 	Table,
 	TableBody,
@@ -7,7 +7,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { formatDistanceToNow } from "date-fns";
+import type { DocumentDto } from "@/lib/api/types";
 
 interface DocumentsTableProps {
 	documents: DocumentDto[];

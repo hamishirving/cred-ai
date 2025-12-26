@@ -30,16 +30,22 @@ An AI-powered chatbot for employee data management, built with Next.js, Supabase
   - Document retrieval
   - Organization metadata access
 
+- **PostHog Analytics**
+  - User behaviour tracking and event analytics
+  - Session recording and error capturing
+  - Reverse proxy for reliable data collection
+
 - **shadcn/ui Components**
   - Styling with [Tailwind CSS](https://tailwindcss.com)
   - Component primitives from [Radix UI](https://radix-ui.com)
 
 ## Tech Stack
 
-- **Frontend**: Next.js 15, React 19, TypeScript
+- **Frontend**: Next.js 16, React 19, TypeScript
 - **Database**: Supabase Postgres + Drizzle ORM
 - **Authentication**: Supabase Auth (email/password)
 - **AI Provider**: Anthropic Claude 4.5 (direct API)
+- **Analytics**: PostHog (client + server-side)
 - **Styling**: Tailwind CSS, shadcn/ui
 - **External API**: Credentially Public API v2.0.0
 

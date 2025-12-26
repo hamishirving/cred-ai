@@ -1,4 +1,5 @@
 import equal from "fast-deep-equal";
+import posthog from "posthog-js";
 import { memo } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
@@ -40,6 +41,14 @@ export function PureMessageActions({
 			return;
 		}
 
+		// Track response copied event
+		posthog.capture("response_copied", {
+			chat_id: chatId,
+			message_id: message.id,
+			message_role: message.role,
+			content_length: textFromParts.length,
+		});
+
 		await copyToClipboard(textFromParts);
 		toast.success("Copied to clipboard!");
 	};
@@ -77,6 +86,12 @@ export function PureMessageActions({
 				data-testid="message-upvote"
 				disabled={vote?.isUpvoted}
 				onClick={() => {
+					// Track response upvoted event
+					posthog.capture("response_upvoted", {
+						chat_id: chatId,
+						message_id: message.id,
+					});
+
 					const upvote = fetch("/api/vote", {
 						method: "PATCH",
 						body: JSON.stringify({
@@ -126,6 +141,12 @@ export function PureMessageActions({
 				data-testid="message-downvote"
 				disabled={vote && !vote.isUpvoted}
 				onClick={() => {
+					// Track response downvoted event
+					posthog.capture("response_downvoted", {
+						chat_id: chatId,
+						message_id: message.id,
+					});
+
 					const downvote = fetch("/api/vote", {
 						method: "PATCH",
 						body: JSON.stringify({

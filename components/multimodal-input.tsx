@@ -4,6 +4,7 @@ import type { UseChatHelpers } from "@ai-sdk/react";
 import { Trigger } from "@radix-ui/react-select";
 import type { UIMessage } from "ai";
 import equal from "fast-deep-equal";
+import posthog from "posthog-js";
 import {
 	type ChangeEvent,
 	type Dispatch,
@@ -132,6 +133,15 @@ function PureMultimodalInput({
 	const submitForm = useCallback(() => {
 		window.history.pushState({}, "", `/chat/${chatId}`);
 
+		// Track message sent event
+		posthog.capture("message_sent", {
+			chat_id: chatId,
+			message_length: input.length,
+			has_attachments: attachments.length > 0,
+			attachment_count: attachments.length,
+			model_id: selectedModelId,
+		});
+
 		sendMessage({
 			role: "user",
 			parts: [
@@ -166,6 +176,7 @@ function PureMultimodalInput({
 		width,
 		chatId,
 		resetHeight,
+		selectedModelId,
 	]);
 
 	const uploadFile = useCallback(async (file: File) => {
@@ -473,6 +484,13 @@ function PureModelSelectorCompact({
 			onValueChange={(modelName) => {
 				const model = chatModels.find((m) => m.name === modelName);
 				if (model) {
+					// Track model change event
+					posthog.capture("model_changed", {
+						previous_model_id: optimisticModelId,
+						new_model_id: model.id,
+						new_model_name: model.name,
+					});
+
 					setOptimisticModelId(model.id);
 					onModelChange?.(model.id);
 					startTransition(() => {

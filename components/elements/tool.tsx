@@ -42,11 +42,11 @@ const getStatusBadge = (status: ToolUIPart["state"] | string) => {
 		"input-streaming": "Pending",
 		"input-available": "Running",
 		"partial-call": "Running",
-		"call": "Running",
+		call: "Running",
 		"approval-requested": "Approval Requested",
 		"approval-responded": "Approved",
 		"output-available": "Completed",
-		"result": "Completed",
+		result: "Completed",
 		"output-error": "Error",
 		"output-denied": "Denied",
 	};
@@ -55,11 +55,11 @@ const getStatusBadge = (status: ToolUIPart["state"] | string) => {
 		"input-streaming": <CircleIcon className="size-4" />,
 		"input-available": <ClockIcon className="size-4 animate-spin" />,
 		"partial-call": <ClockIcon className="size-4 animate-spin" />,
-		"call": <ClockIcon className="size-4 animate-spin" />,
+		call: <ClockIcon className="size-4 animate-spin" />,
 		"approval-requested": <ClockIcon className="size-4 text-yellow-600" />,
 		"approval-responded": <CheckCircleIcon className="size-4 text-blue-600" />,
 		"output-available": <CheckCircleIcon className="size-4 text-green-600" />,
-		"result": <CheckCircleIcon className="size-4 text-green-600" />,
+		result: <CheckCircleIcon className="size-4 text-green-600" />,
 		"output-error": <XCircleIcon className="size-4 text-red-600" />,
 		"output-denied": <XCircleIcon className="size-4 text-orange-600" />,
 	};
@@ -76,7 +76,8 @@ const getStatusBadge = (status: ToolUIPart["state"] | string) => {
 		<Badge
 			className={cn(
 				"flex items-center gap-1 rounded-full text-xs",
-				isRunning && "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+				isRunning &&
+					"bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
 			)}
 			variant={isRunning ? "default" : "secondary"}
 		>

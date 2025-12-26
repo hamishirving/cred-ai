@@ -3,6 +3,7 @@
 import { isToday, isYesterday, subMonths, subWeeks } from "date-fns";
 import { motion } from "framer-motion";
 import { useParams, useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { useState } from "react";
 import { toast } from "sonner";
 import useSWRInfinite from "swr/infinite";
@@ -124,6 +125,12 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 		: false;
 
 	const handleDelete = () => {
+		// Track chat deleted event
+		posthog.capture("chat_deleted", {
+			chat_id: deleteId,
+			is_current_chat: deleteId === id,
+		});
+
 		const deletePromise = fetch(`/api/chat?id=${deleteId}`, {
 			method: "DELETE",
 		});

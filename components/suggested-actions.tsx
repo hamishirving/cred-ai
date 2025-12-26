@@ -2,6 +2,7 @@
 
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { motion } from "framer-motion";
+import posthog from "posthog-js";
 import { memo } from "react";
 import type { ChatMessage } from "@/lib/types";
 import { Suggestion } from "./elements/suggestion";
@@ -37,6 +38,13 @@ function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
 					<Suggestion
 						className="h-auto w-full whitespace-normal p-3 text-left"
 						onClick={(suggestion) => {
+							// Track suggested action click event
+							posthog.capture("suggested_action_clicked", {
+								chat_id: chatId,
+								suggestion_text: suggestion,
+								suggestion_index: index,
+							});
+
 							window.history.replaceState({}, "", `/chat/${chatId}`);
 							sendMessage({
 								role: "user",

@@ -1,17 +1,16 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { ToolHandlerProps } from "./types";
-
 // Import all tool handlers
 import { DataAgentTool } from "./handlers/data-agent-tool";
 import { DocumentCreateTool } from "./handlers/document-create-tool";
-import { DocumentsTool } from "./handlers/documents-tool";
 import { DocumentUpdateTool } from "./handlers/document-update-tool";
+import { DocumentsTool } from "./handlers/documents-tool";
 import { EmailTool } from "./handlers/email-tool";
 import { FormTool } from "./handlers/form-tool";
 import { ProfileTool } from "./handlers/profile-tool";
 import { SuggestionsTool } from "./handlers/suggestions-tool";
+import type { ToolHandlerProps } from "./types";
 
 // Type for tool handler components with any input/output
 type ToolHandler = (props: ToolHandlerProps) => ReactNode;
