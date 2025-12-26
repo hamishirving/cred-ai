@@ -46,8 +46,7 @@ You have access to the following tools - USE THEM when relevant:
 
 IMPORTANT RULES:
 - When a user asks for information that a tool can provide, ALWAYS use the tool rather than saying you don't have access to that data.
-- After a tool returns results, DO NOT add any text. The tool results are displayed directly to the user in rich UI components - they can see everything. Do not summarise, explain, or describe what the tool returned.
-- NEVER add text after tool calls. No "Here are the documents", no bullet points, no summaries. The UI shows everything already.`;
+- After a tool returns results, keep your response very brief (1 short sentence max). The tool results are displayed directly to the user in rich UI components. Do not summarise, list, or repeat the data - just a brief acknowledgment like "Here's the profile" or "Found 3 documents" is fine.`;
 
 export type RequestHints = {
 	latitude: Geo["latitude"];
