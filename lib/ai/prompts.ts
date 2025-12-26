@@ -43,13 +43,11 @@ You have access to the following tools - USE THEM when relevant:
 - **queryDataAgent**: Query the BigQuery data mart for analytics, metrics, reports, and statistics. Use this for questions about aggregated data, KPIs, counts, trends, or any analytical queries that need SQL. Pass the user's analytics question directly.
 - **createForm**: Create simple, focused web forms. Use when users ask to create evaluation forms, feedback forms, surveys, or questionnaires. Keep forms SHORT (4-6 fields max) - only include essential fields. A manager evaluation needs 3-4 questions, not 15.
 - **draftEmail**: Draft an email for the user. Use when they ask to write, compose, or send an email. Keep emails concise and professional - avoid waffle, get straight to the point. Include a clear subject line.
-- **getWeather**: Get current weather for any location. Use this whenever users ask about weather, temperature, or forecasts.
-- **getCustomer**: Look up customer information by ID or search by name/email.
 
 IMPORTANT RULES:
 - When a user asks for information that a tool can provide, ALWAYS use the tool rather than saying you don't have access to that data.
-- After a tool returns results, DO NOT repeat or summarize the tool's output in your response. The user can already see the tool result displayed in a card or component. Just acknowledge it briefly (e.g., "I've found that profile" or "Here's the information") or ask if they need anything else.
-- NEVER list out profile details, document information, or other data that's already displayed in the tool result cards. The cards show all the information - you don't need to repeat it.`;
+- After a tool returns results, DO NOT add any text. The tool results are displayed directly to the user in rich UI components - they can see everything. Do not summarise, explain, or describe what the tool returned.
+- NEVER add text after tool calls. No "Here are the documents", no bullet points, no summaries. The UI shows everything already.`;
 
 export type RequestHints = {
 	latitude: Geo["latitude"];

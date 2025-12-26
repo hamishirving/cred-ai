@@ -32,33 +32,45 @@ export const Tool = ({ className, ...props }: ToolProps) => (
 );
 
 export type ToolHeaderProps = {
-	type: ToolUIPart["type"];
-	state: ToolUIPart["state"];
+	type: string;
+	state: ToolUIPart["state"] | string;
 	className?: string;
 };
 
-const getStatusBadge = (status: ToolUIPart["state"]) => {
-	const labels = {
+const getStatusBadge = (status: ToolUIPart["state"] | string) => {
+	const labels: Record<string, string> = {
 		"input-streaming": "Pending",
 		"input-available": "Running",
+		"partial-call": "Running",
+		"call": "Running",
 		"approval-requested": "Approval Requested",
 		"approval-responded": "Approved",
 		"output-available": "Completed",
+		"result": "Completed",
 		"output-error": "Error",
 		"output-denied": "Denied",
-	} as const;
+	};
 
-	const icons = {
+	const icons: Record<string, ReactNode> = {
 		"input-streaming": <CircleIcon className="size-4" />,
 		"input-available": <ClockIcon className="size-4 animate-spin" />,
+		"partial-call": <ClockIcon className="size-4 animate-spin" />,
+		"call": <ClockIcon className="size-4 animate-spin" />,
 		"approval-requested": <ClockIcon className="size-4 text-yellow-600" />,
 		"approval-responded": <CheckCircleIcon className="size-4 text-blue-600" />,
 		"output-available": <CheckCircleIcon className="size-4 text-green-600" />,
+		"result": <CheckCircleIcon className="size-4 text-green-600" />,
 		"output-error": <XCircleIcon className="size-4 text-red-600" />,
 		"output-denied": <XCircleIcon className="size-4 text-orange-600" />,
-	} as const;
+	};
 
-	const isRunning = status === "input-available";
+	const isRunning =
+		status === "input-available" ||
+		status === "partial-call" ||
+		status === "call";
+
+	const label = labels[status] ?? "Unknown";
+	const icon = icons[status] ?? <CircleIcon className="size-4" />;
 
 	return (
 		<Badge
@@ -68,8 +80,8 @@ const getStatusBadge = (status: ToolUIPart["state"]) => {
 			)}
 			variant={isRunning ? "default" : "secondary"}
 		>
-			{icons[status]}
-			<span className={cn(isRunning && "font-semibold")}>{labels[status]}</span>
+			{icon}
+			<span className={cn(isRunning && "font-semibold")}>{label}</span>
 		</Badge>
 	);
 };

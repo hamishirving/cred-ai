@@ -6,28 +6,15 @@ import { memo, useState } from "react";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
-import { BackendResponse } from "./backend-response";
 import { useDataStream } from "./data-stream-provider";
-import { DocumentToolResult } from "./document";
-import { DocumentPreview } from "./document-preview";
-import { DocumentsTable } from "./documents-table";
-import { DynamicForm } from "./dynamic-form";
 import { MessageContent } from "./elements/message";
 import { Response } from "./elements/response";
-import {
-	Tool,
-	ToolContent,
-	ToolHeader,
-	ToolInput,
-	ToolOutput,
-} from "./elements/tool";
-import { EmailDraftComponent } from "./email-draft";
 import { SparklesIcon } from "./icons";
 import { MessageActions } from "./message-actions";
 import { MessageEditor } from "./message-editor";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
-import { ProfileCard } from "./profile-card";
+import { hasToolHandler, renderTool } from "./tool-handlers";
 
 const PurePreviewMessage = ({
 	chatId,
@@ -169,191 +156,27 @@ const PurePreviewMessage = ({
 							}
 						}
 
-						if (type === "tool-queryDataAgent") {
-							const { toolCallId, state } = part;
-
+						// Handle all tool types through the registry
+						if (hasToolHandler(type)) {
+							const toolPart = part as {
+								toolCallId: string;
+								state?: string;
+								input?: unknown;
+								output?: unknown;
+							};
 							return (
-								<Tool defaultOpen={true} key={toolCallId}>
-									<ToolHeader state={state} type="tool-queryDataAgent" />
-									<ToolContent>
-										{state === "input-available" && (
-											<ToolInput input={part.input} />
-										)}
-										{state === "output-available" && (
-											<ToolOutput
-												errorText={undefined}
-												output={<BackendResponse output={part.output} />}
-											/>
-										)}
-									</ToolContent>
-								</Tool>
-							);
-						}
-
-						if (type === "tool-getProfile") {
-							const { toolCallId } = part;
-
-							if (part.output && "error" in part.output) {
-								return (
-									<div
-										className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 dark:bg-red-950/50"
-										key={toolCallId}
-									>
-										Error looking up profile: {String(part.output.error)}
-									</div>
-								);
-							}
-
-							if (part.output && "data" in part.output) {
-								return (
-									<ProfileCard key={toolCallId} profile={part.output.data} />
-								);
-							}
-
-							return null;
-						}
-
-						if (type === "tool-getDocuments") {
-							const { toolCallId } = part;
-
-							if (part.output && "error" in part.output) {
-								return (
-									<div
-										className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 dark:bg-red-950/50"
-										key={toolCallId}
-									>
-										Error fetching documents: {String(part.output.error)}
-									</div>
-								);
-							}
-
-							if (part.output && "data" in part.output) {
-								return (
-									<DocumentsTable documents={part.output.data} key={toolCallId} />
-								);
-							}
-
-							return null;
-						}
-
-						if (type === "tool-createForm") {
-							const { toolCallId, state } = part;
-
-							return (
-								<Tool defaultOpen={true} key={toolCallId}>
-									<ToolHeader state={state} type="tool-createForm" />
-									<ToolContent>
-										{state === "output-available" && (
-											<div className="p-4">
-												<DynamicForm
-													onSubmit={(data) => {
-														console.log("Form submitted:", data);
-														// TODO: Send form data somewhere
-													}}
-													schema={part.output}
-												/>
-											</div>
-										)}
-									</ToolContent>
-								</Tool>
-							);
-						}
-
-						if (type === "tool-draftEmail") {
-							const { toolCallId, state } = part;
-
-							return (
-								<Tool defaultOpen={true} key={toolCallId}>
-									<ToolHeader state={state} type="tool-draftEmail" />
-									<ToolContent>
-										{state === "output-available" && (
-											<div className="p-4">
-												<EmailDraftComponent email={part.output} />
-											</div>
-										)}
-									</ToolContent>
-								</Tool>
-							);
-						}
-
-						if (type === "tool-createDocument") {
-							const { toolCallId } = part;
-
-							if (part.output && "error" in part.output) {
-								return (
-									<div
-										className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 dark:bg-red-950/50"
-										key={toolCallId}
-									>
-										Error creating document: {String(part.output.error)}
-									</div>
-								);
-							}
-
-							return (
-								<DocumentPreview
-									isReadonly={isReadonly}
-									key={toolCallId}
-									result={part.output}
-								/>
-							);
-						}
-
-						if (type === "tool-updateDocument") {
-							const { toolCallId } = part;
-
-							if (part.output && "error" in part.output) {
-								return (
-									<div
-										className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 dark:bg-red-950/50"
-										key={toolCallId}
-									>
-										Error updating document: {String(part.output.error)}
-									</div>
-								);
-							}
-
-							return (
-								<div className="relative" key={toolCallId}>
-									<DocumentPreview
-										args={{ ...part.output, isUpdate: true }}
-										isReadonly={isReadonly}
-										result={part.output}
-									/>
+								<div key={toolPart.toolCallId}>
+									{renderTool(type, {
+										toolCallId: toolPart.toolCallId,
+										state: toolPart.state as
+											| "input-available"
+											| "output-available"
+											| undefined,
+										input: toolPart.input,
+										output: toolPart.output,
+										isReadonly,
+									})}
 								</div>
-							);
-						}
-
-						if (type === "tool-requestSuggestions") {
-							const { toolCallId, state } = part;
-
-							return (
-								<Tool defaultOpen={true} key={toolCallId}>
-									<ToolHeader state={state} type="tool-requestSuggestions" />
-									<ToolContent>
-										{state === "input-available" && (
-											<ToolInput input={part.input} />
-										)}
-										{state === "output-available" && (
-											<ToolOutput
-												errorText={undefined}
-												output={
-													"error" in part.output ? (
-														<div className="rounded border p-2 text-red-500">
-															Error: {String(part.output.error)}
-														</div>
-													) : (
-														<DocumentToolResult
-															isReadonly={isReadonly}
-															result={part.output}
-															type="request-suggestions"
-														/>
-													)
-												}
-											/>
-										)}
-									</ToolContent>
-								</Tool>
 							);
 						}
 

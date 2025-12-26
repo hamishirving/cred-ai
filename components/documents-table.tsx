@@ -48,7 +48,7 @@ export function DocumentsTable({ documents }: DocumentsTableProps) {
 						return (
 							<TableRow key={doc.id}>
 								<TableCell className="font-medium">
-									{doc.type.shortName || doc.type.name}
+									{doc.otherTypeName || doc.type.shortName || doc.type.name}
 								</TableCell>
 								<TableCell>{doc.description || "-"}</TableCell>
 								<TableCell>
