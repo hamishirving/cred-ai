@@ -128,7 +128,24 @@ export async function POST(request: Request) {
 			// New chat - no need to fetch messages, it's empty
 		}
 
-		const uiMessages = [...convertToUIMessages(messagesFromDb), message];
+		const uiMessages = [...convertToUIMessages(messagesFromDb), message].map(
+			(msg) => {
+				// Ensure assistant messages have text content to avoid API errors
+				if (msg.role === "assistant") {
+					const hasText = msg.parts.some(
+						(part) => part.type === "text" && part.text?.trim(),
+					);
+					if (!hasText) {
+						// Add minimal text to tool-only messages
+						return {
+							...msg,
+							parts: [{ type: "text" as const, text: "." }, ...msg.parts],
+						};
+					}
+				}
+				return msg;
+			},
+		);
 
 		const { longitude, latitude, city, country } = geolocation(request);
 
