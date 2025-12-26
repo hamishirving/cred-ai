@@ -1,4 +1,5 @@
 import { geolocation } from "@vercel/functions";
+import { withTracing } from "@posthog/ai";
 import {
 	convertToModelMessages,
 	createUIMessageStream,
@@ -28,6 +29,7 @@ import { queryDataAgent } from "@/lib/ai/tools/query-data-agent";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { isProductionEnvironment } from "@/lib/constants";
+import { getPostHogClient } from "@/lib/posthog-server";
 import {
 	createStreamId,
 	deleteChatById,
@@ -176,8 +178,18 @@ export async function POST(request: Request) {
 
 		const stream = createUIMessageStream({
 			execute: async ({ writer: dataStream }) => {
+				// Wrap model with PostHog tracing for LLM analytics
+				const tracedModel = withTracing(
+					myProvider.languageModel(selectedChatModel),
+					getPostHogClient(),
+					{
+						posthogDistinctId: session.user.id,
+						posthogProperties: { chatId: id },
+					},
+				);
+
 				const result = streamText({
-					model: myProvider.languageModel(selectedChatModel),
+					model: tracedModel,
 					system: systemPrompt({ selectedChatModel, requestHints }),
 					messages: await convertToModelMessages(uiMessages),
 					stopWhen: stepCountIs(5),

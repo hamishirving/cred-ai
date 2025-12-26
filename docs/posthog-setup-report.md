@@ -8,6 +8,7 @@ The integration includes:
 
 - **Client-side analytics** via `PostHogProvider` component with manual pageview tracking on route changes
 - **Server-side event tracking** for authentication flows using `posthog-node`
+- **LLM analytics** via `@posthog/ai` wrapping AI SDK models with `withTracing`
 - **User identification** both client-side (via Supabase auth state changes) and server-side (during sign-up/sign-in)
 - **Reverse proxy configuration** in `next.config.ts` to bypass ad blockers
 - **Error tracking** enabled via `capture_exceptions: true`
