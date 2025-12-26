@@ -22,7 +22,7 @@ pnpm db:studio    # Open Drizzle Studio
 
 ## Key Rules
 
-- Always read ARCHITECTURE.md before major changes
+- Always read `docs/ARCHITECTURE.md` before major changes
 - Use async/await for params, searchParams, cookies, headers (Next.js 16)
 - Server Components by default, only add "use client" when needed
 - Tools render results directly in UI - keep AI responses brief after tool calls

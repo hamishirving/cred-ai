@@ -1,65 +1,45 @@
 # Tool Template
 
-Copy-paste starter for adding new tools.
+Copy-paste starter for adding new AI tools.
 
-## 1. Tool File
+## 1. Create Tool Definition
 
 ```typescript
 // lib/ai/tools/get-{entity}.ts
 import { tool } from "ai";
 import { z } from "zod";
-
-const API_BASE = process.env.BACKEND_API_URL;
-
-// Define your response type
-interface EntityData {
-  id: string;
-  name: string;
-  // ... other fields
-}
+import { getEntityById, isApiError } from "@/lib/api/credentially-client";
+import type { EntityDto } from "@/lib/api/types";
 
 export const getEntity = tool({
-  // This description is what the AI uses to decide when to call this tool
-  // Be specific and include example use cases
-  description: `
-    Get entity information. Use this when the user asks about:
-    - Entity details or info
-    - Looking up an entity by ID
-    - Searching for entities
-  `,
-  
-  // Zod schema for inputs - AI will extract these from the user's message
+  description: `Get entity information.
+Use this when the user asks about:
+- Entity details or info
+- Looking up an entity by ID
+- Searching for entities`,
+
   inputSchema: z.object({
     entityId: z.string().describe("The entity ID to look up").optional(),
     searchTerm: z.string().describe("Search term to find entities").optional(),
   }),
-  
-  // The actual API call
-  execute: async ({ entityId, searchTerm }): Promise<EntityData | EntityData[] | { error: string }> => {
-    try {
-      const endpoint = entityId
-        ? `${API_BASE}/entities/${entityId}`
-        : `${API_BASE}/entities/search?q=${encodeURIComponent(searchTerm ?? "")}`;
 
-      const res = await fetch(endpoint, {
-        headers: {
-          Authorization: `Bearer ${process.env.BACKEND_API_KEY}`,
-        },
-      });
-
-      if (!res.ok) {
-        return { error: `API returned ${res.status}` };
-      }
-
-      return res.json();
-    } catch (error) {
-      return { error: String(error) };
+  execute: async ({ entityId, searchTerm }): Promise<{ data: EntityDto } | { error: string }> => {
+    if (!entityId && !searchTerm) {
+      return { error: "Please provide an entity ID or search term" };
     }
+
+    const result = await getEntityById(entityId);
+
+    if (isApiError(result)) {
+      return { error: result.error };
+    }
+
+    return { data: result };
   },
 });
 ```
 
-## 2. Register Tool
+## 2. Register Tool in Chat Route
 
 In `app/(chat)/api/chat/route.ts`:
 
@@ -67,96 +47,99 @@ In `app/(chat)/api/chat/route.ts`:
 // Add import
 import { getEntity } from "@/lib/ai/tools/get-entity";
 
-// Add to tools object (~line 197)
+// Add to tools object
 tools: {
-  getWeather,
-  getEntity,  // ← add
-  // ...
+  getEntity,
+  // ...existing tools
 },
 
-// Add to experimental_activeTools (~line 191)
+// Add to experimental_activeTools array
 experimental_activeTools: [
-  "getWeather",
-  "getEntity",  // ← add
+  "getEntity",
+  // ...existing tools
 ],
 ```
 
-## 3. UI Component
+## 3. Create Tool Handler
+
+```tsx
+// components/tool-handlers/handlers/entity-tool.tsx
+import { ToolLoading } from "../tool-renderer";
+import { EntityCard } from "@/components/entity-card";
+import type { ToolHandlerProps } from "../types";
+import type { EntityDto } from "@/lib/api/types";
+
+interface EntityOutput {
+  data?: EntityDto;
+  error?: string;
+}
+
+export function EntityTool({
+  toolCallId,
+  state,
+  input,
+  output,
+}: ToolHandlerProps<unknown, EntityOutput>) {
+  // Show loading while running
+  if (!output) {
+    return (
+      <ToolLoading
+        toolCallId={toolCallId}
+        toolName="Get Entity"
+        state={state}
+        input={input}
+      />
+    );
+  }
+
+  // Handle error
+  if (output.error) {
+    return <div className="text-destructive">Error: {output.error}</div>;
+  }
+
+  // Render result directly (no wrapper)
+  if (output.data) {
+    return <EntityCard entity={output.data} />;
+  }
+
+  return null;
+}
+```
+
+## 4. Register Handler
+
+In `components/tool-handlers/index.tsx`:
+
+```typescript
+import { EntityTool } from "./handlers/entity-tool";
+
+const toolRegistry: Record<string, ToolHandler> = {
+  "tool-getEntity": EntityTool as ToolHandler,
+  // ...existing handlers
+};
+```
+
+## 5. Create UI Component
 
 ```tsx
 // components/entity-card.tsx
-interface EntityData {
-  id: string;
-  name: string;
-}
+import type { EntityDto } from "@/lib/api/types";
 
-export function EntityCard({ entity }: { entity: EntityData }) {
+export function EntityCard({ entity }: { entity: EntityDto }) {
   return (
     <div className="rounded-xl border bg-card p-4 shadow-sm">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-lg">{entity.name}</h3>
-        <span className="text-muted-foreground text-sm">#{entity.id}</span>
-      </div>
-      {/* Add more fields as needed */}
-    </div>
-  );
-}
-
-// For arrays
-export function EntityList({ entities }: { entities: EntityData[] }) {
-  return (
-    <div className="space-y-2">
-      {entities.map((entity) => (
-        <EntityCard key={entity.id} entity={entity} />
-      ))}
+      <h3 className="font-semibold text-lg">{entity.name}</h3>
+      <p className="text-muted-foreground text-sm">{entity.description}</p>
     </div>
   );
 }
 ```
 
-## 4. Wire Up in Message Component
+## Checklist
 
-In `components/message.tsx`, add inside the `message.parts?.map()` block:
-
-```tsx
-if (type === "tool-getEntity") {
-  const { toolCallId, state } = part;
-
-  return (
-    <Tool defaultOpen={true} key={toolCallId}>
-      <ToolHeader state={state} type="tool-getEntity" />
-      <ToolContent>
-        {state === "input-available" && (
-          <ToolInput input={part.input} />
-        )}
-        {state === "output-available" && (
-          <ToolOutput
-            errorText={undefined}
-            output={
-              "error" in part.output ? (
-                <div className="text-red-500">
-                  Error: {String(part.output.error)}
-                </div>
-              ) : Array.isArray(part.output) ? (
-                <EntityList entities={part.output} />
-              ) : (
-                <EntityCard entity={part.output} />
-              )
-            }
-          />
-        )}
-      </ToolContent>
-    </Tool>
-  );
-}
-```
-
-## 5. Test Prompts
-
-After implementation, test with:
-
-- "Show me entity ABC123"
-- "Find entities named X"
-- "What's the info on [entity]?"
-
-The AI should automatically route to your tool.
+- [ ] Tool definition in `lib/ai/tools/`
+- [ ] Registered in `chat/route.ts` (tools + activeTools)
+- [ ] Handler in `components/tool-handlers/handlers/`
+- [ ] Handler registered in `components/tool-handlers/index.tsx`
+- [ ] UI component for rendering data
+- [ ] Update system prompt in `lib/ai/prompts.ts` if needed
