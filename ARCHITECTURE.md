@@ -39,7 +39,6 @@ artifacts/              # Artifact type implementations (code, text, etc.)
 hooks/                  # Custom React hooks
 tests/                  # E2E, route, and unit tests
 proxy.ts                # Network proxy (replaces middleware in Next.js 16)
-instrumentation-client.ts  # Client-side instrumentation (PostHog)
 ```
 
 ### Key Conventions
@@ -162,19 +161,31 @@ export default function Page() {
 }
 ```
 
-### Client-Side Instrumentation
+### Client-Side Analytics
 
-Use `instrumentation-client.ts` for client-side initialization (analytics, error tracking):
+Use a provider component that initializes after mount to avoid hydration issues:
 
-```ts
-// instrumentation-client.ts
-import posthog from 'posthog-js';
+```tsx
+// components/posthog-provider.tsx
+"use client";
 
-posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-  api_host: '/ingest',
-  capture_exceptions: true,
-});
+import posthog from "posthog-js";
+import { PostHogProvider as PHProvider } from "posthog-js/react";
+import { useEffect } from "react";
+
+export function PostHogProvider({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+      api_host: "/ingest",
+      capture_pageview: false, // Capture manually on route change
+    });
+  }, []);
+
+  return <PHProvider client={posthog}>{children}</PHProvider>;
+}
 ```
+
+Add to root layout inside ThemeProvider. See `components/posthog-provider.tsx` for full implementation.
 
 ---
 

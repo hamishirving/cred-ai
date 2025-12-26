@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Suspense } from "react";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/components/auth-provider";
+import { PostHogProvider } from "@/components/posthog-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 
 import "./globals.css";
@@ -73,17 +74,19 @@ export default function RootLayout({
 					}}
 				/>
 			</head>
-			<body className="antialiased">
+			<body className="antialiased" suppressHydrationWarning>
 				<ThemeProvider
 					attribute="class"
 					defaultTheme="system"
 					disableTransitionOnChange
 					enableSystem
 				>
-					<Toaster position="top-center" />
-					<Suspense fallback={null}>
-						<AuthProvider>{children}</AuthProvider>
-					</Suspense>
+					<PostHogProvider>
+						<Toaster position="top-center" />
+						<Suspense fallback={null}>
+							<AuthProvider>{children}</AuthProvider>
+						</Suspense>
+					</PostHogProvider>
 				</ThemeProvider>
 			</body>
 		</html>

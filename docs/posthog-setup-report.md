@@ -1,11 +1,15 @@
-# PostHog post-wizard report
+# PostHog Setup Report
 
-The wizard has completed a deep integration of your Next.js AI chatbot application. PostHog has been configured using the recommended Next.js 15.3+ approach with `instrumentation-client.ts` for client-side initialization and `posthog-node` for server-side tracking. The integration includes:
+PostHog integration for this Next.js 16 application.
 
-- **Client-side analytics** via `instrumentation-client.ts` with automatic pageview tracking, error capturing, and session recording enabled
+**Note**: The original `instrumentation-client.ts` approach caused hydration issues with next-themes. Switched to a provider-based approach that initializes PostHog after mount via `useEffect`.
+
+The integration includes:
+
+- **Client-side analytics** via `PostHogProvider` component with manual pageview tracking on route changes
 - **Server-side event tracking** for authentication flows using `posthog-node`
 - **User identification** both client-side (via Supabase auth state changes) and server-side (during sign-up/sign-in)
-- **Reverse proxy configuration** in `next.config.ts` to bypass ad blockers and improve data collection reliability
+- **Reverse proxy configuration** in `next.config.ts` to bypass ad blockers
 - **Error tracking** enabled via `capture_exceptions: true`
 
 ## Events Tracked
@@ -30,7 +34,7 @@ The wizard has completed a deep integration of your Next.js AI chatbot applicati
 | File | Purpose |
 |------|---------|
 | `.env` | PostHog API key and host environment variables |
-| `instrumentation-client.ts` | Client-side PostHog initialization |
+| `components/posthog-provider.tsx` | Client-side PostHog initialization and pageview tracking |
 | `lib/posthog-server.ts` | Server-side PostHog client singleton |
 | `next.config.ts` | Reverse proxy rewrites for PostHog |
 | `app/(auth)/actions.ts` | Server-side sign-up/sign-in tracking |
