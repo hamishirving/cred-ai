@@ -7,10 +7,10 @@ import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { BackendResponse } from "./backend-response";
-import { CustomerCard, CustomerList } from "./customer";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
+import { DocumentsTable } from "./documents-table";
 import { DynamicForm } from "./dynamic-form";
 import { MessageContent } from "./elements/message";
 import { Response } from "./elements/response";
@@ -28,7 +28,6 @@ import { MessageEditor } from "./message-editor";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
 import { ProfileCard } from "./profile-card";
-import { Weather } from "./weather";
 
 const PurePreviewMessage = ({
 	chatId,
@@ -170,58 +169,6 @@ const PurePreviewMessage = ({
 							}
 						}
 
-						if (type === "tool-getWeather") {
-							const { toolCallId, state } = part;
-
-							return (
-								<Tool defaultOpen={true} key={toolCallId}>
-									<ToolHeader state={state} type="tool-getWeather" />
-									<ToolContent>
-										{state === "input-available" && (
-											<ToolInput input={part.input} />
-										)}
-										{state === "output-available" && (
-											<ToolOutput
-												errorText={undefined}
-												output={<Weather weatherAtLocation={part.output} />}
-											/>
-										)}
-									</ToolContent>
-								</Tool>
-							);
-						}
-
-						if (type === "tool-getCustomer") {
-							const { toolCallId, state } = part;
-
-							return (
-								<Tool defaultOpen={true} key={toolCallId}>
-									<ToolHeader state={state} type="tool-getCustomer" />
-									<ToolContent>
-										{state === "input-available" && (
-											<ToolInput input={part.input} />
-										)}
-										{state === "output-available" && (
-											<ToolOutput
-												errorText={undefined}
-												output={
-													"error" in part.output ? (
-														<div className="text-red-500">
-															{String(part.output.error)}
-														</div>
-													) : Array.isArray(part.output) ? (
-														<CustomerList customers={part.output} />
-													) : (
-														<CustomerCard customer={part.output} />
-													)
-												}
-											/>
-										)}
-									</ToolContent>
-								</Tool>
-							);
-						}
-
 						if (type === "tool-queryDataAgent") {
 							const { toolCallId, state } = part;
 
@@ -243,7 +190,7 @@ const PurePreviewMessage = ({
 							);
 						}
 
-						if (type === "tool-lookupProfile") {
+						if (type === "tool-getProfile") {
 							const { toolCallId } = part;
 
 							if (part.output && "error" in part.output) {
@@ -260,6 +207,29 @@ const PurePreviewMessage = ({
 							if (part.output && "data" in part.output) {
 								return (
 									<ProfileCard key={toolCallId} profile={part.output.data} />
+								);
+							}
+
+							return null;
+						}
+
+						if (type === "tool-getDocuments") {
+							const { toolCallId } = part;
+
+							if (part.output && "error" in part.output) {
+								return (
+									<div
+										className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 dark:bg-red-950/50"
+										key={toolCallId}
+									>
+										Error fetching documents: {String(part.output.error)}
+									</div>
+								);
+							}
+
+							if (part.output && "data" in part.output) {
+								return (
+									<DocumentsTable documents={part.output.data} key={toolCallId} />
 								);
 							}
 

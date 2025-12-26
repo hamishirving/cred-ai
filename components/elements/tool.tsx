@@ -23,7 +23,10 @@ export type ToolProps = ComponentProps<typeof Collapsible>;
 
 export const Tool = ({ className, ...props }: ToolProps) => (
 	<Collapsible
-		className={cn("not-prose mb-4 w-full rounded-md border", className)}
+		className={cn(
+			"not-prose mb-4 w-full rounded-md border transition-all",
+			className,
+		)}
 		{...props}
 	/>
 );
@@ -47,7 +50,7 @@ const getStatusBadge = (status: ToolUIPart["state"]) => {
 
 	const icons = {
 		"input-streaming": <CircleIcon className="size-4" />,
-		"input-available": <ClockIcon className="size-4 animate-pulse" />,
+		"input-available": <ClockIcon className="size-4 animate-spin" />,
 		"approval-requested": <ClockIcon className="size-4 text-yellow-600" />,
 		"approval-responded": <CheckCircleIcon className="size-4 text-blue-600" />,
 		"output-available": <CheckCircleIcon className="size-4 text-green-600" />,
@@ -55,13 +58,18 @@ const getStatusBadge = (status: ToolUIPart["state"]) => {
 		"output-denied": <XCircleIcon className="size-4 text-orange-600" />,
 	} as const;
 
+	const isRunning = status === "input-available";
+
 	return (
 		<Badge
-			className="flex items-center gap-1 rounded-full text-xs"
-			variant="secondary"
+			className={cn(
+				"flex items-center gap-1 rounded-full text-xs",
+				isRunning && "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+			)}
+			variant={isRunning ? "default" : "secondary"}
 		>
 			{icons[status]}
-			<span>{labels[status]}</span>
+			<span className={cn(isRunning && "font-semibold")}>{labels[status]}</span>
 		</Badge>
 	);
 };
@@ -71,24 +79,34 @@ export const ToolHeader = ({
 	type,
 	state,
 	...props
-}: ToolHeaderProps) => (
-	<CollapsibleTrigger
-		className={cn(
-			"flex w-full min-w-0 items-center justify-between gap-2 p-3",
-			className,
-		)}
-		{...props}
-	>
-		<div className="flex min-w-0 flex-1 items-center gap-2">
-			<WrenchIcon className="size-4 shrink-0 text-muted-foreground" />
-			<span className="truncate font-medium text-sm">{type}</span>
-		</div>
-		<div className="flex shrink-0 items-center gap-2">
-			{getStatusBadge(state)}
-			<ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-		</div>
-	</CollapsibleTrigger>
-);
+}: ToolHeaderProps) => {
+	const isRunning = state === "input-available";
+
+	return (
+		<CollapsibleTrigger
+			className={cn(
+				"flex w-full min-w-0 items-center justify-between gap-2 p-3 transition-colors",
+				isRunning && "bg-blue-50/50 dark:bg-blue-950/20",
+				className,
+			)}
+			{...props}
+		>
+			<div className="flex min-w-0 flex-1 items-center gap-2">
+				<WrenchIcon
+					className={cn(
+						"size-4 shrink-0 text-muted-foreground",
+						isRunning && "text-blue-600 dark:text-blue-400",
+					)}
+				/>
+				<span className="truncate font-medium text-sm">{type}</span>
+			</div>
+			<div className="flex shrink-0 items-center gap-2">
+				{getStatusBadge(state)}
+				<ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+			</div>
+		</CollapsibleTrigger>
+	);
+};
 
 export type ToolContentProps = ComponentProps<typeof CollapsibleContent>;
 

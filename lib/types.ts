@@ -4,11 +4,9 @@ import type { ArtifactKind } from "@/components/artifact";
 import type { createDocument } from "./ai/tools/create-document";
 import type { createForm } from "./ai/tools/create-form";
 import type { draftEmail } from "./ai/tools/draft-email";
-import type { getCustomer } from "./ai/tools/get-customer";
 import type { getMetadata } from "./ai/tools/get-org-metadata";
 import type { getDocuments } from "./ai/tools/get-profile-documents";
-import type { getWeather } from "./ai/tools/get-weather";
-import type { lookupProfile } from "./ai/tools/lookup-profile";
+import type { getProfile } from "./ai/tools/get-profile";
 import type { manageProfile } from "./ai/tools/manage-profile";
 import type { queryDataAgent } from "./ai/tools/query-data-agent";
 import type { requestSuggestions } from "./ai/tools/request-suggestions";
@@ -24,10 +22,8 @@ export const messageMetadataSchema = z.object({
 
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 
-type weatherTool = InferUITool<typeof getWeather>;
-type customerTool = InferUITool<typeof getCustomer>;
 type queryDataAgentTool = InferUITool<typeof queryDataAgent>;
-type lookupProfileTool = InferUITool<typeof lookupProfile>;
+type getProfileTool = InferUITool<typeof getProfile>;
 type getDocumentsTool = InferUITool<typeof getDocuments>;
 type getMetadataTool = InferUITool<typeof getMetadata>;
 type manageProfileTool = InferUITool<typeof manageProfile>;
@@ -40,10 +36,8 @@ type requestSuggestionsTool = InferUITool<
 >;
 
 export type ChatTools = {
-	getWeather: weatherTool;
-	getCustomer: customerTool;
 	queryDataAgent: queryDataAgentTool;
-	lookupProfile: lookupProfileTool;
+	getProfile: getProfileTool;
 	getDocuments: getDocumentsTool;
 	getMetadata: getMetadataTool;
 	manageProfile: manageProfileTool;

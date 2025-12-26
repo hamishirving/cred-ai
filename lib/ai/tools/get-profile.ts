@@ -7,7 +7,7 @@ import {
 } from "@/lib/api/credentially-client";
 import type { ProfileDto } from "@/lib/api/types";
 
-export const lookupProfile = tool({
+export const getProfile = tool({
 	description: `Look up an employee profile from the Credentially system.
 Use this tool when the user asks about:
 - Finding an employee by email or name
@@ -33,7 +33,7 @@ Provide either an email address OR a profile ID. Email search is most common.`,
 		email,
 		profileId,
 	}): Promise<{ data: ProfileDto } | { error: string }> => {
-		console.log("[lookupProfile] Input:", { email, profileId });
+		console.log("[getProfile] Input:", { email, profileId });
 
 		// Validate input
 		if (!email && !profileId) {
@@ -51,10 +51,10 @@ Provide either an email address OR a profile ID. Email search is most common.`,
 		// Perform lookup
 		let result;
 		if (email) {
-			console.log(`[lookupProfile] Looking up by email: ${email}`);
+			console.log(`[getProfile] Looking up by email: ${email}`);
 			result = await getProfileByEmail(email);
 		} else if (profileId) {
-			console.log(`[lookupProfile] Looking up by ID: ${profileId}`);
+			console.log(`[getProfile] Looking up by ID: ${profileId}`);
 			result = await getProfileById(profileId);
 		} else {
 			return { error: "Either email or profileId must be provided" };

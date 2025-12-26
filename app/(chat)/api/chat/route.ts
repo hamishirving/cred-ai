@@ -20,11 +20,9 @@ import { myProvider } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { createForm } from "@/lib/ai/tools/create-form";
 import { draftEmail } from "@/lib/ai/tools/draft-email";
-import { getCustomer } from "@/lib/ai/tools/get-customer";
 import { getMetadata } from "@/lib/ai/tools/get-org-metadata";
 import { getDocuments } from "@/lib/ai/tools/get-profile-documents";
-import { getWeather } from "@/lib/ai/tools/get-weather";
-import { lookupProfile } from "@/lib/ai/tools/lookup-profile";
+import { getProfile } from "@/lib/ai/tools/get-profile";
 import { manageProfile } from "@/lib/ai/tools/manage-profile";
 import { queryDataAgent } from "@/lib/ai/tools/query-data-agent";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
@@ -170,10 +168,8 @@ export async function POST(request: Request) {
 						selectedChatModel === "chat-model-reasoning"
 							? []
 							: [
-									"getWeather",
-									"getCustomer",
 									"queryDataAgent",
-									"lookupProfile",
+									"getProfile",
 									"getDocuments",
 									"getMetadata",
 									"manageProfile",
@@ -185,10 +181,8 @@ export async function POST(request: Request) {
 								],
 					experimental_transform: smoothStream({ chunking: "word" }),
 					tools: {
-						getWeather,
-						getCustomer,
 						queryDataAgent,
-						lookupProfile,
+						getProfile,
 						getDocuments,
 						getMetadata,
 						manageProfile,

@@ -12,7 +12,7 @@ Use this tool when the user asks about:
 - OCR extracted fields from documents
 - Document verification status and history
 
-Requires the profile ID (can be obtained from lookupProfile tool first).`,
+Requires the profile ID (can be obtained from getProfile tool first).`,
 
 	inputSchema: z.object({
 		profileId: z
