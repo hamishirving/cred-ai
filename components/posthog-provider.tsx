@@ -13,7 +13,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
 			capture_pageview: false, // We capture manually below
 			capture_pageleave: true,
 			capture_exceptions: true,
-			debug: process.env.NODE_ENV === "development",
+			debug: false, // Set to true if you need to debug PostHog
 		});
 	}, []);
 

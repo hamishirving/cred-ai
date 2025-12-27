@@ -1,0 +1,157 @@
+{
+  "candidates": [
+    {
+      "id": "cand-001",
+      "candidateName": "Sarah Mitchell",
+      "currentApplication": {
+        "jobTitle": "Senior Staff Nurse",
+        "companyName": "Royal London Hospital NHS Trust",
+        "applicationDate": "2025-10-15"
+      },
+      "workHistory": [
+        {
+          "id": "work-001-1",
+          "companyName": "Manchester Royal Infirmary",
+          "jobTitle": "Staff Nurse - Acute Medicine",
+          "employmentType": "full-time",
+          "startDate": "2023-03-01",
+          "endDate": "2025-09-30",
+          "responsibilities": "Patient care and assessment, medication administration, clinical documentation, mentoring junior staff",
+          "referenceContact": {
+            "name": "Sister Jane Thompson",
+            "phoneNumber": "+447780781414",
+            "relationship": "Ward Manager",
+            "email": "j.thompson@mft.nhs.uk"
+          }
+        },
+        {
+          "id": "work-001-2",
+          "companyName": "Salford Royal Hospital",
+          "jobTitle": "Registered Nurse - Emergency Department",
+          "employmentType": "full-time",
+          "startDate": "2021-06-15",
+          "endDate": "2023-02-28",
+          "responsibilities": "Emergency triage, acute patient care, trauma response, IV therapy administration",
+          "referenceContact": {
+            "name": "Dr. Emma Richardson",
+            "phoneNumber": "+447780781414",
+            "relationship": "Clinical Lead",
+            "email": "e.richardson@srft.nhs.uk"
+          }
+        },
+        {
+          "id": "work-001-3",
+          "companyName": "Stepping Hill Hospital",
+          "jobTitle": "Healthcare Assistant",
+          "employmentType": "part-time",
+          "startDate": "2020-09-01",
+          "endDate": "2021-05-31",
+          "responsibilities": "Patient observations, personal care, mobility assistance, clinical support duties",
+          "referenceContact": null
+        }
+      ]
+    },
+    {
+      "id": "cand-002",
+      "candidateName": "Dr. Marcus Thompson",
+      "currentApplication": {
+        "jobTitle": "Consultant Physician",
+        "companyName": "Birmingham University Hospitals NHS Trust",
+        "applicationDate": "2025-10-20"
+      },
+      "workHistory": [
+        {
+          "id": "work-002-1",
+          "companyName": "Leeds Teaching Hospitals NHS Trust",
+          "jobTitle": "Specialty Doctor - General Medicine",
+          "employmentType": "full-time",
+          "startDate": "2022-01-10",
+          "endDate": "2025-10-01",
+          "responsibilities": "Ward rounds, patient diagnosis and treatment, clinical audits, medical education and supervision",
+          "referenceContact": {
+            "name": "Dr. Priya Sharma",
+            "phoneNumber": "+447780781414",
+            "relationship": "Clinical Director",
+            "email": "p.sharma@lth.nhs.uk"
+          }
+        },
+        {
+          "id": "work-002-2",
+          "companyName": "Sheffield Teaching Hospitals",
+          "jobTitle": "Core Medical Trainee",
+          "employmentType": "full-time",
+          "startDate": "2019-08-01",
+          "endDate": "2021-12-20",
+          "responsibilities": "Acute medical admissions, patient management, clinical procedures, on-call duties",
+          "referenceContact": {
+            "name": "Dr. Robert Williams",
+            "phoneNumber": "+447780781414",
+            "relationship": "Training Programme Director",
+            "email": "r.williams@sth.nhs.uk"
+          }
+        },
+        {
+          "id": "work-002-3",
+          "companyName": "Nottingham University Hospitals",
+          "jobTitle": "Foundation Year Doctor",
+          "employmentType": "contract",
+          "startDate": "2018-08-01",
+          "endDate": "2019-07-31",
+          "responsibilities": "Clinical rotations, patient assessments, treatment plans, multidisciplinary team collaboration",
+          "referenceContact": null
+        }
+      ]
+    },
+    {
+      "id": "cand-003",
+      "candidateName": "Aisha Patel",
+      "currentApplication": {
+        "jobTitle": "Lead Healthcare Assistant",
+        "companyName": "Bupa Cromwell Hospital",
+        "applicationDate": "2025-10-18"
+      },
+      "workHistory": [
+        {
+          "id": "work-003-1",
+          "companyName": "Guy's and St Thomas' NHS Trust",
+          "jobTitle": "Senior Healthcare Assistant - Cardiology",
+          "employmentType": "full-time",
+          "startDate": "2021-11-01",
+          "endDate": "2025-09-15",
+          "responsibilities": "Patient vital signs monitoring, ECG recording, phlebotomy, post-operative care, team supervision",
+          "referenceContact": {
+            "name": "Sister Sophie Chen",
+            "phoneNumber": "+447780781414",
+            "relationship": "Senior Sister",
+            "email": "s.chen@gstt.nhs.uk"
+          }
+        },
+        {
+          "id": "work-003-2",
+          "companyName": "King's College Hospital",
+          "jobTitle": "Healthcare Assistant - Surgical Ward",
+          "employmentType": "full-time",
+          "startDate": "2019-02-01",
+          "endDate": "2021-10-31",
+          "responsibilities": "Pre and post-operative patient care, wound dressing, infection control, patient mobility support",
+          "referenceContact": {
+            "name": "Charge Nurse Michael O'Brien",
+            "phoneNumber": "+447780781414",
+            "relationship": "Ward Manager",
+            "email": "m.obrien@kch.nhs.uk"
+          }
+        },
+        {
+          "id": "work-003-3",
+          "companyName": "Lewisham Hospital",
+          "jobTitle": "Care Support Worker",
+          "employmentType": "part-time",
+          "startDate": "2017-09-01",
+          "endDate": "2019-01-31",
+          "responsibilities": "Patient personal care, feeding assistance, bed making, clinical observations",
+          "referenceContact": null
+        }
+      ]
+    }
+  ]
+}

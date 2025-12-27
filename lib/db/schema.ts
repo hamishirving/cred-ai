@@ -2,6 +2,7 @@ import type { InferSelectModel } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
+	integer,
 	json,
 	jsonb,
 	pgTable,
@@ -12,6 +13,12 @@ import {
 	varchar,
 } from "drizzle-orm/pg-core";
 import type { AppUsage } from "../usage";
+import type {
+	TranscriptMessage,
+	VoiceCallOutcome,
+	VoiceCallStatus,
+	FieldSchema,
+} from "../voice/types";
 
 export const user = pgTable("User", {
 	id: uuid("id").primaryKey().notNull().defaultRandom(),
@@ -170,3 +177,83 @@ export const stream = pgTable(
 );
 
 export type Stream = InferSelectModel<typeof stream>;
+
+// ============================================
+// Voice Tables
+// ============================================
+
+/**
+ * Voice call templates define reusable call configurations.
+ * Each template specifies the agent behavior, data to capture,
+ * and can be associated with a VAPI assistant.
+ *
+ * For MVP, templates are defined in code (lib/voice/templates.ts).
+ * This table supports future dynamic template creation.
+ */
+export const voiceTemplate = pgTable("VoiceTemplate", {
+	id: uuid("id").primaryKey().notNull().defaultRandom(),
+	slug: text("slug").notNull().unique(),
+	name: text("name").notNull(),
+	description: text("description"),
+
+	// Agent configuration
+	systemPrompt: text("systemPrompt"),
+	vapiAssistantId: text("vapiAssistantId"),
+
+	// Schema definitions (JSON)
+	contextSchema: jsonb("contextSchema").$type<FieldSchema[]>(),
+	captureSchema: jsonb("captureSchema").$type<FieldSchema[]>(),
+
+	// Ownership & status
+	userId: uuid("userId").references(() => user.id),
+	isActive: boolean("isActive").notNull().default(true),
+
+	createdAt: timestamp("createdAt").notNull().defaultNow(),
+	updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export type VoiceTemplate = InferSelectModel<typeof voiceTemplate>;
+
+/**
+ * Voice calls represent individual call instances.
+ * Generic structure supports any template/use case.
+ */
+export const voiceCall = pgTable("VoiceCall", {
+	id: uuid("id").primaryKey().notNull().defaultRandom(),
+
+	// Relationships
+	userId: uuid("userId")
+		.notNull()
+		.references(() => user.id),
+	templateId: uuid("templateId").references(() => voiceTemplate.id),
+	templateSlug: text("templateSlug").notNull(),
+
+	// Call target
+	phoneNumber: text("phoneNumber").notNull(),
+	recipientName: text("recipientName"),
+
+	// Dynamic data (schema defined by template)
+	context: jsonb("context").$type<Record<string, unknown>>().notNull(),
+	capturedData: jsonb("capturedData").$type<Record<string, unknown>>(),
+
+	// VAPI integration
+	vapiCallId: text("vapiCallId").unique(),
+	vapiAssistantId: text("vapiAssistantId"),
+
+	// Status tracking
+	status: text("status").$type<VoiceCallStatus>().notNull().default("pending"),
+
+	// Results (populated when call ends)
+	recordingUrl: text("recordingUrl"),
+	transcript: jsonb("transcript").$type<TranscriptMessage[]>(),
+	duration: integer("duration"),
+	outcome: text("outcome").$type<VoiceCallOutcome>(),
+
+	// Timestamps
+	createdAt: timestamp("createdAt").notNull().defaultNow(),
+	scheduledAt: timestamp("scheduledAt"),
+	startedAt: timestamp("startedAt"),
+	endedAt: timestamp("endedAt"),
+});
+
+export type VoiceCall = InferSelectModel<typeof voiceCall>;

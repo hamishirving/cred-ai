@@ -10,6 +10,7 @@ import {
 	gte,
 	inArray,
 	lt,
+	lte,
 	type SQL,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -31,7 +32,14 @@ import {
 	type User,
 	user,
 	vote,
+	type VoiceCall,
+	voiceCall,
 } from "./schema";
+import type {
+	TranscriptMessage,
+	VoiceCallStatus,
+	VoiceCallOutcome,
+} from "../voice/types";
 
 // biome-ignore lint: Forbidden non-null assertion.
 const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
@@ -553,6 +561,271 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
 		throw new ChatSDKError(
 			"bad_request:database",
 			"Failed to get stream ids by chat id",
+		);
+	}
+}
+
+// ============================================
+// Voice Call Queries
+// ============================================
+
+export interface CreateVoiceCallParams {
+	userId: string;
+	templateSlug: string;
+	phoneNumber: string;
+	recipientName?: string;
+	context: Record<string, unknown>;
+	vapiAssistantId?: string;
+}
+
+export async function createVoiceCall(
+	params: CreateVoiceCallParams,
+): Promise<VoiceCall> {
+	try {
+		const [result] = await db
+			.insert(voiceCall)
+			.values({
+				userId: params.userId,
+				templateSlug: params.templateSlug,
+				phoneNumber: params.phoneNumber,
+				recipientName: params.recipientName,
+				context: params.context,
+				vapiAssistantId: params.vapiAssistantId,
+				status: "pending",
+			})
+			.returning();
+
+		return result;
+	} catch (error) {
+		console.error("Failed to create voice call:", error);
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to create voice call",
+		);
+	}
+}
+
+export async function getVoiceCallById({
+	id,
+	userId,
+}: {
+	id: string;
+	userId: string;
+}): Promise<VoiceCall | null> {
+	try {
+		const [result] = await db
+			.select()
+			.from(voiceCall)
+			.where(and(eq(voiceCall.id, id), eq(voiceCall.userId, userId)));
+
+		return result || null;
+	} catch (_error) {
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to get voice call by id",
+		);
+	}
+}
+
+export async function getVoiceCallByVapiId({
+	vapiCallId,
+}: {
+	vapiCallId: string;
+}): Promise<VoiceCall | null> {
+	try {
+		const [result] = await db
+			.select()
+			.from(voiceCall)
+			.where(eq(voiceCall.vapiCallId, vapiCallId));
+
+		return result || null;
+	} catch (_error) {
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to get voice call by VAPI id",
+		);
+	}
+}
+
+export interface UpdateVoiceCallParams {
+	vapiCallId?: string;
+	status?: VoiceCallStatus;
+	outcome?: VoiceCallOutcome;
+	recordingUrl?: string;
+	transcript?: TranscriptMessage[];
+	capturedData?: Record<string, unknown>;
+	duration?: number;
+	startedAt?: Date;
+	endedAt?: Date;
+}
+
+export async function updateVoiceCall({
+	id,
+	...data
+}: UpdateVoiceCallParams & { id: string }): Promise<VoiceCall | null> {
+	try {
+		const [result] = await db
+			.update(voiceCall)
+			.set(data)
+			.where(eq(voiceCall.id, id))
+			.returning();
+
+		return result || null;
+	} catch (_error) {
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to update voice call",
+		);
+	}
+}
+
+export interface ListVoiceCallsParams {
+	userId: string;
+	templateSlug?: string;
+	status?: VoiceCallStatus;
+	from?: Date;
+	to?: Date;
+	limit?: number;
+	offset?: number;
+}
+
+export interface ListVoiceCallsResult {
+	calls: VoiceCall[];
+	total: number;
+}
+
+export async function listVoiceCalls(
+	params: ListVoiceCallsParams,
+): Promise<ListVoiceCallsResult> {
+	try {
+		const { userId, templateSlug, status, from, to, limit = 20, offset = 0 } = params;
+
+		// Build where conditions
+		const conditions: SQL<unknown>[] = [eq(voiceCall.userId, userId)];
+
+		if (templateSlug) {
+			conditions.push(eq(voiceCall.templateSlug, templateSlug));
+		}
+		if (status) {
+			conditions.push(eq(voiceCall.status, status));
+		}
+		if (from) {
+			conditions.push(gte(voiceCall.createdAt, from));
+		}
+		if (to) {
+			conditions.push(lte(voiceCall.createdAt, to));
+		}
+
+		const whereClause = and(...conditions);
+
+		// Get total count
+		const [countResult] = await db
+			.select({ count: count() })
+			.from(voiceCall)
+			.where(whereClause);
+
+		// Get paginated results
+		const calls = await db
+			.select()
+			.from(voiceCall)
+			.where(whereClause)
+			.orderBy(desc(voiceCall.createdAt))
+			.limit(limit)
+			.offset(offset);
+
+		return {
+			calls,
+			total: countResult?.count ?? 0,
+		};
+	} catch (_error) {
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to list voice calls",
+		);
+	}
+}
+
+export async function getRecentVoiceCalls({
+	userId,
+	limit = 5,
+}: {
+	userId: string;
+	limit?: number;
+}): Promise<VoiceCall[]> {
+	try {
+		return await db
+			.select()
+			.from(voiceCall)
+			.where(eq(voiceCall.userId, userId))
+			.orderBy(desc(voiceCall.createdAt))
+			.limit(limit);
+	} catch (_error) {
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to get recent voice calls",
+		);
+	}
+}
+
+export async function getVoiceCallStats({
+	userId,
+}: {
+	userId: string;
+}): Promise<{
+	total: number;
+	completed: number;
+	failed: number;
+	inProgress: number;
+}> {
+	try {
+		const [stats] = await db
+			.select({
+				total: count(),
+			})
+			.from(voiceCall)
+			.where(eq(voiceCall.userId, userId));
+
+		const [completed] = await db
+			.select({ count: count() })
+			.from(voiceCall)
+			.where(
+				and(
+					eq(voiceCall.userId, userId),
+					eq(voiceCall.status, "ended"),
+					eq(voiceCall.outcome, "completed"),
+				),
+			);
+
+		const [failed] = await db
+			.select({ count: count() })
+			.from(voiceCall)
+			.where(
+				and(
+					eq(voiceCall.userId, userId),
+					eq(voiceCall.outcome, "failed"),
+				),
+			);
+
+		const [inProgress] = await db
+			.select({ count: count() })
+			.from(voiceCall)
+			.where(
+				and(
+					eq(voiceCall.userId, userId),
+					inArray(voiceCall.status, ["pending", "queued", "ringing", "in-progress"]),
+				),
+			);
+
+		return {
+			total: stats?.total ?? 0,
+			completed: completed?.count ?? 0,
+			failed: failed?.count ?? 0,
+			inProgress: inProgress?.count ?? 0,
+		};
+	} catch (_error) {
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to get voice call stats",
 		);
 	}
 }
