@@ -1,8 +1,13 @@
+/**
+ * Chat & Voice tables - existing playground functionality.
+ *
+ * These tables support the AI chat and voice call features
+ * of the playground application.
+ */
 import type { InferSelectModel } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
-	integer,
 	json,
 	jsonb,
 	pgTable,
@@ -11,143 +16,104 @@ import {
 	timestamp,
 	uuid,
 	varchar,
+	integer,
 } from "drizzle-orm/pg-core";
-import type { AppUsage } from "../usage";
+import type { AppUsage } from "../../usage";
 import type {
 	TranscriptMessage,
 	VoiceCallOutcome,
 	VoiceCallStatus,
 	FieldSchema,
-} from "../voice/types";
+} from "../../voice/types";
 
-export const user = pgTable("User", {
+export const user = pgTable("users", {
 	id: uuid("id").primaryKey().notNull().defaultRandom(),
 	email: varchar("email", { length: 64 }).notNull(),
 });
 
 export type User = InferSelectModel<typeof user>;
 
-export const chat = pgTable("Chat", {
+export const chat = pgTable("chats", {
 	id: uuid("id").primaryKey().notNull().defaultRandom(),
-	createdAt: timestamp("createdAt").notNull(),
+	createdAt: timestamp("created_at").notNull(),
 	title: text("title").notNull(),
-	userId: uuid("userId")
+	userId: uuid("user_id")
 		.notNull()
 		.references(() => user.id),
 	visibility: varchar("visibility", { enum: ["public", "private"] })
 		.notNull()
 		.default("private"),
-	lastContext: jsonb("lastContext").$type<AppUsage | null>(),
+	lastContext: jsonb("last_context").$type<AppUsage | null>(),
 });
 
 export type Chat = InferSelectModel<typeof chat>;
 
-// DEPRECATED: The following schema is deprecated and will be removed in the future.
-// Read the migration guide at https://chat-sdk.dev/docs/migration-guides/message-parts
-export const messageDeprecated = pgTable("Message", {
+export const message = pgTable("messages", {
 	id: uuid("id").primaryKey().notNull().defaultRandom(),
-	chatId: uuid("chatId")
-		.notNull()
-		.references(() => chat.id),
-	role: varchar("role").notNull(),
-	content: json("content").notNull(),
-	createdAt: timestamp("createdAt").notNull(),
-});
-
-export type MessageDeprecated = InferSelectModel<typeof messageDeprecated>;
-
-export const message = pgTable("Message_v2", {
-	id: uuid("id").primaryKey().notNull().defaultRandom(),
-	chatId: uuid("chatId")
+	chatId: uuid("chat_id")
 		.notNull()
 		.references(() => chat.id),
 	role: varchar("role").notNull(),
 	parts: json("parts").notNull(),
 	attachments: json("attachments").notNull(),
-	createdAt: timestamp("createdAt").notNull(),
+	createdAt: timestamp("created_at").notNull(),
 });
 
 export type DBMessage = InferSelectModel<typeof message>;
 
-// DEPRECATED: The following schema is deprecated and will be removed in the future.
-// Read the migration guide at https://chat-sdk.dev/docs/migration-guides/message-parts
-export const voteDeprecated = pgTable(
-	"Vote",
-	{
-		chatId: uuid("chatId")
-			.notNull()
-			.references(() => chat.id),
-		messageId: uuid("messageId")
-			.notNull()
-			.references(() => messageDeprecated.id),
-		isUpvoted: boolean("isUpvoted").notNull(),
-	},
-	(table) => {
-		return {
-			pk: primaryKey({ columns: [table.chatId, table.messageId] }),
-		};
-	},
-);
-
-export type VoteDeprecated = InferSelectModel<typeof voteDeprecated>;
-
 export const vote = pgTable(
-	"Vote_v2",
+	"votes",
 	{
-		chatId: uuid("chatId")
+		chatId: uuid("chat_id")
 			.notNull()
 			.references(() => chat.id),
-		messageId: uuid("messageId")
+		messageId: uuid("message_id")
 			.notNull()
 			.references(() => message.id),
-		isUpvoted: boolean("isUpvoted").notNull(),
+		isUpvoted: boolean("is_upvoted").notNull(),
 	},
-	(table) => {
-		return {
-			pk: primaryKey({ columns: [table.chatId, table.messageId] }),
-		};
-	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.chatId, table.messageId] }),
+	}),
 );
 
 export type Vote = InferSelectModel<typeof vote>;
 
 export const document = pgTable(
-	"Document",
+	"documents",
 	{
 		id: uuid("id").notNull().defaultRandom(),
-		createdAt: timestamp("createdAt").notNull(),
+		createdAt: timestamp("created_at").notNull(),
 		title: text("title").notNull(),
 		content: text("content"),
-		kind: varchar("text", { enum: ["text", "code", "image", "sheet"] })
+		kind: varchar("kind", { enum: ["text", "code", "image", "sheet"] })
 			.notNull()
 			.default("text"),
-		userId: uuid("userId")
+		userId: uuid("user_id")
 			.notNull()
 			.references(() => user.id),
 	},
-	(table) => {
-		return {
-			pk: primaryKey({ columns: [table.id, table.createdAt] }),
-		};
-	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.id, table.createdAt] }),
+	}),
 );
 
 export type Document = InferSelectModel<typeof document>;
 
 export const suggestion = pgTable(
-	"Suggestion",
+	"suggestions",
 	{
 		id: uuid("id").notNull().defaultRandom(),
-		documentId: uuid("documentId").notNull(),
-		documentCreatedAt: timestamp("documentCreatedAt").notNull(),
-		originalText: text("originalText").notNull(),
-		suggestedText: text("suggestedText").notNull(),
+		documentId: uuid("document_id").notNull(),
+		documentCreatedAt: timestamp("document_created_at").notNull(),
+		originalText: text("original_text").notNull(),
+		suggestedText: text("suggested_text").notNull(),
 		description: text("description"),
-		isResolved: boolean("isResolved").notNull().default(false),
-		userId: uuid("userId")
+		isResolved: boolean("is_resolved").notNull().default(false),
+		userId: uuid("user_id")
 			.notNull()
 			.references(() => user.id),
-		createdAt: timestamp("createdAt").notNull(),
+		createdAt: timestamp("created_at").notNull(),
 	},
 	(table) => ({
 		pk: primaryKey({ columns: [table.id] }),
@@ -161,11 +127,11 @@ export const suggestion = pgTable(
 export type Suggestion = InferSelectModel<typeof suggestion>;
 
 export const stream = pgTable(
-	"Stream",
+	"streams",
 	{
 		id: uuid("id").notNull().defaultRandom(),
-		chatId: uuid("chatId").notNull(),
-		createdAt: timestamp("createdAt").notNull(),
+		chatId: uuid("chat_id").notNull(),
+		createdAt: timestamp("created_at").notNull(),
 	},
 	(table) => ({
 		pk: primaryKey({ columns: [table.id] }),
@@ -190,26 +156,26 @@ export type Stream = InferSelectModel<typeof stream>;
  * For MVP, templates are defined in code (lib/voice/templates.ts).
  * This table supports future dynamic template creation.
  */
-export const voiceTemplate = pgTable("VoiceTemplate", {
+export const voiceTemplate = pgTable("voice_templates", {
 	id: uuid("id").primaryKey().notNull().defaultRandom(),
 	slug: text("slug").notNull().unique(),
 	name: text("name").notNull(),
 	description: text("description"),
 
 	// Agent configuration
-	systemPrompt: text("systemPrompt"),
-	vapiAssistantId: text("vapiAssistantId"),
+	systemPrompt: text("system_prompt"),
+	vapiAssistantId: text("vapi_assistant_id"),
 
 	// Schema definitions (JSON)
-	contextSchema: jsonb("contextSchema").$type<FieldSchema[]>(),
-	captureSchema: jsonb("captureSchema").$type<FieldSchema[]>(),
+	contextSchema: jsonb("context_schema").$type<FieldSchema[]>(),
+	captureSchema: jsonb("capture_schema").$type<FieldSchema[]>(),
 
 	// Ownership & status
-	userId: uuid("userId").references(() => user.id),
-	isActive: boolean("isActive").notNull().default(true),
+	userId: uuid("user_id").references(() => user.id),
+	isActive: boolean("is_active").notNull().default(true),
 
-	createdAt: timestamp("createdAt").notNull().defaultNow(),
-	updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+	createdAt: timestamp("created_at").notNull().defaultNow(),
+	updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export type VoiceTemplate = InferSelectModel<typeof voiceTemplate>;
@@ -218,42 +184,42 @@ export type VoiceTemplate = InferSelectModel<typeof voiceTemplate>;
  * Voice calls represent individual call instances.
  * Generic structure supports any template/use case.
  */
-export const voiceCall = pgTable("VoiceCall", {
+export const voiceCall = pgTable("voice_calls", {
 	id: uuid("id").primaryKey().notNull().defaultRandom(),
 
 	// Relationships
-	userId: uuid("userId")
+	userId: uuid("user_id")
 		.notNull()
 		.references(() => user.id),
-	templateId: uuid("templateId").references(() => voiceTemplate.id),
-	templateSlug: text("templateSlug").notNull(),
+	templateId: uuid("template_id").references(() => voiceTemplate.id),
+	templateSlug: text("template_slug").notNull(),
 
 	// Call target
-	phoneNumber: text("phoneNumber").notNull(),
-	recipientName: text("recipientName"),
+	phoneNumber: text("phone_number").notNull(),
+	recipientName: text("recipient_name"),
 
 	// Dynamic data (schema defined by template)
 	context: jsonb("context").$type<Record<string, unknown>>().notNull(),
-	capturedData: jsonb("capturedData").$type<Record<string, unknown>>(),
+	capturedData: jsonb("captured_data").$type<Record<string, unknown>>(),
 
 	// VAPI integration
-	vapiCallId: text("vapiCallId").unique(),
-	vapiAssistantId: text("vapiAssistantId"),
+	vapiCallId: text("vapi_call_id").unique(),
+	vapiAssistantId: text("vapi_assistant_id"),
 
 	// Status tracking
 	status: text("status").$type<VoiceCallStatus>().notNull().default("pending"),
 
 	// Results (populated when call ends)
-	recordingUrl: text("recordingUrl"),
+	recordingUrl: text("recording_url"),
 	transcript: jsonb("transcript").$type<TranscriptMessage[]>(),
 	duration: integer("duration"),
 	outcome: text("outcome").$type<VoiceCallOutcome>(),
 
 	// Timestamps
-	createdAt: timestamp("createdAt").notNull().defaultNow(),
-	scheduledAt: timestamp("scheduledAt"),
-	startedAt: timestamp("startedAt"),
-	endedAt: timestamp("endedAt"),
+	createdAt: timestamp("created_at").notNull().defaultNow(),
+	scheduledAt: timestamp("scheduled_at"),
+	startedAt: timestamp("started_at"),
+	endedAt: timestamp("ended_at"),
 });
 
 export type VoiceCall = InferSelectModel<typeof voiceCall>;

@@ -70,6 +70,21 @@ This document defines the data model for the Credentially 2.0 Playground. The mo
 - Auto-advance rules based on compliance completion
 - Separate pipelines for Application vs Placement journeys
 
+### D4: Skills via Compliance Elements (Micro-Credentialling)
+
+**Decision:** Skills are granted by compliant ComplianceElements, not tracked separately.
+
+**Rationale:** The platform already tracks training certificates, competency assessments, and professional registrations as compliance elements. Rather than duplicating this data, skills are a *lens* on compliance data. When a candidate completes a training element, they gain the associated skill.
+
+**Use Case:** Micro-credentialling for workforce allocation. NHS and other healthcare systems need granular understanding of candidate skills (procedures, equipment, environments) to optimise workforce allocation. Rostering systems can query Credentially for candidates with specific skill profiles.
+
+**Implementation:**
+- ComplianceElement can optionally grant skills via `grantsSkillIds`
+- CandidateSkill links to the ComplianceElement that evidences it
+- Skill taxonomies support standard frameworks (UK Core Skills Training Framework) as templates
+- Orgs can customise/extend taxonomies
+- Future: SkillRequirement on jobs/shifts for matching
+
 ---
 
 ## Core Entities
@@ -226,6 +241,9 @@ interface ComplianceElement {
 
   // For checks/integrations
   integrationKey?: string;     // 'gmc' | 'nmc' | 'hcpc' | 'dbs' | 'rtw'
+
+  // Skills granted when this element is compliant (micro-credentialling)
+  grantsSkillIds?: string[];   // Links to Skill entities
 
   // Extensibility
   customFields?: Record<string, unknown>;
@@ -673,6 +691,353 @@ interface StageTransition {
   isDefault: true
 }
 ```
+
+---
+
+## Skills & Micro-Credentialling Entities
+
+Skills provide a granular view of candidate capabilities beyond simple compliance status. They enable workforce allocation systems (rostering) to match candidates to shifts, procedures, or work environments based on specific skills.
+
+**Key Principle:** Skills are evidenced by compliance elements. When a candidate completes a training requirement or holds a certification, they gain the associated skills. Same data, different lens.
+
+### SkillFramework
+
+Standard skill taxonomies that can be used as templates. Orgs can adopt frameworks and customise.
+
+```ts
+interface SkillFramework {
+  id: string;
+  code: string;                    // "uk-cstf", "aus-ahpra", "us-ancc"
+  name: string;                    // "UK Core Skills Training Framework"
+  jurisdiction?: string;           // "uk", "australia", "us"
+  isTemplate: boolean;             // true = system-provided template
+  version?: string;                // Framework version
+}
+```
+
+**Example Frameworks:**
+
+| Code | Name | Jurisdiction |
+|------|------|--------------|
+| uk-cstf | UK Core Skills Training Framework | UK |
+| uk-nhs-ksa | NHS Knowledge and Skills Framework | UK |
+| us-ancc | ANCC Nursing Certifications | US |
+| custom | Organisation Custom | Per-org |
+
+### SkillCategory
+
+Hierarchical groupings for skills. Can come from a framework or be org-defined.
+
+```ts
+interface SkillCategory {
+  id: string;
+  organisationId?: string;         // null = from framework template
+  frameworkId?: string;            // Which framework this belongs to
+  name: string;                    // "Clinical Skills", "Resuscitation", "Infection Control"
+  parentId?: string;               // For nested categories
+  order?: number;                  // Display order
+}
+```
+
+**Example Hierarchy:**
+
+```
+Clinical Skills (category)
+├── Resuscitation (category)
+│   ├── Basic Life Support (skill)
+│   ├── Immediate Life Support (skill)
+│   └── Advanced Life Support (skill)
+├── Medication Administration (category)
+│   ├── Oral Medication (skill)
+│   ├── IV Administration (skill)
+│   └── Controlled Drugs (skill)
+└── Wound Care (category)
+    ├── Basic Wound Dressing (skill)
+    └── Complex Wound Management (skill)
+```
+
+### Skill
+
+Individual skill definitions within a category.
+
+```ts
+interface Skill {
+  id: string;
+  categoryId: string;
+  organisationId?: string;         // null = from framework template
+  code?: string;                   // Standard code if from framework
+  name: string;                    // "IV Cannulation", "Tracheostomy Care"
+  description?: string;
+
+  // How is this skill verified?
+  verificationType: 'evidence' | 'assessment' | 'self_declared' | 'attestation';
+
+  // Proficiency levels (optional - most skills are binary)
+  proficiencyLevels?: string[];    // ["Foundation", "Competent", "Expert"]
+
+  // Expiry (skills can expire like compliance items)
+  validityPeriod?: string;         // "P1Y" = 1 year, "P3Y" = 3 years
+
+  isActive: boolean;
+}
+```
+
+### CandidateSkill
+
+Links a candidate to a skill, evidenced by a compliance element.
+
+```ts
+interface CandidateSkill {
+  id: string;
+  candidateId: string;
+  skillId: string;
+
+  // The compliance element that grants/evidences this skill
+  complianceElementId: string;
+
+  // Status derived from the compliance element
+  // If element is compliant → skill is verified
+  // If element expires → skill expires
+  status: 'verified' | 'expired' | 'pending';
+
+  // Optional enrichment
+  proficiencyLevel?: string;       // If skill has levels
+  context?: string[];              // ["paediatric", "emergency", "ICU"]
+
+  // Temporal (derived from evidence)
+  acquiredAt?: string;             // When the compliance element was fulfilled
+  expiresAt?: string;              // When the compliance element expires
+
+  // Portability (future - credential marketplace)
+  sourceOrganisationId?: string;   // Who paid for/provided the training
+  isPortable: boolean;             // Can be transferred to other orgs
+  transferredAt?: string;          // When transferred (if applicable)
+}
+```
+
+### CandidateExperience
+
+Tracks environment/context experience. Can be derived from placements or explicitly declared.
+
+```ts
+interface CandidateExperience {
+  id: string;
+  candidateId: string;
+
+  type: 'environment' | 'speciality' | 'procedure';
+  name: string;                    // "Emergency Department", "Cardiac Surgery", "Ventilator Management"
+
+  // Derived from placement history (future - rostering integration)
+  derivedFromPlacementIds?: string[];
+
+  // Experience metrics (for matching)
+  recency?: string;                // Last worked in this context
+  duration?: string;               // Total time in this context
+  volume?: number;                 // Procedure count (if applicable)
+
+  // Verification
+  verificationStatus: 'unverified' | 'placement_derived' | 'reference_verified';
+}
+```
+
+### SkillRequirement (Future)
+
+For matching candidates to jobs/shifts based on required skills.
+
+```ts
+interface SkillRequirement {
+  id: string;
+
+  // What entity requires this skill?
+  entityType: 'job' | 'shift' | 'procedure' | 'work_node';
+  entityId: string;
+
+  skillId: string;
+
+  // Requirement level
+  required: boolean;               // true = must have, false = preferred
+  minimumProficiency?: string;     // If skill has levels
+
+  // Context requirements
+  contextRequired?: string[];      // Must have skill in specific context
+  recencyRequired?: string;        // Must have used skill within timeframe
+}
+```
+
+**Example: Matching a Shift to Candidates**
+
+```ts
+// ICU Night Shift at St Mary's requires:
+const shiftRequirements: SkillRequirement[] = [
+  { skillId: 'sk-ils', required: true },              // Immediate Life Support
+  { skillId: 'sk-iv-admin', required: true },         // IV Administration
+  { skillId: 'sk-ventilator', required: true },       // Ventilator Management
+  { skillId: 'sk-tracheostomy', required: false },    // Tracheostomy (preferred)
+];
+
+// Query: Find candidates with all required skills
+// Returns: Candidates ranked by skill match + experience recency
+```
+
+### Skill-Compliance Link Examples
+
+| Compliance Element | Grants Skills |
+|--------------------|---------------|
+| BLS Training Certificate | Basic Life Support |
+| ILS Training Certificate | Immediate Life Support, Basic Life Support |
+| IV Cannulation Competency | IV Cannulation, IV Administration |
+| NMC Registration | Registered Nurse (implies base clinical skills) |
+| Ventilator Training | Ventilator Management |
+| Trust Induction | (No skills - administrative compliance) |
+
+**Note:** Not all compliance elements grant skills. Administrative requirements (inductions, contracts, declarations) typically don't. Skill-granting elements are primarily training, certifications, and competency assessments.
+
+---
+
+## Entity Descriptions
+
+Summary of each entity's purpose and what it enables. Used for ERD tooltips and documentation.
+
+### Tenant & Structure Domain
+
+| Entity | Description | Purpose | Enables |
+|--------|-------------|---------|---------|
+| **Organisation** | Top-level tenant with settings and terminology | Multi-tenant isolation with hierarchy support | Parent-child orgs, inherited settings, custom terminology per org |
+| **OrgSettings** | Configuration for an organisation | Centralised org-level settings | Data ownership defaults, terminology config, feature flags |
+| **WorkNodeType** | User-defined hierarchy level type | Flexible location hierarchy | Customers define their own levels (Trust, Hospital, Ward, State, etc.) |
+| **WorkNode** | Where work happens - unified location entity | Replace rigid Client/Facility/OrgUnit with flexible hierarchy | Customer-defined structures, jurisdiction-based compliance, multi-org visibility |
+| **Role** | Job role/type within organisation | Role-based compliance requirements | Different requirements per role (Nurse vs HCA vs Doctor) |
+
+### Compliance Domain
+
+| Entity | Description | Purpose | Enables |
+|--------|-------------|---------|---------|
+| **ComplianceElement** | Definition of a compliance requirement | Define what needs to be fulfilled | Configurable requirements with scope, expiry, verification rules |
+| **CompliancePackage** | Bundle of compliance elements | Group requirements together | Reusable requirement sets, assignment rules |
+| **PackageElement** | Link between package and element | Package composition with overrides | Required vs optional elements, per-package configuration |
+| **AssignmentRule** | When a package applies | Automatic package assignment | Role-based, location-based, job-based requirement assignment |
+
+### Skills Domain
+
+| Entity | Description | Purpose | Enables |
+|--------|-------------|---------|---------|
+| **SkillFramework** | Standard skill taxonomy template | Provide industry frameworks as starting point | UK Core Skills, NHS KSF, custom frameworks |
+| **SkillCategory** | Hierarchical skill grouping | Organise skills into logical groups | Clinical Skills → Resuscitation → BLS/ILS/ALS |
+| **Skill** | Individual skill definition | Define what capabilities to track | Granular skill tracking with verification type and expiry |
+| **CandidateSkill** | Candidate's attained skill | Link candidate to skill via compliance evidence | Skill profiles for workforce matching |
+| **CandidateExperience** | Environment/context experience | Track where candidate has worked | ER vs ICU vs Ward experience for matching |
+| **SkillRequirement** | Skills required for job/shift | Define what skills are needed | Workforce matching, rostering integration |
+
+### People Domain
+
+| Entity | Description | Purpose | Enables |
+|--------|-------------|---------|---------|
+| **Profile** | The candidate/worker being onboarded | Core person record | Candidate-scoped evidence, overall compliance status |
+
+### Work Domain
+
+| Entity | Description | Purpose | Enables |
+|--------|-------------|---------|---------|
+| **Job** | Position/opening to be filled | ATS-style job postings | Future CRM expansion, requirement preview at application time |
+| **Application** | Candidate applying to a job | Track application journey | Pre-placement compliance, application pipeline |
+| **Placement** | Active assignment for a candidate | Where and when someone is working | Placement-scoped compliance, location-specific requirements |
+
+### Evidence Domain
+
+| Entity | Description | Purpose | Enables |
+|--------|-------------|---------|---------|
+| **Evidence** | Proof that a requirement is fulfilled | Store documents, check results, attestations | Multi-source evidence, ownership tracking, jurisdiction support |
+| **ComplianceGap** | Missing or problematic requirement | Computed gap analysis | Gap-driven AI chasing, clear action items |
+
+### Journey Domain
+
+| Entity | Description | Purpose | Enables |
+|--------|-------------|---------|---------|
+| **Pipeline** | Configurable multi-stage journey | Replace hardcoded status fields | Custom pipelines per entity type, stage ownership |
+| **PipelineStage** | Single stage in a pipeline | Define journey steps | Stage ownership, auto-advance rules, SLAs |
+| **EntityStagePosition** | Where an entity is in its pipeline | Track current position | Pipeline views, stage history |
+| **StageTransition** | Record of a stage change | Audit trail for journey | History of who moved what, when, why |
+
+### Operations Domain
+
+| Entity | Description | Purpose | Enables |
+|--------|-------------|---------|---------|
+| **Activity** | Log of AI and human actions | Track what happened | Audit trail, AI transparency, candidate timeline |
+| **Escalation** | Decision requiring human input | Route exceptions to humans | AI escalations, approval workflows, HITL |
+| **EscalationOption** | Available action for an escalation | Present choices to human | Structured decision-making, recommendation highlighting |
+
+---
+
+## Relationship Descriptions
+
+Key relationships between entities and what they enable.
+
+### Organisation Relationships
+
+| Relationship | From → To | Cardinality | Purpose |
+|--------------|-----------|-------------|---------|
+| Org hierarchy | Organisation → Organisation | Many-to-one | Parent-child orgs for multi-level tenancy |
+| Org owns WorkNodeTypes | WorkNodeType → Organisation | Many-to-one | Each org defines their own hierarchy levels |
+| Org owns WorkNodes | WorkNode → Organisation | Many-to-one | Locations belong to an org |
+| Org owns Roles | Role → Organisation | Many-to-one | Job roles are org-specific |
+
+### WorkNode Relationships
+
+| Relationship | From → To | Cardinality | Purpose |
+|--------------|-----------|-------------|---------|
+| WorkNode type | WorkNode → WorkNodeType | Many-to-one | Defines what level this node is (Hospital, Ward, etc.) |
+| WorkNode hierarchy | WorkNode → WorkNode | Many-to-one | Parent-child for location tree |
+| Placement location | Placement → WorkNode | Many-to-one | Where the candidate is placed - drives compliance |
+| Job location | Job → WorkNode | Many-to-one | Where the job is located - enables requirement preview |
+
+### Compliance Relationships
+
+| Relationship | From → To | Cardinality | Purpose |
+|--------------|-----------|-------------|---------|
+| Package contains elements | PackageElement → CompliancePackage | Many-to-one | Package composition |
+| Element in package | PackageElement → ComplianceElement | Many-to-one | Which requirement is included |
+| Evidence fulfils element | Evidence → ComplianceElement | Many-to-one | Proof of compliance |
+| Evidence on profile | Evidence → Profile | Many-to-one | Candidate-scoped evidence |
+| Evidence on placement | Evidence → Placement | Many-to-one | Placement-scoped evidence |
+| Element grants skills | ComplianceElement → Skill | Many-to-many | Micro-credentialling link |
+
+### Work Relationships
+
+| Relationship | From → To | Cardinality | Purpose |
+|--------------|-----------|-------------|---------|
+| Placement for profile | Placement → Profile | Many-to-one | Which candidate is placed |
+| Placement role | Placement → Role | Many-to-one | What role they're filling - drives requirements |
+| Application for job | Application → Job | Many-to-one | Which job they applied to |
+| Application by profile | Application → Profile | Many-to-one | Who is applying |
+| Placement from application | Placement → Application | One-to-one | Link when application accepted |
+
+### Skills Relationships
+
+| Relationship | From → To | Cardinality | Purpose |
+|--------------|-----------|-------------|---------|
+| Skill in category | Skill → SkillCategory | Many-to-one | Organises skills hierarchically |
+| Category in framework | SkillCategory → SkillFramework | Many-to-one | Links to standard framework |
+| Candidate has skill | CandidateSkill → Profile | Many-to-one | Skill attribution |
+| Skill evidenced by | CandidateSkill → ComplianceElement | Many-to-one | Compliance element proves skill |
+| Skill definition | CandidateSkill → Skill | Many-to-one | Which skill they have |
+
+### Pipeline Relationships
+
+| Relationship | From → To | Cardinality | Purpose |
+|--------------|-----------|-------------|---------|
+| Pipeline for org | Pipeline → Organisation | Many-to-one | Org-specific pipelines |
+| Stage in pipeline | PipelineStage → Pipeline | Many-to-one | Pipeline composition |
+| Entity in pipeline | EntityStagePosition → Pipeline | Many-to-one | Which pipeline entity is in |
+| Entity at stage | EntityStagePosition → PipelineStage | Many-to-one | Current position |
+
+### Activity Relationships
+
+| Relationship | From → To | Cardinality | Purpose |
+|--------------|-----------|-------------|---------|
+| Activity about profile | Activity → Profile | Many-to-one | Who the activity is about |
+| Activity for placements | Activity → Placement | Many-to-many | Which placements drove this |
+| Escalation about profile | Escalation → Profile | Many-to-one | Who the escalation concerns |
+| Escalation for element | Escalation → ComplianceElement | Many-to-one | Which requirement triggered it |
 
 ---
 
@@ -1439,6 +1804,14 @@ This enables dashboards showing "candidates with expiring items this month" or "
 
 ## Changelog
 
+- **2025-12-28** (erd): Added documentation for ERD visualisation:
+  - Entity Descriptions section with purpose and enables for each entity
+  - Relationship Descriptions section with cardinality and purpose
+- **2025-12-28** (skills): Added Skills & Micro-Credentialling:
+  - Design decision D4: Skills via Compliance Elements
+  - New entities: SkillFramework, SkillCategory, Skill, CandidateSkill, CandidateExperience
+  - Future entity: SkillRequirement for workforce matching
+  - Added grantsSkillIds to ComplianceElement
 - **2025-12-28** (update): Added:
   - Ongoing Compliance Monitoring section
   - Future Ideas section with AI Regulatory Monitoring concept
