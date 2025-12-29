@@ -156,74 +156,80 @@ export interface Relationship {
 	source: string;
 	sourceColumn: string;
 	target: string;
+	description?: string;
 }
 
 export const relationships: Relationship[] = [
 	// Tenant & Structure
-	{ source: "organisations", sourceColumn: "parentId", target: "organisations" },
-	{ source: "work_node_types", sourceColumn: "organisationId", target: "organisations" },
-	{ source: "work_nodes", sourceColumn: "organisationId", target: "organisations" },
-	{ source: "work_nodes", sourceColumn: "typeId", target: "work_node_types" },
-	{ source: "work_nodes", sourceColumn: "parentId", target: "work_nodes" },
-	{ source: "roles", sourceColumn: "organisationId", target: "organisations" },
+	{ source: "organisations", sourceColumn: "parentId", target: "organisations", description: "Parent org for multi-level hierarchy" },
+	{ source: "work_node_types", sourceColumn: "organisationId", target: "organisations", description: "Org that defined this hierarchy level type" },
+	{ source: "work_nodes", sourceColumn: "organisationId", target: "organisations", description: "Org that owns this work location" },
+	{ source: "work_nodes", sourceColumn: "typeId", target: "work_node_types", description: "What level in hierarchy (Trust, Hospital, Ward, etc.)" },
+	{ source: "work_nodes", sourceColumn: "parentId", target: "work_nodes", description: "Parent location for hierarchy tree" },
+	{ source: "roles", sourceColumn: "organisationId", target: "organisations", description: "Org that defined this role" },
 
 	// Compliance
-	{ source: "compliance_elements", sourceColumn: "organisationId", target: "organisations" },
-	{ source: "compliance_packages", sourceColumn: "organisationId", target: "organisations" },
-	{ source: "package_elements", sourceColumn: "packageId", target: "compliance_packages" },
-	{ source: "package_elements", sourceColumn: "elementId", target: "compliance_elements" },
-	{ source: "assignment_rules", sourceColumn: "organisationId", target: "organisations" },
-	{ source: "assignment_rules", sourceColumn: "packageId", target: "compliance_packages" },
+	{ source: "compliance_elements", sourceColumn: "organisationId", target: "organisations", description: "Org that defined this requirement" },
+	{ source: "compliance_packages", sourceColumn: "organisationId", target: "organisations", description: "Org that owns this package" },
+	{ source: "package_elements", sourceColumn: "packageId", target: "compliance_packages", description: "Which package this belongs to" },
+	{ source: "package_elements", sourceColumn: "elementId", target: "compliance_elements", description: "Which requirement is included" },
+	{ source: "assignment_rules", sourceColumn: "organisationId", target: "organisations", description: "Org scope for this rule" },
+	{ source: "assignment_rules", sourceColumn: "packageId", target: "compliance_packages", description: "Package to assign when rule matches" },
 
 	// Skills
-	{ source: "skill_frameworks", sourceColumn: "organisationId", target: "organisations" },
-	{ source: "skill_categories", sourceColumn: "organisationId", target: "organisations" },
-	{ source: "skill_categories", sourceColumn: "frameworkId", target: "skill_frameworks" },
-	{ source: "skill_categories", sourceColumn: "parentId", target: "skill_categories" },
-	{ source: "skills", sourceColumn: "organisationId", target: "organisations" },
-	{ source: "skills", sourceColumn: "categoryId", target: "skill_categories" },
-	{ source: "candidate_skills", sourceColumn: "profileId", target: "profiles" },
-	{ source: "candidate_skills", sourceColumn: "skillId", target: "skills" },
-	{ source: "candidate_skills", sourceColumn: "complianceElementId", target: "compliance_elements" },
-	{ source: "candidate_experiences", sourceColumn: "profileId", target: "profiles" },
-	{ source: "skill_requirements", sourceColumn: "skillId", target: "skills" },
+	{ source: "skill_frameworks", sourceColumn: "organisationId", target: "organisations", description: "Org that adopted/customised this framework" },
+	{ source: "skill_categories", sourceColumn: "organisationId", target: "organisations", description: "Org that owns this category" },
+	{ source: "skill_categories", sourceColumn: "frameworkId", target: "skill_frameworks", description: "Framework this category belongs to" },
+	{ source: "skill_categories", sourceColumn: "parentId", target: "skill_categories", description: "Parent for nested categories" },
+	{ source: "skills", sourceColumn: "organisationId", target: "organisations", description: "Org that defined this skill" },
+	{ source: "skills", sourceColumn: "categoryId", target: "skill_categories", description: "Category grouping for this skill" },
+	{ source: "candidate_skills", sourceColumn: "profileId", target: "profiles", description: "Candidate who has this skill" },
+	{ source: "candidate_skills", sourceColumn: "skillId", target: "skills", description: "Which skill they have" },
+	{ source: "candidate_skills", sourceColumn: "complianceElementId", target: "compliance_elements", description: "Compliance element that evidences this skill" },
+	{ source: "candidate_experiences", sourceColumn: "profileId", target: "profiles", description: "Candidate with this experience" },
+	{ source: "skill_requirements", sourceColumn: "skillId", target: "skills", description: "Required skill for matching" },
 
 	// People
-	{ source: "profiles", sourceColumn: "organisationId", target: "organisations" },
+	{ source: "profiles", sourceColumn: "organisationId", target: "organisations", description: "Primary org for this candidate" },
 
 	// Work
-	{ source: "jobs", sourceColumn: "organisationId", target: "organisations" },
-	{ source: "jobs", sourceColumn: "workNodeId", target: "work_nodes" },
-	{ source: "jobs", sourceColumn: "roleId", target: "roles" },
-	{ source: "applications", sourceColumn: "profileId", target: "profiles" },
-	{ source: "applications", sourceColumn: "jobId", target: "jobs" },
-	{ source: "placements", sourceColumn: "organisationId", target: "organisations" },
-	{ source: "placements", sourceColumn: "profileId", target: "profiles" },
-	{ source: "placements", sourceColumn: "workNodeId", target: "work_nodes" },
-	{ source: "placements", sourceColumn: "roleId", target: "roles" },
-	{ source: "placements", sourceColumn: "applicationId", target: "applications" },
+	{ source: "jobs", sourceColumn: "organisationId", target: "organisations", description: "Org posting this job" },
+	{ source: "jobs", sourceColumn: "workNodeId", target: "work_nodes", description: "Where this job is located" },
+	{ source: "jobs", sourceColumn: "roleId", target: "roles", description: "Role type for this position" },
+	{ source: "applications", sourceColumn: "profileId", target: "profiles", description: "Candidate who applied" },
+	{ source: "applications", sourceColumn: "jobId", target: "jobs", description: "Job they applied to" },
+	{ source: "placements", sourceColumn: "organisationId", target: "organisations", description: "Org managing this placement" },
+	{ source: "placements", sourceColumn: "profileId", target: "profiles", description: "Candidate being placed" },
+	{ source: "placements", sourceColumn: "workNodeId", target: "work_nodes", description: "Where they're working - drives compliance" },
+	{ source: "placements", sourceColumn: "roleId", target: "roles", description: "Role they're filling - drives requirements" },
+	{ source: "placements", sourceColumn: "applicationId", target: "applications", description: "Application that led to this placement" },
 
 	// Evidence
-	{ source: "evidence", sourceColumn: "organisationId", target: "organisations" },
-	{ source: "evidence", sourceColumn: "complianceElementId", target: "compliance_elements" },
-	{ source: "evidence", sourceColumn: "profileId", target: "profiles" },
-	{ source: "evidence", sourceColumn: "placementId", target: "placements" },
-	{ source: "compliance_gaps", sourceColumn: "profileId", target: "profiles" },
-	{ source: "compliance_gaps", sourceColumn: "placementId", target: "placements" },
-	{ source: "compliance_gaps", sourceColumn: "complianceElementId", target: "compliance_elements" },
+	{ source: "evidence", sourceColumn: "organisationId", target: "organisations", description: "Org that owns this evidence" },
+	{ source: "evidence", sourceColumn: "complianceElementId", target: "compliance_elements", description: "Which requirement this fulfils" },
+	{ source: "evidence", sourceColumn: "profileId", target: "profiles", description: "Candidate-scoped evidence owner" },
+	{ source: "evidence", sourceColumn: "placementId", target: "placements", description: "Placement-scoped evidence owner" },
+	{ source: "compliance_gaps", sourceColumn: "profileId", target: "profiles", description: "Candidate with this gap" },
+	{ source: "compliance_gaps", sourceColumn: "placementId", target: "placements", description: "Placement context for gap" },
+	{ source: "compliance_gaps", sourceColumn: "complianceElementId", target: "compliance_elements", description: "Missing/expired requirement" },
 
 	// Journey
-	{ source: "pipelines", sourceColumn: "organisationId", target: "organisations" },
-	{ source: "pipeline_stages", sourceColumn: "pipelineId", target: "pipelines" },
-	{ source: "entity_stage_positions", sourceColumn: "pipelineId", target: "pipelines" },
-	{ source: "entity_stage_positions", sourceColumn: "currentStageId", target: "pipeline_stages" },
-	{ source: "stage_transitions", sourceColumn: "fromStageId", target: "pipeline_stages" },
-	{ source: "stage_transitions", sourceColumn: "toStageId", target: "pipeline_stages" },
+	{ source: "pipelines", sourceColumn: "organisationId", target: "organisations", description: "Org that owns this pipeline" },
+	{ source: "pipeline_stages", sourceColumn: "pipelineId", target: "pipelines", description: "Pipeline this stage belongs to" },
+	{ source: "entity_stage_positions", sourceColumn: "pipelineId", target: "pipelines", description: "Which pipeline entity is in" },
+	{ source: "entity_stage_positions", sourceColumn: "currentStageId", target: "pipeline_stages", description: "Current position in journey" },
+	{ source: "stage_transitions", sourceColumn: "fromStageId", target: "pipeline_stages", description: "Stage transitioned from" },
+	{ source: "stage_transitions", sourceColumn: "toStageId", target: "pipeline_stages", description: "Stage transitioned to" },
 
 	// Operations
-	{ source: "activities", sourceColumn: "organisationId", target: "organisations" },
-	{ source: "escalations", sourceColumn: "organisationId", target: "organisations" },
-	{ source: "escalations", sourceColumn: "profileId", target: "profiles" },
-	{ source: "escalations", sourceColumn: "complianceElementId", target: "compliance_elements" },
-	{ source: "escalation_options", sourceColumn: "escalationId", target: "escalations" },
+	{ source: "activities", sourceColumn: "organisationId", target: "organisations", description: "Org context for activity" },
+	{ source: "escalations", sourceColumn: "organisationId", target: "organisations", description: "Org handling this escalation" },
+	{ source: "escalations", sourceColumn: "profileId", target: "profiles", description: "Candidate this escalation concerns" },
+	{ source: "escalations", sourceColumn: "complianceElementId", target: "compliance_elements", description: "Requirement that triggered escalation" },
+	{ source: "escalation_options", sourceColumn: "escalationId", target: "escalations", description: "Escalation these options belong to" },
 ];
+
+// Helper to get relationship info for a specific FK column
+export function getRelationshipInfo(tableName: string, columnName: string): Relationship | undefined {
+	return relationships.find(r => r.source === tableName && r.sourceColumn === columnName);
+}

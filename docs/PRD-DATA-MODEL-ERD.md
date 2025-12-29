@@ -1,7 +1,8 @@
 # PRD: Data Model ERD Visualisation
 
-**Status:** Draft
+**Status:** Complete
 **Created:** 2025-12-28
+**Completed:** 2025-12-29
 **Priority:** Medium
 
 ---
@@ -26,17 +27,17 @@ Create an interactive ERD (Entity Relationship Diagram) page to visualise the Cr
 ### In Scope (V1)
 - Static ERD visualisation using React Flow
 - Entity nodes showing table name and columns
-- Relationship edges from foreign key references
-- Domain grouping via React Flow group nodes
-- Matches cred-ai theme (light/dark mode support)
+- Relationship edges from explicit config (60+ relationships)
+- Domain grouping via coloured borders
+- Matches cred-ai theme (dark mode)
 - Pan and zoom navigation
-- Hover tooltips with entity/relationship descriptions
+- Hover tooltips with entity descriptions
+- Auto-layout via dagre algorithm
 
 ### Out of Scope (V1)
 - Editing/drag-to-rearrange nodes
 - Filter by domain
 - Export to image/PDF
-- Auto-layout algorithm
 
 ---
 
@@ -75,13 +76,11 @@ export type NewWorkNode = typeof workNodes.$inferInsert;
 
 ### 2. ERD Reads from Drizzle Schema
 
-The ERD introspects the Drizzle schema directly:
-- **Tables** → nodes
-- **Columns** → fields with types
-- **Foreign keys** → edges with cardinality
-- **References** → relationship targets
+The ERD introspects the Drizzle schema for tables and columns:
+- **Tables** → nodes (extracted from schema exports)
+- **Columns** → fields with types (via column introspection)
 
-No separate config needed for relationships - they're defined in the schema via `.references()`.
+**Note:** Runtime FK introspection from Drizzle `.references()` proved unreliable in the browser context. Relationships are defined explicitly in `erd-config.ts` instead, which also allows more control over edge styling and grouping.
 
 ### 3. Documentation Strategy
 
@@ -336,33 +335,39 @@ components/
 ### Phase 4: Documentation & Tooltips ✅
 16. [x] Create `erd-metadata.ts` with entity/relationship descriptions
 17. [x] Create entity tooltip component
-18. [ ] Create relationship tooltip component (deferred)
+18. [x] Create relationship tooltip component (on FK columns)
 19. [ ] Create entity detail side panel (deferred)
 20. [x] Wire up hover/click interactions
 
-### Phase 5: Polish
-21. [ ] Add pan/zoom controls
-22. [ ] Add minimap
-23. [ ] Theme support (light/dark)
-24. [ ] Mobile-friendly viewport
+### Phase 5: Polish ✅
+21. [x] Pan/zoom - built into React Flow
+22. [x] Minimap
+23. [x] Light/dark mode support
+
+### Bonus: Auto-Layout ✅
+26. [x] Install dagre: `pnpm add @dagrejs/dagre`
+27. [x] Implement `applyDagreLayout()` in use-schema-to-erd.ts
+28. [x] Configure left-to-right flow with proper spacing
 
 ---
 
 ## Success Criteria
 
-- [ ] All 25+ tables from DATA_MODEL.md created in Drizzle schema
-- [ ] All tables rendered as nodes in ERD
-- [ ] Entities grouped by domain with coloured outlines
-- [ ] Foreign key relationships shown as edges
-- [ ] Hover tooltips show entity/relationship descriptions
-- [ ] Matches cred-ai theme in both light and dark mode
-- [ ] Can be used to present data model to stakeholders
+- [x] All 27 tables from DATA_MODEL.md created in Drizzle schema
+- [x] All tables rendered as nodes in ERD
+- [x] Entities grouped by domain with coloured borders
+- [x] Foreign key relationships shown as edges (60+ relationships)
+- [x] Hover tooltips show entity descriptions
+- [x] Matches cred-ai theme (dark mode)
+- [x] Auto-layout via dagre positions nodes intelligently
+- [x] Can be used to present data model to stakeholders
 
 ---
 
 ## Dependencies
 
 - `@xyflow/react` - React Flow library
+- `@dagrejs/dagre` - Auto-layout algorithm
 - `drizzle-orm` - Already installed
 - Existing Supabase database connection
 - Existing cred-ai theme variables
@@ -374,12 +379,13 @@ components/
 
 - Filter by domain
 - Search for table/column
-- Auto-layout algorithm (dagre, elk)
 - Export to PNG/SVG
 - Show indexes and constraints
 - Highlight related tables on hover
 - Generate schema documentation from ERD
 - Seed data visualisation
+- Cardinality markers on edges (1:N)
+- Entity detail side panel on click
 
 ---
 

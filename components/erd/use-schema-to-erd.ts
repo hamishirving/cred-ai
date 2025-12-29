@@ -52,8 +52,20 @@ function getColumnType(column: any): string {
 	return dataType || "unknown";
 }
 
+// Build a set of FK columns from explicit relationships config
+// Format: "tableName-columnName"
+function buildFkColumnSet(): Set<string> {
+	const fkColumns = new Set<string>();
+	for (const rel of relationships) {
+		fkColumns.add(`${rel.source}-${rel.sourceColumn}`);
+	}
+	return fkColumns;
+}
+
+const fkColumnSet = buildFkColumnSet();
+
 // Extract column information from Drizzle table
-function extractColumns(table: any): ColumnInfo[] {
+function extractColumns(table: any, tableName: string): ColumnInfo[] {
 	const columns: ColumnInfo[] = [];
 
 	for (const [name, column] of Object.entries(table)) {
@@ -64,33 +76,15 @@ function extractColumns(table: any): ColumnInfo[] {
 		const isPrimaryKey = col.primary === true || col.primaryKey === true;
 		const isNullable = col.notNull !== true;
 
-		// Check for foreign key references
-		let references: ColumnInfo["references"] = undefined;
-		if (col.references) {
-			try {
-				const refResult = col.references();
-				if (refResult?.table) {
-					const refTableName =
-						refResult.table[Symbol.for("drizzle:Name")] ||
-						refResult.table._.name ||
-						"unknown";
-					references = {
-						table: refTableName,
-						column: refResult.name || "id",
-					};
-				}
-			} catch {
-				// References function might not be callable in all contexts
-			}
-		}
+		// Check if this column is an FK based on explicit relationships config
+		const isForeignKey = fkColumnSet.has(`${tableName}-${name}`);
 
 		columns.push({
 			name,
 			type: getColumnType(col),
 			isPrimaryKey,
-			isForeignKey: !!references,
+			isForeignKey,
 			isNullable,
-			references,
 		});
 	}
 
@@ -130,7 +124,7 @@ function extractTables(): TableInfo[] {
 		// Skip chat/voice tables - only show data model tables
 		if (excludeTables.includes(key)) continue;
 
-		const columns = extractColumns(value);
+		const columns = extractColumns(value, tableName);
 		if (columns.length === 0) continue;
 
 		tables.push({
@@ -158,10 +152,18 @@ function generateEdges(tables: TableInfo[]): Edge[] {
 			? erdConfig.domains[sourceTable.domain]
 			: undefined;
 
+		// Handle IDs for column-level connections
+		// Source: FK column on the source table
+		// Target: PK (id) column on the target table
+		const sourceHandle = `${rel.source}-${rel.sourceColumn}-source`;
+		const targetHandle = `${rel.target}-id-target`;
+
 		edges.push({
 			id: `${rel.source}-${rel.sourceColumn}-${rel.target}`,
 			source: rel.source,
+			sourceHandle,
 			target: rel.target,
+			targetHandle,
 			type: "smoothstep",
 			animated: false,
 			style: {
