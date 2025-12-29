@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useMemo, useOptimistic, useState } from "react";
-import { saveChatModelAsCookie } from "@/app/(chat)/actions";
+import { saveChatModelAsCookie } from "@/app/(app)/actions";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,

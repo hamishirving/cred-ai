@@ -1,7 +1,7 @@
 import Form from "next/form";
 import { redirect } from "next/navigation";
 
-import { auth, signOut } from "@/app/(auth)/auth";
+import { auth, signOut } from "@/lib/auth";
 import { getPostHogClient } from "@/lib/posthog-server";
 
 export const SignOutForm = () => {
