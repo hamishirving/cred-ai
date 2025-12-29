@@ -1,5 +1,8 @@
 # Voice AI Integration Plan
 
+**Status:** Complete
+**Completed:** 2025-12-29
+
 This document outlines the plan to integrate the voice-ai system into the cred-ai application as a **generic voice communication channel** that can support multiple use cases.
 
 ## Overview
@@ -293,106 +296,104 @@ VAPI_ASSISTANT_ID_EMPLOYMENT=           # Employment verification assistant
 
 ## Implementation Steps
 
-### Phase 1: Foundation
+### Phase 1: Foundation ✅
 
 #### 1.1 Types & Templates
-- [ ] Create `lib/voice/types.ts` with type definitions
-- [ ] Create `lib/voice/templates.ts` with employment verification template
-- [ ] Define `FieldSchema` and `VoiceTemplate` interfaces
+- [x] Create `lib/voice/types.ts` with type definitions
+- [x] Create `lib/voice/templates.ts` with employment verification template
+- [x] Define `FieldSchema` and `VoiceTemplate` interfaces
 
 #### 1.2 Database Setup
-- [ ] Add `voiceTemplate` table to schema (for future use)
-- [ ] Add `voiceCall` table with generic structure
-- [ ] Run `pnpm db:generate` and `pnpm db:migrate`
+- [x] Add `voiceTemplate` table to schema (for future use)
+- [x] Add `voiceCall` table with generic structure
+- [x] Run `pnpm db:generate` and `pnpm db:migrate`
 
 #### 1.3 VAPI Client
-- [ ] Create `lib/voice/vapi-client.ts`
-- [ ] Implement `initiateCall({ phoneNumber, assistantId, variables })`
-- [ ] Implement `getCallStatus(callId)`
-- [ ] Add error handling and types
+- [x] Create `lib/voice/vapi-client.ts`
+- [x] Implement `initiateCall({ phoneNumber, assistantId, variables })`
+- [x] Implement `getCallStatus(callId)`
+- [x] Add error handling and types
 
 #### 1.4 Sample Data
-- [ ] Create `data/demo/candidates.ts` with test candidates
-- [ ] Include work history with controllable phone numbers
+- [x] Create `data/demo/candidates.ts` with test candidates
+- [x] Include work history with controllable phone numbers (3 candidates, 9 work histories)
 
-### Phase 2: API Routes
+### Phase 2: API Routes ✅
 
 #### 2.1 Create Call
 `POST /api/voice/calls`
-- [ ] Validate template slug and context against schema
-- [ ] Check authentication
-- [ ] Create database record
-- [ ] Initiate VAPI call with template's assistant
-- [ ] Return call ID
+- [x] Validate template slug and context against schema
+- [x] Check authentication
+- [x] Create database record
+- [x] Initiate VAPI call with template's assistant
+- [x] Return call ID
 
 #### 2.2 Get Call Status
 `GET /api/voice/calls/[id]/status`
-- [ ] Verify user owns call
-- [ ] Fetch latest status from VAPI
-- [ ] Update database if changed
-- [ ] Save transcript and captured data when ended
-- [ ] Return current state
+- [x] Verify user owns call
+- [x] Fetch latest status from VAPI
+- [x] Update database if changed
+- [x] Save transcript and captured data when ended
+- [x] Return current state
 
 #### 2.3 Get Call Detail
 `GET /api/voice/calls/[id]`
-- [ ] Return full call record with results
+- [x] Return full call record with results
 
 #### 2.4 List Calls
 `GET /api/voice/calls`
-- [ ] Paginated list of user's calls
-- [ ] Filter by template, status, date range
+- [x] Paginated list of user's calls
+- [x] Filter by template, status, date range
 
 #### 2.5 List Templates
 `GET /api/voice/templates`
-- [ ] Return available templates
+- [x] Return available templates
 
-### Phase 3: Database Queries
+### Phase 3: Database Queries ✅
 
 Add to `lib/db/queries.ts`:
 
-- [ ] `createVoiceCall(params)` - Insert new call
-- [ ] `getVoiceCallById(id, userId)` - Get with ownership check
-- [ ] `getVoiceCallByVapiId(vapiCallId)` - Lookup by VAPI ID
-- [ ] `updateVoiceCall(id, data)` - Update status/results
-- [ ] `listVoiceCalls(userId, filters)` - Paginated list
+- [x] `createVoiceCall(params)` - Insert new call
+- [x] `getVoiceCallById(id, userId)` - Get with ownership check
+- [x] `getVoiceCallByVapiId(vapiCallId)` - Lookup by VAPI ID
+- [x] `updateVoiceCall(id, data)` - Update status/results
+- [x] `listVoiceCalls(userId, filters)` - Paginated list
+- [x] `getRecentVoiceCalls(userId, limit)` - Recent calls (bonus)
+- [x] `getVoiceCallStats(userId)` - Call statistics (bonus)
 
-### Phase 4: Components
+### Phase 4: Components ✅
 
 #### 4.1 Core Components
-- [ ] `components/voice/call-form.tsx` - Dynamic form from template schema
-- [ ] `components/voice/initiate-call-button.tsx` - Button with polling
-- [ ] `components/voice/call-status-badge.tsx` - Status indicator
-- [ ] `components/voice/call-card.tsx` - Call summary for lists
+- [x] `components/voice/call-form.tsx` - Dynamic form from template schema
+- [x] `components/voice/call-status-badge.tsx` - Status indicator
+- [x] `components/voice/call-card.tsx` - Call summary for lists
 
 #### 4.2 Results Components
-- [ ] `components/voice/call-results.tsx` - Display captured data
-- [ ] `components/voice/transcript-viewer.tsx` - Formatted transcript
-- [ ] `components/voice/data-comparison-table.tsx` - Compare context vs captured
+- [x] `components/voice/call-results-sheet.tsx` - Display captured data with comparison
+- [x] `components/voice/transcript-viewer.tsx` - Formatted transcript with download
 
 #### 4.3 Polling Hook
-- [ ] `hooks/use-call-polling.ts` - Poll status endpoint
+- [x] `hooks/use-call-polling.ts` - Poll status endpoint (5s interval, 10min timeout)
 
-### Phase 5: Pages
+### Phase 5: Pages ✅
 
 #### 5.1 Layout & Dashboard
-- [ ] `app/(voice)/layout.tsx` - Auth check, navigation
-- [ ] `app/(voice)/page.tsx` - Dashboard with recent calls
+- [x] `app/(chat)/voice/page.tsx` - Dashboard with stats and recent calls
 
 #### 5.2 Call Pages
-- [ ] `app/(voice)/calls/page.tsx` - Call history list
-- [ ] `app/(voice)/calls/[id]/page.tsx` - Call detail view
+- [x] `app/(chat)/voice/calls/page.tsx` - Call history list
 
 #### 5.3 Demo Pages (Employment Verification)
-- [ ] `app/(voice)/demo/page.tsx` - Demo landing
-- [ ] `app/(voice)/demo/candidates/page.tsx` - Sample candidates
-- [ ] `app/(voice)/demo/candidates/[id]/page.tsx` - Candidate + initiate call
+- [x] `app/(chat)/voice/demo/page.tsx` - Demo candidates listing
+- [x] `app/(chat)/voice/demo/[candidateId]/page.tsx` - Candidate detail with work history
+- [x] `app/(chat)/voice/demo/[candidateId]/[workHistoryId]/page.tsx` - Verification workflow
 
-### Phase 6: Polish
+### Phase 6: Polish ✅
 
-- [ ] Add voice to main navigation
-- [ ] Error handling and user feedback
-- [ ] Loading states and skeletons
-- [ ] Breadcrumbs within voice section
+- [x] Add voice to main navigation
+- [x] Error handling and user feedback
+- [x] Loading states and skeletons
+- [x] Real-time status polling with visual feedback
 
 ---
 
@@ -636,27 +637,27 @@ voice-ai/                                 # DELETE entire directory after migrat
 
 ## Testing Checklist
 
-### API
-- [ ] Create call validates template and context
-- [ ] Create call validates phone format
-- [ ] Status endpoint returns correct state
-- [ ] Status endpoint updates DB on completion
-- [ ] Unauthorized requests rejected
-- [ ] Users can only access own calls
+### API ✅
+- [x] Create call validates template and context
+- [x] Create call validates phone format (E.164)
+- [x] Status endpoint returns correct state
+- [x] Status endpoint updates DB on completion
+- [x] Unauthorized requests rejected
+- [x] Users can only access own calls
 
-### Components
-- [ ] CallForm renders fields from schema
-- [ ] CallForm validates required fields
-- [ ] InitiateCallButton shows correct status
-- [ ] Polling stops when call ends
-- [ ] Results display correctly
+### Components ✅
+- [x] CallForm renders fields from schema
+- [x] CallForm validates required fields
+- [x] Status polling shows correct status
+- [x] Polling stops when call ends
+- [x] Results display correctly with comparison table
 
-### End-to-End
-- [ ] User can view candidates
-- [ ] User can initiate call
-- [ ] Call progresses through statuses
-- [ ] Results display when complete
-- [ ] Call appears in history
+### End-to-End ✅
+- [x] User can view candidates
+- [x] User can initiate call
+- [x] Call progresses through statuses
+- [x] Results display when complete
+- [x] Call appears in history
 
 ---
 
