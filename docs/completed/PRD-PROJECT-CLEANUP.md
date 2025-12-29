@@ -1,6 +1,6 @@
 # PRD: Project Cleanup
 
-**Status:** Draft
+**Status:** Complete
 **Owner:** Engineering
 **Last Updated:** 2025-12-29
 
@@ -233,24 +233,24 @@ The Vercel AI Chatbot template is actively maintained. Consider:
 ## Checklist Summary
 
 ### Must Do
-- [ ] Remove `/tests/` directory
-- [ ] Remove `/playwright.config.ts`
-- [ ] Remove `/lib/ai/models.test.ts`
-- [ ] Remove `@playwright/test` dependency
-- [ ] Remove `"test"` script from package.json
-- [ ] Remove `/vercel-template.json`
-- [ ] Remove `@ai-sdk/xai` dependency
-- [ ] Remove `redis` dependency
-- [ ] Update package name in package.json
+- [x] Remove `/tests/` directory
+- [x] Remove `/playwright.config.ts`
+- [x] Remove `/lib/ai/models.test.ts`
+- [x] Remove `@playwright/test` dependency
+- [x] Remove `"test"` script from package.json
+- [x] Remove `/vercel-template.json`
+- [x] Remove `@ai-sdk/xai` dependency
+- [x] Remove `redis` dependency
+- [x] Update package name in package.json
 
 ### Should Do
-- [ ] Remove template images from `/public/images/`
+- [x] Remove template images from `/public/images/`
 - [ ] Update OpenGraph/Twitter images with Credentially branding
 - [ ] Update `/README.md`
-- [ ] Fix or remove `db:delete-guests` script
+- [x] Fix or remove `db:delete-guests` script
 
 ### Nice to Have
-- [ ] Archive or remove `/docs/completed/`
+- [x] Archive or remove `/docs/completed/` (removed obsolete template docs, kept project docs)
 - [ ] Review `/docs/existing-features/`
 - [ ] Audit remaining dependencies
 
