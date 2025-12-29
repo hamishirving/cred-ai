@@ -17,6 +17,7 @@ Playground for testing AI capabilities leveraging the Credentially API. Used for
 pnpm dev          # Start dev server
 pnpm build        # Production build
 pnpm db:migrate   # Run migrations
+pnpm db:seed      # Seed demo data (UK + US orgs)
 pnpm db:studio    # Open Drizzle Studio
 ```
 

@@ -16,6 +16,8 @@
 		"db:check": "drizzle-kit check",
 		"db:up": "drizzle-kit up",
 		"db:delete-guests": "npx tsx scripts/delete-guest-users.ts",
+		"db:seed": "npx tsx lib/db/seed/index.ts",
+		"db:clear": "npx tsx -e \"require('./lib/db/seed/clear').clearAllData().then(() => process.exit(0))\"",
 		"test": "export PLAYWRIGHT=True && pnpm exec playwright test"
 	},
 	"dependencies": {

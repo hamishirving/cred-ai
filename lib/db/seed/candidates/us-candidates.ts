@@ -1,0 +1,480 @@
+/**
+ * US Candidate Profiles
+ *
+ * Named candidates with varied compliance states for realistic demos.
+ */
+import type { NewProfile } from "../../schema";
+import { generateUSPhone, generateUSNursingLicense, generateSSN } from "../utils";
+import type { CandidateProfile, CandidateState } from "./uk-candidates";
+
+/**
+ * US Candidates for TravelNurse Pro (Travel Agency).
+ */
+export const travelNurseCandidates: CandidateProfile[] = [
+	{
+		profile: {
+			email: "jennifer.martinez@email.com",
+			firstName: "Jennifer",
+			lastName: "Martinez",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1989-08-15"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("CA"),
+			address: {
+				line1: "1234 Sunset Blvd",
+				city: "Los Angeles",
+				postcode: "90028",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-icu-rn",
+		state: {
+			status: "compliant",
+			daysSinceActivity: 3,
+			notes: "Active assignment at UCLA Medical Center ICU. California licensed. Fully compliant.",
+		},
+	},
+	{
+		profile: {
+			email: "robert.johnson@email.com",
+			firstName: "Robert",
+			lastName: "Johnson",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1985-03-22"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("FL"),
+			address: {
+				line1: "567 Palm Drive",
+				city: "Miami",
+				postcode: "33101",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-er-rn",
+		state: {
+			status: "near_complete",
+			missingElements: ["texas-rn-license"],
+			startDateDays: 14,
+			daysSinceActivity: 2,
+			notes: "Has Florida license, needs Texas license for upcoming Houston Methodist assignment.",
+		},
+	},
+	{
+		profile: {
+			email: "amanda.davis@email.com",
+			firstName: "Amanda",
+			lastName: "Davis",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1994-11-08"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("TX"),
+			address: {
+				line1: "890 Main Street",
+				city: "Dallas",
+				postcode: "75201",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-rn",
+		state: {
+			status: "in_progress",
+			missingElements: [
+				"federal-background-check",
+				"acls-certification",
+				"tb-test",
+				"hospital-credentialing",
+			],
+			daysSinceActivity: 1,
+			notes: "New to travel nursing. First assignment in progress. Good engagement.",
+		},
+	},
+	{
+		profile: {
+			email: "christopher.lee@email.com",
+			firstName: "Christopher",
+			lastName: "Lee",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1982-06-30"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("CA"),
+			address: {
+				line1: "456 Ocean Avenue",
+				city: "San Diego",
+				postcode: "92101",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-icu-rn",
+		state: {
+			status: "expiring",
+			expiringElements: ["bls-certification"],
+			daysSinceActivity: 5,
+			notes: "BLS expires in 10 days. Reminder sent. Experienced travel nurse.",
+		},
+	},
+	{
+		profile: {
+			email: "michelle.garcia@email.com",
+			firstName: "Michelle",
+			lastName: "Garcia",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1991-02-14"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("AZ"),
+			address: {
+				line1: "789 Desert Road",
+				city: "Phoenix",
+				postcode: "85001",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-rn",
+		state: {
+			status: "stuck",
+			missingElements: ["federal-background-check"],
+			daysSinceActivity: 10,
+			notes: "Background check delayed by provider. Waiting on results.",
+		},
+	},
+	{
+		profile: {
+			email: "daniel.kim@email.com",
+			firstName: "Daniel",
+			lastName: "Kim",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1987-09-18"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("COMPACT"),
+			address: {
+				line1: "321 Lake View",
+				city: "Chicago",
+				postcode: "60601",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-er-rn",
+		state: {
+			status: "compliant",
+			daysSinceActivity: 7,
+			notes: "Multi-state compact license holder. Can work in 41 states. Very experienced.",
+		},
+	},
+	{
+		profile: {
+			email: "stephanie.brown@email.com",
+			firstName: "Stephanie",
+			lastName: "Brown",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1993-04-25"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("NC"),
+			address: {
+				line1: "654 Peach Street",
+				city: "Charlotte",
+				postcode: "28202",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-rn",
+		state: {
+			status: "in_progress",
+			missingElements: ["compact-nursing-license"],
+			daysSinceActivity: 4,
+			notes: "Converting single-state to compact license. Application pending.",
+		},
+	},
+	{
+		profile: {
+			email: "kevin.thompson@email.com",
+			firstName: "Kevin",
+			lastName: "Thompson",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1980-12-01"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("CA"),
+			address: {
+				line1: "987 Golden Gate Way",
+				city: "San Francisco",
+				postcode: "94102",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-icu-rn",
+		state: {
+			status: "near_complete",
+			missingElements: ["hospital-credentialing"],
+			startDateDays: 7,
+			daysSinceActivity: 1,
+			notes: "Candidate-scoped items complete. Waiting on Cedars-Sinai credentialing.",
+		},
+	},
+	{
+		profile: {
+			email: "lauren.wilson@email.com",
+			firstName: "Lauren",
+			lastName: "Wilson",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1986-07-12"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("COMPACT"),
+			address: {
+				line1: "246 Broadway",
+				city: "Denver",
+				postcode: "80202",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-rn",
+		state: {
+			status: "compliant",
+			daysSinceActivity: 14,
+			notes: "Highly experienced. 5+ years travel nursing. All certifications current.",
+		},
+	},
+	{
+		profile: {
+			email: "brian.anderson@email.com",
+			firstName: "Brian",
+			lastName: "Anderson",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1990-05-28"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("TX"),
+			address: {
+				line1: "135 Rodeo Drive",
+				city: "Houston",
+				postcode: "77001",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-er-rn",
+		state: {
+			status: "non_compliant",
+			expiringElements: ["acls-certification"],
+			daysSinceActivity: 0,
+			notes: "ACLS just expired. Cannot work ER until renewed. Urgent.",
+		},
+	},
+];
+
+/**
+ * US Candidates for Lakeside Health System (Direct Employer).
+ */
+export const lakesideCandidates: CandidateProfile[] = [
+	{
+		profile: {
+			email: "patricia.hernandez@email.com",
+			firstName: "Patricia",
+			lastName: "Hernandez",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1984-01-20"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("TX"),
+			address: {
+				line1: "456 Memorial Drive",
+				city: "Houston",
+				postcode: "77030",
+				country: "USA",
+			},
+		},
+		roleSlug: "charge-nurse",
+		state: {
+			status: "compliant",
+			daysSinceActivity: 10,
+			notes: "Charge Nurse at TMC flagship. Long-tenured. All compliant.",
+		},
+	},
+	{
+		profile: {
+			email: "mark.williams@email.com",
+			firstName: "Mark",
+			lastName: "Williams",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1988-09-05"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("TX"),
+			address: {
+				line1: "789 Medical Center Blvd",
+				city: "Houston",
+				postcode: "77054",
+				country: "USA",
+			},
+		},
+		roleSlug: "staff-rn",
+		state: {
+			status: "near_complete",
+			missingElements: ["unit-competency"],
+			startDateDays: 5,
+			daysSinceActivity: 1,
+			notes: "Transferring from Katy to TMC. Needs ICU competency assessment.",
+		},
+	},
+	{
+		profile: {
+			email: "sandra.moore@email.com",
+			firstName: "Sandra",
+			lastName: "Moore",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1976-06-15"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("TX"),
+			address: {
+				line1: "321 Westheimer Road",
+				city: "Houston",
+				postcode: "77056",
+				country: "USA",
+			},
+		},
+		roleSlug: "clinical-nurse-specialist",
+		state: {
+			status: "compliant",
+			daysSinceActivity: 21,
+			notes: "CNS in Surgical Services. Very experienced. Low-touch.",
+		},
+	},
+	{
+		profile: {
+			email: "jason.taylor@email.com",
+			firstName: "Jason",
+			lastName: "Taylor",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1992-11-30"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("TX"),
+			address: {
+				line1: "654 Kirby Drive",
+				city: "Houston",
+				postcode: "77098",
+				country: "USA",
+			},
+		},
+		roleSlug: "staff-rn",
+		state: {
+			status: "in_progress",
+			missingElements: [
+				"pals-certification",
+				"critical-care-cert",
+				"hospital-orientation",
+			],
+			daysSinceActivity: 2,
+			notes: "New hire for ICU. Completing specialty certifications.",
+		},
+	},
+	{
+		profile: {
+			email: "nicole.jackson@email.com",
+			firstName: "Nicole",
+			lastName: "Jackson",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1995-03-08"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("TX"),
+			address: {
+				line1: "987 Galleria Parkway",
+				city: "Houston",
+				postcode: "77057",
+				country: "USA",
+			},
+		},
+		roleSlug: "staff-rn",
+		state: {
+			status: "expiring",
+			expiringElements: ["tb-test", "flu-vaccination"],
+			daysSinceActivity: 3,
+			notes: "Annual health requirements due. TB test expires in 15 days.",
+		},
+	},
+	{
+		profile: {
+			email: "ryan.white@email.com",
+			firstName: "Ryan",
+			lastName: "White",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1990-08-22"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("TX"),
+			address: {
+				line1: "159 Heights Boulevard",
+				city: "Houston",
+				postcode: "77008",
+				country: "USA",
+			},
+		},
+		roleSlug: "staff-rn",
+		state: {
+			status: "stuck",
+			missingElements: ["drug-screen"],
+			daysSinceActivity: 8,
+			notes: "Missed drug screen appointment. Rescheduled twice. Needs follow-up.",
+		},
+	},
+	{
+		profile: {
+			email: "ashley.harris@email.com",
+			firstName: "Ashley",
+			lastName: "Harris",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1987-04-17"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("TX"),
+			address: {
+				line1: "753 Montrose Boulevard",
+				city: "Houston",
+				postcode: "77006",
+				country: "USA",
+			},
+		},
+		roleSlug: "charge-nurse",
+		state: {
+			status: "compliant",
+			daysSinceActivity: 5,
+			notes: "Charge Nurse at The Woodlands location. All current.",
+		},
+	},
+	{
+		profile: {
+			email: "tyler.martin@email.com",
+			firstName: "Tyler",
+			lastName: "Martin",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1998-02-10"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("TX"),
+			address: {
+				line1: "852 Washington Avenue",
+				city: "Houston",
+				postcode: "77007",
+				country: "USA",
+			},
+		},
+		roleSlug: "staff-rn",
+		state: {
+			status: "in_progress",
+			missingElements: [
+				"acls-certification",
+				"physical-examination",
+				"hospital-credentialing",
+			],
+			daysSinceActivity: 0,
+			notes: "New grad RN. First hospital job. Orientation in progress.",
+		},
+	},
+];
