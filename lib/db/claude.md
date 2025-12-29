@@ -1,11 +1,72 @@
-# Database (Drizzle + Supabase)
+# Database (Drizzle ORM + Supabase CLI)
+
+## Architecture
+
+| Layer | Tool | Purpose |
+|-------|------|---------|
+| **Schema definitions** | Drizzle `pgTable()` | Types, ERD, query builder |
+| **Migrations** | Supabase CLI | Generate & apply SQL changes |
+| **Queries** | Drizzle ORM | Type-safe database access |
+
+**Why this hybrid approach:**
+- Drizzle schema files provide rich metadata needed for ERD visualization (`/data-model`)
+- Drizzle ORM gives type-safe queries with inference
+- Supabase CLI handles migrations reliably (drizzle-kit has bugs with Supabase)
 
 ## Schema Changes
 
-1. Edit schema files in `schema/`
-2. Run `pnpm db:generate` to create migration
-3. Run `pnpm db:migrate` to apply
-4. Use `pnpm db:studio` to inspect data
+**IMPORTANT:** Always update BOTH the Drizzle schema AND the database.
+
+### Step 1: Update Drizzle Schema
+Edit files in `lib/db/schema/` - this updates:
+- TypeScript types (used throughout app)
+- ERD visualization (reads from schema)
+- Query builder definitions
+
+### Step 2: Generate Migration
+```bash
+pnpm db:diff    # Generates SQL in supabase/migrations/ (requires Docker)
+```
+
+### Step 3: Apply Migration
+```bash
+pnpm db:push    # Applies pending migrations to remote DB
+```
+
+### Step 4: Verify
+```bash
+pnpm db:studio  # Browse data to confirm changes
+pnpm db:seed    # Re-seed if needed
+```
+
+### Alternative (no Docker)
+Write SQL migration manually in `supabase/migrations/YYYYMMDDHHMMSS_description.sql`
+
+## Commands
+
+```bash
+pnpm db:diff    # Generate migration from schema diff (needs Docker)
+pnpm db:push    # Apply migrations to remote Supabase
+pnpm db:pull    # Pull remote schema to local migrations
+pnpm db:reset   # Reset remote DB to migrations (DESTRUCTIVE)
+pnpm db:studio  # Open Drizzle Studio (browse data)
+pnpm db:seed    # Seed demo data (UK + US orgs)
+pnpm db:clear   # Clear all seeded data
+```
+
+## File Structure
+
+```
+lib/db/
+├── schema/           # Drizzle table definitions (source of truth for types)
+├── queries.ts        # All database queries
+├── index.ts          # DB connection export
+└── seed/             # Seed data scripts
+
+supabase/
+├── migrations/       # SQL migrations (managed by Supabase CLI)
+└── config.toml       # Supabase project config
+```
 
 ## Seed Data
 

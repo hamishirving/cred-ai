@@ -19,6 +19,7 @@ export * from "./organisations";
 export * from "./work-node-types";
 export * from "./work-nodes";
 export * from "./roles";
+export * from "./user-roles";
 
 // Compliance Domain
 export * from "./compliance-elements";

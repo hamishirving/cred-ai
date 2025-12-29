@@ -15,6 +15,7 @@ import {
 	varchar,
 } from "drizzle-orm/pg-core";
 import { organisations } from "./organisations";
+import { userRoles } from "./user-roles";
 
 /**
  * Profiles represent candidates/workers in the system.
@@ -33,6 +34,9 @@ export const profiles = pgTable("profiles", {
 
 	/** Auth user ID (links to Supabase auth) */
 	authUserId: uuid("auth_user_id"),
+
+	/** Permission role (what they can do in the system) */
+	userRoleId: uuid("user_role_id").references(() => userRoles.id),
 
 	/** Email address */
 	email: text("email").notNull(),

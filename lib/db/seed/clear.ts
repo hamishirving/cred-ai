@@ -40,6 +40,7 @@ import {
 	workNodes,
 	workNodeTypes,
 	roles,
+	userRoles,
 	organisations,
 } from "../schema";
 
@@ -74,6 +75,7 @@ export async function clearAllData() {
 		{ name: "work_nodes", table: workNodes },
 		{ name: "work_node_types", table: workNodeTypes },
 		{ name: "roles", table: roles },
+		{ name: "user_roles", table: userRoles },
 		{ name: "organisations", table: organisations },
 	];
 

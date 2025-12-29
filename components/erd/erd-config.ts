@@ -30,7 +30,7 @@ export const erdConfig: ErdConfig = {
 			label: "Tenant & Structure",
 			color: "#3b82f6", // blue-500
 			bgColor: "#3b82f620",
-			tables: ["organisations", "work_node_types", "work_nodes", "roles"],
+			tables: ["organisations", "work_node_types", "work_nodes", "roles", "user_roles"],
 		},
 		compliance: {
 			label: "Compliance",
@@ -101,6 +101,7 @@ export const erdConfig: ErdConfig = {
 		work_node_types: { x: 50, y: 300 },
 		work_nodes: { x: 300, y: 150 },
 		roles: { x: 300, y: 400 },
+		user_roles: { x: 50, y: 500 },
 
 		// People (center-top)
 		profiles: { x: 600, y: 50 },
@@ -167,6 +168,7 @@ export const relationships: Relationship[] = [
 	{ source: "work_nodes", sourceColumn: "typeId", target: "work_node_types", description: "What level in hierarchy (Trust, Hospital, Ward, etc.)" },
 	{ source: "work_nodes", sourceColumn: "parentId", target: "work_nodes", description: "Parent location for hierarchy tree" },
 	{ source: "roles", sourceColumn: "organisationId", target: "organisations", description: "Org that defined this role" },
+	{ source: "user_roles", sourceColumn: "organisationId", target: "organisations", description: "Org that defined this permission role" },
 
 	// Compliance
 	{ source: "compliance_elements", sourceColumn: "organisationId", target: "organisations", description: "Org that defined this requirement" },
@@ -191,6 +193,7 @@ export const relationships: Relationship[] = [
 
 	// People
 	{ source: "profiles", sourceColumn: "organisationId", target: "organisations", description: "Primary org for this candidate" },
+	{ source: "profiles", sourceColumn: "userRoleId", target: "user_roles", description: "Permission role in the system" },
 
 	// Work
 	{ source: "jobs", sourceColumn: "organisationId", target: "organisations", description: "Org posting this job" },

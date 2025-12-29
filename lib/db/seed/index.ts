@@ -11,6 +11,7 @@ import {
 	workNodeTypes,
 	workNodes,
 	roles,
+	userRoles,
 	complianceElements,
 	compliancePackages,
 	packageElements,
@@ -243,6 +244,26 @@ async function seedOrganisation(config: OrgConfig) {
 	}
 	console.log(`   ✓ Created ${roleTemplates.length} roles`);
 
+	// 4b. Create user roles (permission roles)
+	const defaultUserRoles = [
+		{ name: "Admin", slug: "admin", description: "Full system access", permissions: ["*"], isDefault: false },
+		{ name: "Compliance Officer", slug: "compliance-officer", description: "Manage compliance and evidence", permissions: ["profiles:*", "evidence:*", "escalations:*"], isDefault: false },
+		{ name: "Recruiter", slug: "recruiter", description: "Manage candidates and applications", permissions: ["profiles:read", "profiles:create", "applications:*"], isDefault: false },
+		{ name: "Candidate", slug: "candidate", description: "View and manage own data", permissions: ["own:*"], isDefault: true },
+	];
+	const userRoleMap = new Map<string, string>();
+	for (const userRoleTemplate of defaultUserRoles) {
+		const [userRole] = await db
+			.insert(userRoles)
+			.values({
+				...userRoleTemplate,
+				organisationId: org.id,
+			})
+			.returning();
+		userRoleMap.set(userRoleTemplate.slug, userRole.id);
+	}
+	console.log(`   ✓ Created ${defaultUserRoles.length} user roles`);
+
 	// 5. Create compliance elements
 	const elementTemplates = config.market === "uk" ? ukComplianceElements : usComplianceElements;
 	const elementMap = new Map<string, string>();
@@ -327,6 +348,7 @@ async function seedOrganisation(config: OrgConfig) {
 			.values({
 				...candidateConfig.profile,
 				organisationId: org.id,
+				userRoleId: userRoleMap.get("candidate"), // All seeded profiles are candidates
 			})
 			.returning();
 		profileCount++;

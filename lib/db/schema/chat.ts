@@ -29,6 +29,8 @@ import type {
 export const user = pgTable("users", {
 	id: uuid("id").primaryKey().notNull().defaultRandom(),
 	email: varchar("email", { length: 64 }).notNull(),
+	/** Currently selected profile (determines active org) */
+	currentProfileId: uuid("current_profile_id"),
 });
 
 export type User = InferSelectModel<typeof user>;
