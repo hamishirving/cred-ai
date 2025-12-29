@@ -312,33 +312,33 @@ components/
 
 ## Implementation Steps
 
-### Phase 1: Database Schema
+### Phase 1: Database Schema ✅
 1. [x] Add entity descriptions section to DATA_MODEL.md
 2. [x] Add relationship descriptions section to DATA_MODEL.md
-3. [ ] Create Drizzle schema files for all domains
-4. [ ] Run migrations to create tables
-5. [ ] Verify schema with `pnpm db:studio`
+3. [x] Create Drizzle schema files for all domains
+4. [x] Run migrations to create tables
+5. [x] Verify schema with `pnpm db:studio`
 
-### Phase 2: Basic ERD
-6. [ ] Install React Flow: `pnpm add @xyflow/react`
-7. [ ] Create `use-schema-to-erd.ts` hook to introspect Drizzle schema
-8. [ ] Create basic ERD page at `/data-model`
-9. [ ] Create table node component
-10. [ ] Create ERD config with node positions
-11. [ ] Render nodes without edges
+### Phase 2: Basic ERD ✅
+6. [x] Install React Flow: `pnpm add @xyflow/react`
+7. [x] Create `use-schema-to-erd.ts` hook to introspect Drizzle schema
+8. [x] Create basic ERD page at `/data-model`
+9. [x] Create table node component
+10. [x] Create ERD config with node positions
+11. [x] Render nodes with edges
 
-### Phase 3: Relationships & Groups
-12. [ ] Add edge generation from foreign key references
-13. [ ] Create domain group nodes
-14. [ ] Position groups around table nodes
-15. [ ] Style edges with cardinality markers
+### Phase 3: Relationships & Groups ✅
+12. [x] Add edge generation from foreign key references
+13. [x] Create domain group nodes
+14. [x] Position groups around table nodes
+15. [x] Style edges with cardinality markers
 
-### Phase 4: Documentation & Tooltips
-16. [ ] Create `erd-metadata.ts` with entity/relationship descriptions
-17. [ ] Create entity tooltip component
-18. [ ] Create relationship tooltip component
-19. [ ] Create entity detail side panel
-20. [ ] Wire up hover/click interactions
+### Phase 4: Documentation & Tooltips ✅
+16. [x] Create `erd-metadata.ts` with entity/relationship descriptions
+17. [x] Create entity tooltip component
+18. [ ] Create relationship tooltip component (deferred)
+19. [ ] Create entity detail side panel (deferred)
+20. [x] Wire up hover/click interactions
 
 ### Phase 5: Polish
 21. [ ] Add pan/zoom controls
