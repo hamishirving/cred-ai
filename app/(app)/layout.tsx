@@ -3,6 +3,7 @@ import Script from "next/script";
 import { AppSidebar } from "@/components/sidebar";
 import { DataStreamProvider } from "@/components/data-stream-provider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { OrgProvider } from "@/lib/org-context";
 import { auth } from "@/lib/auth";
 
 export default async function AppLayout({
@@ -19,12 +20,14 @@ export default async function AppLayout({
 				src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"
 				strategy="beforeInteractive"
 			/>
-			<DataStreamProvider>
-				<SidebarProvider defaultOpen={!isCollapsed}>
-					<AppSidebar user={session?.user} />
-					<SidebarInset>{children}</SidebarInset>
-				</SidebarProvider>
-			</DataStreamProvider>
+			<OrgProvider>
+				<DataStreamProvider>
+					<SidebarProvider defaultOpen={!isCollapsed}>
+						<AppSidebar user={session?.user} />
+						<SidebarInset>{children}</SidebarInset>
+					</SidebarProvider>
+				</DataStreamProvider>
+			</OrgProvider>
 		</>
 	);
 }

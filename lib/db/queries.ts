@@ -34,6 +34,19 @@ import {
 	vote,
 	type VoiceCall,
 	voiceCall,
+	// Credentially tables
+	organisations,
+	type Organisation,
+	profiles,
+	type Profile,
+	placements,
+	type Placement,
+	pipelines,
+	type Pipeline,
+	pipelineStages,
+	type PipelineStage,
+	entityStagePositions,
+	type EntityStagePosition,
 } from "./schema";
 import type {
 	TranscriptMessage,
@@ -826,6 +839,217 @@ export async function getVoiceCallStats({
 		throw new ChatSDKError(
 			"bad_request:database",
 			"Failed to get voice call stats",
+		);
+	}
+}
+
+// ============================================
+// Pipeline Queries
+// ============================================
+
+export interface PipelineStageInfo {
+	id: string;
+	name: string;
+	stageOrder: number;
+	isTerminal: boolean;
+}
+
+export interface PipelineWithStages {
+	id: string;
+	name: string;
+	stages: PipelineStageInfo[];
+}
+
+/**
+ * Get the default profile pipeline for an organisation with its stages.
+ */
+export async function getDefaultProfilePipeline({
+	organisationId,
+}: {
+	organisationId: string;
+}): Promise<PipelineWithStages | null> {
+	try {
+		// Get the default profile pipeline for this org
+		const [pipeline] = await db
+			.select()
+			.from(pipelines)
+			.where(
+				and(
+					eq(pipelines.organisationId, organisationId),
+					eq(pipelines.appliesTo, "profile"),
+					eq(pipelines.isDefault, true),
+				),
+			)
+			.limit(1);
+
+		if (!pipeline) {
+			return null;
+		}
+
+		// Get all stages for this pipeline
+		const stages = await db
+			.select({
+				id: pipelineStages.id,
+				name: pipelineStages.name,
+				stageOrder: pipelineStages.stageOrder,
+				isTerminal: pipelineStages.isTerminal,
+			})
+			.from(pipelineStages)
+			.where(eq(pipelineStages.pipelineId, pipeline.id))
+			.orderBy(asc(pipelineStages.stageOrder));
+
+		return {
+			id: pipeline.id,
+			name: pipeline.name,
+			stages,
+		};
+	} catch (error) {
+		console.error("Failed to get default pipeline:", error);
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to get default pipeline",
+		);
+	}
+}
+
+// ============================================
+// Candidate/Profile Queries
+// ============================================
+
+export type CandidateAlertStatus = "on_track" | "overdue" | "action_required";
+
+export interface CandidateWithStage {
+	id: string;
+	name: string;
+	email: string;
+	stageId: string | null;
+	stageName: string | null;
+	alertStatus: CandidateAlertStatus;
+	enteredStageAt: Date;
+	compliancePercentage: number;
+}
+
+/**
+ * Derive candidate alert status based on compliance data and time in stage.
+ */
+function deriveCandidateAlertStatus(
+	compliancePercentage: number,
+	enteredStageAt: Date,
+	isTerminalStage: boolean,
+): CandidateAlertStatus {
+	// If fully compliant (terminal stage), they're on track
+	if (isTerminalStage || compliancePercentage >= 100) {
+		return "on_track";
+	}
+
+	// Check how long they've been in the current stage
+	const daysInStage = Math.floor(
+		(Date.now() - enteredStageAt.getTime()) / (1000 * 60 * 60 * 24),
+	);
+
+	// Overdue if low compliance and been in stage > 7 days
+	if (compliancePercentage < 50 && daysInStage > 7) {
+		return "overdue";
+	}
+
+	// Action required if moderate compliance but stalled > 5 days
+	if (compliancePercentage < 75 && daysInStage > 5) {
+		return "action_required";
+	}
+
+	return "on_track";
+}
+
+/**
+ * Get candidates for an organisation with their pipeline stage.
+ */
+export async function getCandidatesByOrganisationId({
+	organisationId,
+}: {
+	organisationId: string;
+}): Promise<CandidateWithStage[]> {
+	try {
+		// Get profiles with their stage position and placement compliance
+		const results = await db
+			.select({
+				profileId: profiles.id,
+				email: profiles.email,
+				firstName: profiles.firstName,
+				lastName: profiles.lastName,
+				profileCreatedAt: profiles.createdAt,
+				stageId: entityStagePositions.currentStageId,
+				stageName: pipelineStages.name,
+				stageOrder: pipelineStages.stageOrder,
+				isTerminal: pipelineStages.isTerminal,
+				enteredStageAt: entityStagePositions.enteredStageAt,
+				compliancePercentage: placements.compliancePercentage,
+			})
+			.from(profiles)
+			.leftJoin(
+				entityStagePositions,
+				and(
+					eq(entityStagePositions.entityId, profiles.id),
+					eq(entityStagePositions.entityType, "profile"),
+				),
+			)
+			.leftJoin(
+				pipelineStages,
+				eq(pipelineStages.id, entityStagePositions.currentStageId),
+			)
+			.leftJoin(
+				placements,
+				and(
+					eq(placements.profileId, profiles.id),
+					eq(placements.organisationId, profiles.organisationId),
+				),
+			)
+			.where(eq(profiles.organisationId, organisationId))
+			.orderBy(asc(pipelineStages.stageOrder), asc(profiles.lastName));
+
+		// Group by profile (take first placement's compliance if multiple)
+		const profileMap = new Map<string, CandidateWithStage>();
+
+		for (const row of results) {
+			if (!profileMap.has(row.profileId)) {
+				const enteredStageAt = row.enteredStageAt ?? row.profileCreatedAt;
+
+				profileMap.set(row.profileId, {
+					id: row.profileId,
+					name: `${row.firstName} ${row.lastName}`,
+					email: row.email,
+					stageId: row.stageId,
+					stageName: row.stageName,
+					alertStatus: deriveCandidateAlertStatus(
+						row.compliancePercentage ?? 0,
+						enteredStageAt,
+						row.isTerminal ?? false,
+					),
+					enteredStageAt,
+					compliancePercentage: row.compliancePercentage ?? 0,
+				});
+			}
+		}
+
+		return Array.from(profileMap.values());
+	} catch (error) {
+		console.error("Failed to get candidates:", error);
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to get candidates by organisation id",
+		);
+	}
+}
+
+/**
+ * Get all organisations (for org switcher).
+ */
+export async function getAllOrganisations(): Promise<Organisation[]> {
+	try {
+		return await db.select().from(organisations).orderBy(asc(organisations.name));
+	} catch (_error) {
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to get organisations",
 		);
 	}
 }

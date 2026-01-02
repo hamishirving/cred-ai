@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Building2, Check, ChevronsUpDown } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -16,18 +15,32 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
-
-// TODO: Replace with actual org data from user's profiles
-const mockOrgs = [
-	{ id: "1", name: "Meridian Healthcare", plan: "Agency" },
-	{ id: "2", name: "Oakwood Care", plan: "Direct Employer" },
-];
+import { useOrg } from "@/lib/org-context";
 
 export function OrgSwitcher() {
 	const { isMobile } = useSidebar();
-	const [activeOrg, setActiveOrg] = useState(mockOrgs[0]);
+	const { organisations, selectedOrg, setSelectedOrgId, loading } = useOrg();
 
-	if (!activeOrg) {
+	if (loading) {
+		return (
+			<SidebarMenu>
+				<SidebarMenuItem>
+					<SidebarMenuButton size="lg" disabled>
+						<div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+							<Loader2 className="size-4 animate-spin" />
+						</div>
+						<div className="grid flex-1 text-left text-sm leading-tight">
+							<span className="truncate font-semibold text-muted-foreground">
+								Loading...
+							</span>
+						</div>
+					</SidebarMenuButton>
+				</SidebarMenuItem>
+			</SidebarMenu>
+		);
+	}
+
+	if (!selectedOrg) {
 		return null;
 	}
 
@@ -44,8 +57,8 @@ export function OrgSwitcher() {
 								<Building2 className="size-4" />
 							</div>
 							<div className="grid flex-1 text-left text-sm leading-tight">
-								<span className="truncate font-semibold">{activeOrg.name}</span>
-								<span className="truncate text-xs">{activeOrg.plan}</span>
+								<span className="truncate font-semibold">{selectedOrg.name}</span>
+								<span className="truncate text-xs">{selectedOrg.type ?? "Organisation"}</span>
 							</div>
 							<ChevronsUpDown className="ml-auto" />
 						</SidebarMenuButton>
@@ -59,17 +72,17 @@ export function OrgSwitcher() {
 						<DropdownMenuLabel className="text-xs text-muted-foreground">
 							Organisations
 						</DropdownMenuLabel>
-						{mockOrgs.map((org) => (
+						{organisations.map((org) => (
 							<DropdownMenuItem
 								key={org.id}
 								className="gap-2 p-2"
-								onClick={() => setActiveOrg(org)}
+								onClick={() => setSelectedOrgId(org.id)}
 							>
 								<div className="flex size-6 items-center justify-center rounded-sm border">
 									<Building2 className="size-4 shrink-0" />
 								</div>
 								<span className="flex-1">{org.name}</span>
-								{activeOrg.id === org.id && (
+								{selectedOrg.id === org.id && (
 									<Check className="size-4 text-primary" />
 								)}
 							</DropdownMenuItem>
