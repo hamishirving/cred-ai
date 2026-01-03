@@ -277,3 +277,45 @@ Priority is calculated based on:
 | `app/(app)/tasks/page.tsx` | Tasks UI |
 | `components/settings/ai-companion-settings.tsx` | Settings UI |
 | `components/candidate/communications.tsx` | Email preview UI |
+
+## What's Next (Roadmap)
+
+Features remaining to complete the AI Companion system, in priority order:
+
+| Priority | Feature | Description | Complexity |
+|----------|---------|-------------|------------|
+| 1 | **Email Channel** | Integrate email provider (Resend/SendGrid) to actually send emails | Medium |
+| 2 | **Scheduled Runs** | Cron job to run agent daily at org's configured time | Medium |
+| 3 | **Notification Channel** | Real-time in-app notifications for compliance managers | Medium |
+| 4 | **Dashboard Widget** | "Tasks Needing Attention" card on home page | Low |
+| 5 | **Bulk Operations** | Run agent for all candidates in org, batch task creation | Medium |
+| 6 | **Email Sending UI** | "Send" button after preview approval, confirmation flow | Low |
+| 7 | **Activity Logging** | Track all sent emails with delivery status, opens, clicks | Medium |
+| 8 | **Escalation Rules** | Auto-escalate tasks that aren't actioned within SLA | High |
+| 9 | **Analytics Dashboard** | Email performance, task completion rates, response times | High |
+
+### Implementation Notes
+
+**Email Channel (Priority 1)**
+- Add Resend or SendGrid SDK
+- Create `lib/ai/channels/email/index.ts`
+- Handle bounce/complaint webhooks
+- Add email templates with org branding
+
+**Scheduled Runs (Priority 2)**
+- Use Vercel Cron or external scheduler
+- Create `/api/cron/compliance-companion` endpoint
+- Respect org timezone and send time settings
+- Rate limit to avoid overwhelming candidates
+
+**Notification Channel (Priority 3)**
+- Create notifications table
+- Real-time updates via polling or WebSocket
+- Badge count in sidebar
+- Mark as read/dismiss functionality
+
+**Dashboard Widget (Priority 4)**
+- Add to home page (`app/(app)/page.tsx`)
+- Show top 5 urgent tasks
+- Quick actions (complete, snooze)
+- Link to full tasks page
