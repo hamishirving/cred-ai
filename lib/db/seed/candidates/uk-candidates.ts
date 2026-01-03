@@ -16,6 +16,10 @@ export interface CandidateState {
 	missingElements?: string[];
 	/** Elements expiring soon (slugs) */
 	expiringElements?: string[];
+	/** Elements awaiting admin review (slugs) - status will be 'requires_review' */
+	pendingAdminReview?: string[];
+	/** Elements awaiting third party (slugs) - status will be 'pending' with source 'external_check' */
+	pendingThirdParty?: string[];
 	/** Days until start date (if applicable) */
 	startDateDays?: number;
 	/** Days since last activity */
@@ -286,6 +290,87 @@ export const meridianCandidates: CandidateProfile[] = [
 			status: "compliant",
 			daysSinceActivity: 15,
 			notes: "Long-tenured care worker. All documents current. Low touch.",
+		},
+	},
+	// NEW: Candidate waiting on admin review
+	{
+		profile: {
+			email: "hannah.clarke@email.com",
+			firstName: "Hannah",
+			lastName: "Clarke",
+			phone: generateUKPhone(),
+			dateOfBirth: new Date("1994-02-18"),
+			status: "active",
+			nationalId: generateNINumber(),
+			professionalRegistration: generateNMCPin(),
+			address: {
+				line1: "45 River View",
+				city: "York",
+				postcode: "YO1 7HJ",
+				country: "UK",
+			},
+		},
+		roleSlug: "band-5-nurse",
+		state: {
+			status: "in_progress",
+			pendingAdminReview: ["passport-id", "proof-of-address"],
+			daysSinceActivity: 1,
+			notes: "Documents uploaded 1 day ago. Awaiting compliance team review.",
+		},
+	},
+	// NEW: Candidate waiting on third party (DBS check in progress)
+	{
+		profile: {
+			email: "oliver.brooks@email.com",
+			firstName: "Oliver",
+			lastName: "Brooks",
+			phone: generateUKPhone(),
+			dateOfBirth: new Date("1991-09-03"),
+			status: "active",
+			nationalId: generateNINumber(),
+			address: {
+				line1: "78 Station Road",
+				city: "Reading",
+				postcode: "RG1 1LX",
+				country: "UK",
+			},
+		},
+		roleSlug: "healthcare-assistant",
+		state: {
+			status: "near_complete",
+			pendingThirdParty: ["enhanced-dbs"],
+			startDateDays: 10,
+			daysSinceActivity: 3,
+			notes: "DBS check submitted and processing with DBS. All other docs complete.",
+		},
+	},
+	// NEW: Mixed blocking - some on candidate, some on admin, some on third party
+	{
+		profile: {
+			email: "amelia.foster@email.com",
+			firstName: "Amelia",
+			lastName: "Foster",
+			phone: generateUKPhone(),
+			dateOfBirth: new Date("1997-11-25"),
+			status: "active",
+			nationalId: generateNINumber(),
+			professionalRegistration: generateNMCPin(),
+			address: {
+				line1: "12 Garden Close",
+				city: "Oxford",
+				postcode: "OX1 2JD",
+				country: "UK",
+			},
+		},
+		roleSlug: "band-5-nurse",
+		state: {
+			status: "in_progress",
+			missingElements: ["occupational-health"],
+			pendingAdminReview: ["nmc-registration"],
+			pendingThirdParty: ["employment-references"],
+			startDateDays: 14,
+			daysSinceActivity: 2,
+			notes: "Mixed blockers: needs OH check, NMC docs under review, reference with previous employer.",
 		},
 	},
 ];
