@@ -9,6 +9,7 @@ import {
 	complianceCompanionAgent,
 	generateEmailContent,
 } from "@/lib/ai/agents/compliance-companion";
+import { createTaskFromInsight } from "@/lib/ai/channels";
 import type { AgentContext, AgentInsight } from "@/lib/ai/agents/types";
 
 /**
@@ -159,6 +160,20 @@ export async function POST(
 			status: "preview",
 		});
 
+		// Create task for compliance manager if high/urgent priority
+		let taskCreated = null;
+		if (insight.priority === "high" || insight.priority === "urgent") {
+			const taskResult = await createTaskFromInsight(insight, {
+				organisationId,
+				orgName: org.name,
+				orgPrompt: org.settings.orgPrompt,
+				complianceContact: org.settings.complianceContact,
+			});
+			if (taskResult?.status === "delivered") {
+				taskCreated = taskResult.data?.taskId;
+			}
+		}
+
 		return NextResponse.json({
 			insight: {
 				id: insight.id,
@@ -172,6 +187,7 @@ export async function POST(
 				subject: emailContent.subject,
 				body: emailContent.body,
 			},
+			task: taskCreated ? { id: taskCreated } : null,
 			context: {
 				candidate: {
 					name: `${candidate.firstName} ${candidate.lastName}`,
