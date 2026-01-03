@@ -1,4 +1,4 @@
-# PRD: Compliance Companion Email MVP (Playground)
+# PRD: AI Compliance Agents Platform (Playground)
 
 **Status:** Draft
 **Created:** 2025-01-03
@@ -9,22 +9,78 @@
 
 ## Overview
 
-Implement an MVP of the AI Compliance Companion automated daily emails feature in the Credentially 2.0 Playground. This demonstrates the core value proposition: **"AI does work, human supervises"** — where candidates receive personalised, AI-generated emails about their onboarding progress.
+Build a modular AI Agent platform in the Credentially 2.0 Playground that supports multiple agents, audiences, and delivery channels. The first implementation focuses on the Compliance Companion agent, but the architecture must support expansion to other agents and channels.
 
-### Goals
+### The Vision
 
-1. **Demonstrate email generation** — Show AI-generated, personalised compliance emails
-2. **Prove blocking logic value** — Differentiate "what candidate needs to do" vs "what we're handling"
-3. **Showcase org customisation** — Org-level prompt configuration for brand voice
-4. **Enable realistic demos** — Use existing seed data to show varied email scenarios
-5. **Build foundation** — Architecture that extends to production implementation
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      AI AGENT PLATFORM                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐        │
+│   │ Compliance  │    │  Recruiter  │    │   Future    │        │
+│   │ Companion   │    │  Assistant  │    │   Agents    │        │
+│   │   Agent     │    │    Agent    │    │    ...      │        │
+│   └──────┬──────┘    └──────┬──────┘    └──────┬──────┘        │
+│          │                  │                  │                │
+│          ▼                  ▼                  ▼                │
+│   ┌─────────────────────────────────────────────────────┐      │
+│   │              INSIGHT / ACTION ENGINE                 │      │
+│   │   Agents produce insights about what's important     │      │
+│   └──────────────────────────┬──────────────────────────┘      │
+│                              │                                  │
+│          ┌───────────────────┼───────────────────┐             │
+│          ▼                   ▼                   ▼             │
+│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐        │
+│   │  Candidate  │    │  Compliance │    │  Recruiter  │        │
+│   │  Audience   │    │   Manager   │    │  Audience   │        │
+│   └──────┬──────┘    └──────┬──────┘    └──────┬──────┘        │
+│          │                  │                  │                │
+│          ▼                  ▼                  ▼                │
+│   ┌─────────────────────────────────────────────────────┐      │
+│   │                 CHANNEL ADAPTERS                     │      │
+│   │  Email │ In-App Task │ Notification │ SMS │ Voice   │      │
+│   └─────────────────────────────────────────────────────┘      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-### Non-Goals (V1)
+### Core Principles
 
-- ❌ Actually sending emails (preview only)
-- ❌ Admin digest emails (candidate-focused only)
-- ❌ Ongoing compliance emails (onboarding only)
-- ❌ Multi-channel (email only, no SMS/WhatsApp)
+1. **Separation of Concerns**
+   - **Agent**: Decides WHAT is important (analysis)
+   - **Router**: Decides WHO should know (audience)
+   - **Channel**: Decides HOW to deliver (medium)
+
+2. **Primitive Alignment**
+   - P021 (AI Agent) → Agent layer
+   - P009 (Notifications) → Channel layer
+   - P005 (Events) → Trigger layer
+   - P006 (Scheduled Actions) → Execution layer
+   - P010 (HITL) → Escalation handling
+   - P004 (Audit) → Activity logging
+
+3. **Extensibility First**
+   - New agents can be added without changing channels
+   - New channels can be added without changing agents
+   - Audience routing is configurable per org
+
+### MVP Scope
+
+**In Scope (V1):**
+- ✅ Compliance Companion Agent (candidate onboarding)
+- ✅ Candidate audience (their own status)
+- ✅ Compliance Manager audience (candidates needing attention)
+- ✅ Email channel (candidates) - preview only
+- ✅ In-app Tasks channel (compliance managers)
+- ✅ Communications history UI
+
+**Future Scope:**
+- ❌ Recruiter Assistant Agent
+- ❌ SMS/WhatsApp channels
+- ❌ Voice channel
+- ❌ Actual email sending
 - ❌ Reply handling / conversational
 
 ---
@@ -39,6 +95,382 @@ Key concepts from production PRD:
 - Warm, encouraging tone - not robotic notifications
 - 150-250 words, scannable format
 - Clear next steps and contact details
+
+---
+
+## Modular Architecture
+
+### Layer 1: Agents
+
+Agents are the "brain" - they analyze context and produce insights/recommendations.
+
+```typescript
+// lib/ai/agents/types.ts
+interface Agent {
+  id: string;
+  name: string;
+  description: string;
+
+  // What triggers this agent to run?
+  triggers: AgentTrigger[];
+
+  // Who can this agent produce insights for?
+  audiences: AudienceType[];
+
+  // Run the agent for a specific context
+  run(context: AgentContext): Promise<AgentInsight[]>;
+}
+
+interface AgentTrigger {
+  type: 'scheduled' | 'event' | 'manual';
+  config: {
+    schedule?: string;        // Cron expression for scheduled
+    eventType?: string;       // Event name for event-triggered
+  };
+}
+
+type AudienceType = 'candidate' | 'compliance_manager' | 'recruiter' | 'admin';
+```
+
+**MVP Agents:**
+
+| Agent | Description | Audiences |
+|-------|-------------|-----------|
+| **Compliance Companion** | Monitors candidate onboarding progress, identifies blockers, generates personalized guidance | Candidate, Compliance Manager |
+
+**Future Agents:**
+
+| Agent | Description | Audiences |
+|-------|-------------|-----------|
+| Recruiter Assistant | Pipeline health, candidate engagement | Recruiter |
+| Document Processor | AI document review, extraction | Compliance Manager |
+| Expiry Monitor | Ongoing compliance, renewal tracking | Candidate, Compliance Manager |
+
+### Layer 2: Insights
+
+Insights are the output of agents - structured data about what's important.
+
+```typescript
+// lib/ai/agents/types.ts
+interface AgentInsight {
+  id: string;
+  agentId: string;
+
+  // What is this about?
+  subjectType: 'profile' | 'placement' | 'evidence' | 'escalation';
+  subjectId: string;
+
+  // Who should receive this?
+  audiences: AudienceInsight[];
+
+  // Classification
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  category: 'progress' | 'blocker' | 'expiry' | 'action_required' | 'celebration';
+
+  // The insight content (structured)
+  summary: string;
+  details: Record<string, unknown>;
+
+  // AI-generated content for each channel (lazy-loaded)
+  content?: {
+    email?: EmailContent;
+    task?: TaskContent;
+    notification?: NotificationContent;
+  };
+
+  // When to deliver (for batching)
+  deliverAt?: Date;
+
+  createdAt: Date;
+}
+
+interface AudienceInsight {
+  audienceType: AudienceType;
+  recipientId?: string;        // Specific user, or null for role-based
+  channels: ChannelType[];     // Which channels to use
+}
+```
+
+**Example Insight:**
+
+```typescript
+const insight: AgentInsight = {
+  id: 'ins_123',
+  agentId: 'compliance-companion',
+  subjectType: 'profile',
+  subjectId: 'sarah-thompson-id',
+  priority: 'high',
+  category: 'action_required',
+  summary: 'Sarah Thompson needs DBS certificate, starts Monday',
+  details: {
+    candidateName: 'Sarah Thompson',
+    completedItems: 5,
+    totalItems: 7,
+    missingItems: ['DBS Certificate'],
+    blockedByCandidate: ['DBS Certificate'],
+    blockedByAdmin: [],
+    blockedByThirdParty: ['Employment Reference'],
+    startDate: '2025-01-06',
+    daysUntilStart: 3,
+  },
+  audiences: [
+    {
+      audienceType: 'candidate',
+      recipientId: 'sarah-thompson-id',
+      channels: ['email'],
+    },
+    {
+      audienceType: 'compliance_manager',
+      recipientId: null, // Assigned CM
+      channels: ['task', 'notification'],
+    },
+  ],
+  createdAt: new Date(),
+};
+```
+
+### Layer 3: Channels
+
+Channels are the delivery mechanism - they format insights for specific mediums.
+
+```typescript
+// lib/ai/channels/types.ts
+type ChannelType = 'email' | 'task' | 'notification' | 'sms' | 'voice';
+
+interface Channel {
+  type: ChannelType;
+  name: string;
+
+  // Can this channel reach this audience?
+  supportsAudience(audience: AudienceType): boolean;
+
+  // Format insight for this channel
+  format(insight: AgentInsight, audience: AudienceInsight): Promise<ChannelContent>;
+
+  // Deliver (or preview) the content
+  deliver(content: ChannelContent, options: DeliverOptions): Promise<DeliveryResult>;
+}
+
+interface DeliverOptions {
+  preview: boolean;           // Don't actually send
+  recipientOverride?: string; // Send to different recipient (testing)
+}
+```
+
+**MVP Channels:**
+
+| Channel | Audience | Purpose | MVP Status |
+|---------|----------|---------|------------|
+| **Email** | Candidate | External async communication | Preview only |
+| **Task** | Compliance Manager | Internal actionable items | Full (in-app) |
+| **Notification** | Compliance Manager | Internal alerts | Full (in-app) |
+
+**Channel Implementations:**
+
+```typescript
+// lib/ai/channels/email-channel.ts
+export const emailChannel: Channel = {
+  type: 'email',
+  name: 'Email',
+
+  supportsAudience: (audience) =>
+    ['candidate', 'recruiter'].includes(audience),
+
+  async format(insight, audience) {
+    // Use AI to generate email content
+    const { subject, body } = await generateEmail(insight, audience);
+    return { type: 'email', subject, body, html: renderEmailHtml(body) };
+  },
+
+  async deliver(content, options) {
+    if (options.preview) {
+      return { status: 'preview', content };
+    }
+    // Future: actually send via Resend
+    return { status: 'sent', messageId: '...' };
+  },
+};
+
+// lib/ai/channels/task-channel.ts
+export const taskChannel: Channel = {
+  type: 'task',
+  name: 'In-App Task',
+
+  supportsAudience: (audience) =>
+    ['compliance_manager', 'recruiter', 'admin'].includes(audience),
+
+  async format(insight, audience) {
+    return {
+      type: 'task',
+      title: insight.summary,
+      description: formatTaskDescription(insight),
+      priority: insight.priority,
+      dueDate: insight.details.startDate,
+      linkedEntity: {
+        type: insight.subjectType,
+        id: insight.subjectId,
+      },
+    };
+  },
+
+  async deliver(content, options) {
+    // Create task in database
+    const task = await createTask(content);
+    return { status: 'created', taskId: task.id };
+  },
+};
+```
+
+### Layer 4: Orchestration
+
+The orchestrator ties everything together:
+
+```typescript
+// lib/ai/agents/orchestrator.ts
+export class AgentOrchestrator {
+  private agents: Map<string, Agent>;
+  private channels: Map<ChannelType, Channel>;
+
+  // Run all agents for an organisation
+  async runDaily(organisationId: string): Promise<OrchestratorResult> {
+    const insights: AgentInsight[] = [];
+
+    // Run each enabled agent
+    for (const agent of this.getEnabledAgents(organisationId)) {
+      const context = await this.buildContext(agent, organisationId);
+      const agentInsights = await agent.run(context);
+      insights.push(...agentInsights);
+    }
+
+    // Route insights to channels
+    const deliveries: DeliveryResult[] = [];
+    for (const insight of insights) {
+      for (const audience of insight.audiences) {
+        for (const channelType of audience.channels) {
+          const channel = this.channels.get(channelType);
+          const content = await channel.format(insight, audience);
+          const result = await channel.deliver(content, { preview: true });
+          deliveries.push(result);
+        }
+      }
+    }
+
+    // Log activity
+    await this.logActivity(organisationId, insights, deliveries);
+
+    return { insights, deliveries };
+  }
+}
+```
+
+### Data Flow Example
+
+**Scenario:** Daily run for Meridian Healthcare
+
+```
+1. TRIGGER: Scheduled job fires at 9am
+
+2. AGENT: Compliance Companion runs
+   └── Scans all active onboarding candidates
+   └── For each candidate:
+       ├── Calculate compliance status
+       ├── Analyze blocking items
+       └── Generate insight
+
+3. INSIGHTS PRODUCED:
+   ├── Sarah Thompson: high priority, DBS needed, starts Monday
+   ├── James Wilson: urgent, stuck 14 days, needs escalation
+   └── Emily Chen: low priority, fully compliant (celebration)
+
+4. ROUTING:
+   Sarah's insight →
+   ├── Candidate (Sarah): email channel
+   └── Compliance Manager: task + notification channels
+
+5. FORMATTING:
+   ├── Email: AI generates personalized message for Sarah
+   ├── Task: "Chase Sarah Thompson - DBS needed for Monday start"
+   └── Notification: "High priority: Sarah Thompson blocked on DBS"
+
+6. DELIVERY:
+   ├── Email: Preview stored (not sent in MVP)
+   ├── Task: Created in tasks table
+   └── Notification: Created in notifications table
+
+7. ACTIVITY LOG:
+   └── Record all actions with AI reasoning
+```
+
+---
+
+## Tasks System (New)
+
+To support compliance managers, we need an in-app tasks system.
+
+### Task Schema
+
+```typescript
+// lib/db/schema/tasks.ts
+export const tasks = pgTable("tasks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organisationId: uuid("organisation_id").notNull(),
+
+  // Who is this task for?
+  assigneeId: uuid("assignee_id"),              // Specific user
+  assigneeRole: varchar("assignee_role"),       // Or role-based (e.g., "compliance_manager")
+
+  // What is this task about?
+  subjectType: varchar("subject_type", {
+    enum: ["profile", "placement", "evidence", "escalation"],
+  }),
+  subjectId: uuid("subject_id"),
+
+  // Task details
+  title: text("title").notNull(),
+  description: text("description"),
+  priority: varchar("priority", {
+    enum: ["low", "medium", "high", "urgent"],
+  }).default("medium"),
+
+  // Source tracking
+  source: varchar("source", {
+    enum: ["ai_agent", "manual", "system"],
+  }).notNull(),
+  agentId: varchar("agent_id"),                 // Which agent created this
+  insightId: uuid("insight_id"),                // Link to insight
+
+  // Status
+  status: varchar("status", {
+    enum: ["pending", "in_progress", "completed", "dismissed"],
+  }).default("pending"),
+
+  // Dates
+  dueAt: timestamp("due_at"),
+  completedAt: timestamp("completed_at"),
+  completedBy: uuid("completed_by"),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+```
+
+### Task UI Integration
+
+Tasks appear in multiple places:
+
+1. **Tasks Page** (`/tasks`) - Full task list with filters
+2. **Home Dashboard** - "Tasks needing attention" widget
+3. **Candidate Page** - Tasks related to this candidate
+
+### Task Actions
+
+| Action | Description |
+|--------|-------------|
+| View | Open linked entity (e.g., candidate profile) |
+| Complete | Mark as done |
+| Dismiss | Acknowledge but don't action |
+| Snooze | Delay until later |
+| Reassign | Move to different user/role |
 
 ---
 
@@ -778,46 +1210,117 @@ interface UpdateOrgSettingsRequest {
 
 ## Technical Architecture
 
+### Directory Structure
+
 ```
-┌────────────────────────────────────────────────────────────────┐
-│                        Playground UI                            │
-├─────────────────────┬──────────────────────┬───────────────────┤
-│  Candidate Page     │    Org Settings      │    (Future)       │
-│  - Comms History    │    - AI Companion    │    Dashboard      │
-│  - Email Preview    │    - Org Prompt      │    Batch Preview  │
-└─────────────────────┴──────────────────────┴───────────────────┘
-                              │
-                              ▼
-┌────────────────────────────────────────────────────────────────┐
-│                         API Layer                               │
-├────────────────────────────────────────────────────────────────┤
-│  /api/companion/generate-email                                  │
-│  /api/candidates/[id]/communications                            │
-│  /api/organisations/[id]/settings                               │
-└────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌────────────────────────────────────────────────────────────────┐
-│                    AI Generation Layer                          │
-├─────────────────────┬──────────────────────┬───────────────────┤
-│   System Prompt     │     Org Prompt       │  Dynamic Context  │
-│   (hardcoded)       │   (from settings)    │  (from DB query)  │
-└─────────────────────┴──────────────────────┴───────────────────┘
-                              │
-                              ▼
-┌────────────────────────────────────────────────────────────────┐
-│                       Claude API                                │
-│                    (claude-sonnet-4-5)                               │
-└────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌────────────────────────────────────────────────────────────────┐
-│                      Data Layer                                 │
-├─────────────────────┬──────────────────────┬───────────────────┤
-│     Profiles        │      Evidence        │    Activities     │
-│   (candidates)      │  (compliance items)  │  (comms history)  │
-└─────────────────────┴──────────────────────┴───────────────────┘
+lib/ai/
+├── agents/                           # Agent Layer (P021)
+│   ├── types.ts                      # Agent, Insight, Trigger interfaces
+│   ├── orchestrator.ts               # Runs agents, routes insights
+│   ├── compliance-companion/         # First agent implementation
+│   │   ├── index.ts                  # Agent definition
+│   │   ├── analyzer.ts               # Compliance analysis logic
+│   │   ├── blocking.ts               # Blocking status derivation
+│   │   └── prompts.ts                # System + dynamic prompts
+│   └── registry.ts                   # Agent registration
+│
+├── channels/                         # Channel Layer (P009)
+│   ├── types.ts                      # Channel interfaces
+│   ├── email/                        # Email channel
+│   │   ├── index.ts                  # Channel implementation
+│   │   ├── formatter.ts              # AI content generation
+│   │   └── templates.ts              # Email HTML templates
+│   ├── task/                         # Task channel
+│   │   ├── index.ts                  # Channel implementation
+│   │   └── formatter.ts              # Task content formatting
+│   ├── notification/                 # Notification channel
+│   │   └── index.ts                  # Channel implementation
+│   └── registry.ts                   # Channel registration
+│
+├── insights/                         # Insight storage & routing
+│   ├── types.ts                      # Insight interfaces
+│   ├── router.ts                     # Audience routing logic
+│   └── storage.ts                    # Insight persistence
+│
+└── prompts/                          # Shared prompt components
+    ├── system-prompt.ts              # Core AI behaviour
+    └── org-prompt.ts                 # Org-specific voice
 ```
+
+### System Diagram
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                         PLAYGROUND UI                               │
+├──────────────┬───────────────┬────────────────┬────────────────────┤
+│  Candidate   │   Tasks       │   Org          │   Home             │
+│  Page        │   Page        │   Settings     │   Dashboard        │
+│  - Comms     │   - Task List │   - AI Config  │   - Task Widget    │
+│  - Preview   │   - Filters   │   - Org Prompt │   - Activity Feed  │
+└──────┬───────┴───────┬───────┴────────┬───────┴────────┬───────────┘
+       │               │                │                │
+       ▼               ▼                ▼                ▼
+┌────────────────────────────────────────────────────────────────────┐
+│                           API LAYER                                 │
+├────────────────────────────────────────────────────────────────────┤
+│  /api/agents/run                    Run agent manually              │
+│  /api/agents/[id]/insights          Get insights for agent          │
+│  /api/candidates/[id]/communications Get comms history              │
+│  /api/tasks                         Task CRUD                       │
+│  /api/organisations/[id]/settings   Update org AI settings          │
+└────────────────────────────────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌────────────────────────────────────────────────────────────────────┐
+│                      AGENT ORCHESTRATOR                             │
+├────────────────────────────────────────────────────────────────────┤
+│  1. Load enabled agents for org                                     │
+│  2. Build context (candidates, evidence, activities)                │
+│  3. Run each agent → produce insights                               │
+│  4. Route insights to audiences                                     │
+│  5. Format for channels                                             │
+│  6. Deliver (or preview)                                            │
+│  7. Log activities                                                  │
+└────────────────────────────────────────────────────────────────────┘
+         │                    │                     │
+         ▼                    ▼                     ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│ COMPLIANCE      │  │ (FUTURE)        │  │ (FUTURE)        │
+│ COMPANION       │  │ RECRUITER       │  │ DOCUMENT        │
+│ AGENT           │  │ ASSISTANT       │  │ PROCESSOR       │
+└────────┬────────┘  └─────────────────┘  └─────────────────┘
+         │
+         ▼
+┌────────────────────────────────────────────────────────────────────┐
+│                        INSIGHT ENGINE                               │
+├────────────────────────────────────────────────────────────────────┤
+│  Insights: { subject, priority, category, audiences[], content }   │
+└────────────────────────────────────────────────────────────────────┘
+         │
+         ├─────────────────────┬─────────────────────┐
+         ▼                     ▼                     ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│ EMAIL CHANNEL   │  │ TASK CHANNEL    │  │ NOTIFICATION    │
+│ (Candidates)    │  │ (Staff)         │  │ CHANNEL (Staff) │
+│ [Preview Only]  │  │ [Full]          │  │ [Full]          │
+└────────┬────────┘  └────────┬────────┘  └────────┬────────┘
+         │                    │                     │
+         ▼                    ▼                     ▼
+┌────────────────────────────────────────────────────────────────────┐
+│                         DATA LAYER                                  │
+├──────────────┬────────────┬────────────┬────────────┬──────────────┤
+│  profiles    │  evidence  │  tasks     │ activities │ insights     │
+│              │            │  (NEW)     │            │ (NEW)        │
+└──────────────┴────────────┴────────────┴────────────┴──────────────┘
+```
+
+### New Database Tables
+
+| Table | Purpose |
+|-------|---------|
+| `tasks` | In-app tasks for staff (compliance managers, recruiters) |
+| `insights` | Stored agent insights (optional, for analytics/replay) |
+| `agent_runs` | Log of when agents ran (for debugging/audit) |
 
 ---
 
@@ -849,32 +1352,75 @@ interface UpdateOrgSettingsRequest {
 
 ## Implementation Checklist
 
-### Week 1: Data & Core Logic
+### Phase 1: Foundation (Week 1)
 
+**Data Layer:**
+- [ ] Create `tasks` schema (`lib/db/schema/tasks.ts`)
 - [ ] Update org settings schema (add aiCompanion, complianceContact)
 - [ ] Update seed data with org contacts and AI settings
-- [ ] Implement blocking analysis utility
 - [ ] Add "waiting on admin/third party" evidence to seed
-- [ ] Create prompt files (system, org, dynamic)
-- [ ] Implement email generation function
+- [ ] Run migration
 
-### Week 2: API & UI
+**Agent Framework:**
+- [ ] Create agent types (`lib/ai/agents/types.ts`)
+- [ ] Create channel types (`lib/ai/channels/types.ts`)
+- [ ] Create insight types (`lib/ai/insights/types.ts`)
+- [ ] Implement agent orchestrator (`lib/ai/agents/orchestrator.ts`)
+- [ ] Implement blocking analysis utility (`lib/ai/agents/compliance-companion/blocking.ts`)
 
-- [ ] Create `/api/companion/generate-email` endpoint
-- [ ] Create `/api/candidates/[id]/communications` endpoint
+### Phase 2: Compliance Companion Agent (Week 1-2)
+
+**Agent Implementation:**
+- [ ] Create Compliance Companion agent (`lib/ai/agents/compliance-companion/index.ts`)
+- [ ] Implement compliance analyzer (`lib/ai/agents/compliance-companion/analyzer.ts`)
+- [ ] Create system prompt (`lib/ai/agents/compliance-companion/prompts.ts`)
+- [ ] Add org prompt fetching
+
+**Channel Implementations:**
+- [ ] Implement email channel (preview only) (`lib/ai/channels/email/`)
+- [ ] Implement task channel (`lib/ai/channels/task/`)
+- [ ] Implement notification channel (`lib/ai/channels/notification/`)
+
+### Phase 3: API Layer (Week 2)
+
+- [ ] Create `/api/agents/run` - Run agent for org
+- [ ] Create `/api/agents/[id]/insights` - Get agent insights
+- [ ] Create `/api/candidates/[id]/communications` - Get comms history
+- [ ] Create `/api/tasks` - Task CRUD
 - [ ] Update `/api/organisations/[id]/settings` for AI settings
+
+### Phase 4: UI (Week 2-3)
+
+**Candidate Page:**
 - [ ] Build `CandidateCommsHistory` component
-- [ ] Build `EmailPreviewCard` and `EmailDetailModal`
+- [ ] Build `EmailPreviewCard` component
+- [ ] Build `EmailDetailModal` with AI reasoning
 - [ ] Add "Communications" tab to candidate detail page
-- [ ] Build org settings AI Companion section
 
-### Week 3: Polish & Demo
+**Tasks Page (NEW):**
+- [ ] Create `/tasks` page
+- [ ] Build task list with filters (priority, status, subject)
+- [ ] Build task detail view
+- [ ] Add task actions (complete, dismiss, snooze)
 
-- [ ] Add activity logging for generated emails
+**Org Settings:**
+- [ ] Build AI Companion settings section
+- [ ] Add org prompt textarea
+- [ ] Add compliance contact fields
+- [ ] Add "Preview Sample Email" button
+
+**Home Dashboard:**
+- [ ] Add "Tasks Needing Attention" widget
+- [ ] Add "AI Activity Today" summary
+
+### Phase 5: Polish & Demo (Week 3)
+
+- [ ] Activity logging for all agent actions
 - [ ] Test all candidate scenarios
 - [ ] Refine prompts based on output quality
+- [ ] Add "Run Daily Agent" demo button
 - [ ] Create demo script/walkthrough
-- [ ] Document for team
+- [ ] Document architecture for team
 
 ---
 
