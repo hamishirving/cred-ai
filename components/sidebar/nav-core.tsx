@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Home, MessageSquare, Phone, Search } from "lucide-react";
+import { Bell, CheckSquare, Home, MessageSquare, Phone, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -30,6 +30,11 @@ const coreNavItems = [
 		title: "Voice",
 		url: "/voice",
 		icon: Phone,
+	},
+	{
+		title: "Tasks",
+		url: "/tasks",
+		icon: CheckSquare,
 	},
 	{
 		title: "Notifications",
