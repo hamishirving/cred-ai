@@ -8,11 +8,9 @@
 		"start": "next start",
 		"lint": "npx ultracite@latest check",
 		"format": "npx ultracite@latest fix",
-		"db:studio": "drizzle-kit studio",
-		"db:diff": "supabase db diff --linked --schema public",
+		"db:generate": "drizzle-kit generate",
 		"db:push": "supabase db push --linked",
-		"db:pull": "supabase db pull --linked",
-		"db:reset": "supabase db reset --linked",
+		"db:studio": "drizzle-kit studio",
 		"db:seed": "npx tsx lib/db/seed/index.ts",
 		"db:clear": "npx tsx -e \"require('./lib/db/seed/clear').clearAllData().then(() => process.exit(0))\""
 	},

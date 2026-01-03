@@ -6,7 +6,7 @@ Playground for testing AI capabilities leveraging the Credentially API. Used for
 
 - **Framework**: Next.js 16 (App Router), React 19, TypeScript
 - **AI**: Anthropic Claude 4.5 via AI SDK 6
-- **Database**: Supabase Postgres + Drizzle ORM + Supabase CLI migrations
+- **Database**: Supabase Postgres + Drizzle ORM (hybrid migrations)
 - **Auth**: Supabase Auth (email/password)
 - **Analytics**: PostHog
 - **UI**: Tailwind CSS, shadcn/ui
@@ -16,7 +16,7 @@ Playground for testing AI capabilities leveraging the Credentially API. Used for
 ```bash
 pnpm dev          # Start dev server
 pnpm build        # Production build
-pnpm db:diff      # Generate migration from schema changes (requires Docker)
+pnpm db:generate  # Generate SQL migration from Drizzle schema
 pnpm db:push      # Apply migrations to remote DB
 pnpm db:seed      # Seed demo data (UK + US orgs)
 pnpm db:studio    # Open Drizzle Studio
@@ -24,9 +24,9 @@ pnpm db:studio    # Open Drizzle Studio
 
 ## Database Workflow
 
-Schema changes require updating TWO places:
-1. **Drizzle schema** (`lib/db/schema/`) - for types, ERD, queries
-2. **Database** - via `pnpm db:diff` then `pnpm db:push`
+1. Edit Drizzle schema (`lib/db/schema/`)
+2. Run `pnpm db:generate` to create SQL migration
+3. Run `pnpm db:push` to apply to database
 
 See `lib/db/CLAUDE.md` for detailed workflow.
 
