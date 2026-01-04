@@ -14,6 +14,19 @@ export default async function AppLayout({
 	const [session, cookieStore] = await Promise.all([auth(), cookies()]);
 	const isCollapsed = cookieStore.get("sidebar_state")?.value !== "true";
 
+	// Build user object with role info for sidebar
+	const user = session?.user
+		? {
+				id: session.user.id,
+				email: session.user.email,
+				firstName: session.user.firstName,
+				lastName: session.user.lastName,
+				type: session.user.type,
+				roleName: session.user.roleName,
+				roleSlug: session.user.roleSlug,
+			}
+		: undefined;
+
 	return (
 		<>
 			<Script
@@ -23,7 +36,7 @@ export default async function AppLayout({
 			<OrgProvider>
 				<DataStreamProvider>
 					<SidebarProvider defaultOpen={!isCollapsed}>
-						<AppSidebar user={session?.user} />
+						<AppSidebar user={user} />
 						<SidebarInset>{children}</SidebarInset>
 					</SidebarProvider>
 				</DataStreamProvider>

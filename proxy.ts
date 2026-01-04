@@ -41,7 +41,14 @@ export async function proxy(request: NextRequest) {
 		request.nextUrl.pathname.startsWith("/login") ||
 		request.nextUrl.pathname.startsWith("/register");
 
-	if (!user && !isAuthPage) {
+	// Public API routes (accessible without auth)
+	const isPublicApi =
+		request.nextUrl.pathname.match(/^\/api\/organisations\/[^/]+\/user-roles$/);
+
+	// PostHog analytics routes
+	const isPostHogRoute = request.nextUrl.pathname.startsWith("/ingest");
+
+	if (!user && !isAuthPage && !isPublicApi && !isPostHogRoute) {
 		// Redirect to login page
 		const url = request.nextUrl.clone();
 		url.pathname = "/login";

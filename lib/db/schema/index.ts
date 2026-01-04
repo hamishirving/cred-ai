@@ -21,6 +21,10 @@ export * from "./work-nodes";
 export * from "./roles";
 export * from "./user-roles";
 
+// Identity & Authorisation Domain
+export * from "./users";
+export * from "./org-memberships";
+
 // Compliance Domain
 export * from "./compliance-elements";
 export * from "./compliance-packages";

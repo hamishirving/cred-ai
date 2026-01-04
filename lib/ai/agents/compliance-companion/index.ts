@@ -303,7 +303,6 @@ export async function generateEmailContent(
 		const result = await generateText({
 			model: anthropic("claude-sonnet-4-5"),
 			prompt,
-			maxTokens: 1000,
 		});
 
 		// Parse JSON response

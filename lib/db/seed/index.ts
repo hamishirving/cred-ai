@@ -15,6 +15,8 @@ import {
 	complianceElements,
 	compliancePackages,
 	packageElements,
+	users,
+	orgMemberships,
 	profiles,
 	placements,
 	evidence,
@@ -166,11 +168,15 @@ async function seedOrganisation(config: OrgConfig) {
 	console.log(`\n📦 Seeding ${config.name}...`);
 
 	// 1. Create organisation with AI companion settings
+	const marketLabel = config.market === "uk" ? "UK" : "US";
+	const typeLabel = config.type === "agency" ? "Healthcare Agency" : "Healthcare Provider";
+
 	const [org] = await db
 		.insert(organisations)
 		.values({
 			name: config.name,
 			slug: config.slug,
+			description: `${marketLabel} ${typeLabel}`,
 			settings: {
 				defaultDataOwnership: "organisation",
 				terminology: config.market === "uk"
@@ -375,20 +381,47 @@ Sign off as: "${config.name} Credentialing Team"`,
 	console.log(`   ✓ Created onboarding pipeline with ${stageNames.length} stages`);
 
 	// 8. Create candidates with evidence and activities
+	let userCount = 0;
 	let profileCount = 0;
 	let evidenceCount = 0;
 	let activityCount = 0;
 
 	for (const candidateConfig of config.candidates) {
+		// Create User (global identity)
+		const [user] = await db
+			.insert(users)
+			.values({
+				authUserId: null, // Seeded users don't have Supabase auth
+				email: candidateConfig.profile.email,
+				firstName: candidateConfig.profile.firstName,
+				lastName: candidateConfig.profile.lastName,
+				phone: candidateConfig.profile.phone,
+				currentOrgId: org.id,
+			})
+			.returning();
+		userCount++;
+
+		// Create Profile (compliance data)
 		const [profile] = await db
 			.insert(profiles)
 			.values({
 				...candidateConfig.profile,
 				organisationId: org.id,
-				userRoleId: userRoleMap.get("candidate"), // All seeded profiles are candidates
 			})
 			.returning();
 		profileCount++;
+
+		// Create OrgMembership (links user to org with role and profile)
+		await db
+			.insert(orgMemberships)
+			.values({
+				userId: user.id,
+				organisationId: org.id,
+				userRoleId: userRoleMap.get("candidate")!,
+				profileId: profile.id,
+				status: "active",
+				joinedAt: new Date(),
+			});
 
 		// Determine pipeline stage based on status
 		let stageName: string;
@@ -599,7 +632,8 @@ Sign off as: "${config.name} Credentialing Team"`,
 		}
 	}
 
-	console.log(`   ✓ Created ${profileCount} candidates`);
+	console.log(`   ✓ Created ${userCount} users`);
+	console.log(`   ✓ Created ${profileCount} profiles`);
 	console.log(`   ✓ Created ${evidenceCount} evidence records`);
 	console.log(`   ✓ Created ${activityCount} activities`);
 

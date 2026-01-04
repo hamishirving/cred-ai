@@ -30,7 +30,7 @@ import {
 	stream,
 	suggestion,
 	type User,
-	user,
+	users,
 	vote,
 	type VoiceCall,
 	voiceCall,

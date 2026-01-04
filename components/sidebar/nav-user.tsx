@@ -40,9 +40,11 @@ export function NavUser({ user }: NavUserProps) {
 		return null;
 	}
 
-	const initials = user.email
-		? user.email.slice(0, 2).toUpperCase()
-		: "U";
+	const initials = user.firstName && user.lastName
+		? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+		: user.email.slice(0, 2).toUpperCase();
+
+	const isAdmin = user.roleSlug === "admin";
 
 	const handleSignOut = async () => {
 		const response = await fetch("/api/auth/signout", { method: "POST" });
@@ -67,7 +69,7 @@ export function NavUser({ user }: NavUserProps) {
 							<div className="grid flex-1 text-left text-sm leading-tight">
 								<span className="truncate font-semibold">{user.email}</span>
 								<span className="truncate text-xs text-muted-foreground">
-									{user.type}
+									{user.roleName ?? "No role"}
 								</span>
 							</div>
 							<ChevronsUpDown className="ml-auto size-4" />
@@ -87,7 +89,7 @@ export function NavUser({ user }: NavUserProps) {
 								<div className="grid flex-1 text-left text-sm leading-tight">
 									<span className="truncate font-semibold">{user.email}</span>
 									<span className="truncate text-xs text-muted-foreground">
-										{user.type}
+										{user.roleName ?? "No role"}
 									</span>
 								</div>
 							</div>
@@ -100,7 +102,10 @@ export function NavUser({ user }: NavUserProps) {
 								{theme === "dark" ? <Sun /> : <Moon />}
 								{theme === "dark" ? "Switch to light" : "Switch to dark"}
 							</DropdownMenuItem>
-							<DropdownMenuItem disabled>
+							<DropdownMenuItem
+								disabled={!isAdmin}
+								onClick={() => isAdmin && router.push("/settings")}
+							>
 								<Settings />
 								Settings
 							</DropdownMenuItem>

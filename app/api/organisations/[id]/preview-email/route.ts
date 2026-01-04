@@ -104,7 +104,6 @@ Return your response as a JSON object with "subject", "body", and "reasoning" fi
 		const result = await generateText({
 			model: anthropic("claude-sonnet-4-5"),
 			prompt: fullPrompt,
-			maxTokens: 1000,
 		});
 
 		// Parse JSON response

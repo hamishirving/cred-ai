@@ -85,6 +85,47 @@ This document defines the data model for the Credentially 2.0 Playground. The mo
 - Orgs can customise/extend taxonomies
 - Future: SkillRequirement on jobs/shifts for matching
 
+### D5: Unified User Model (Identity vs Permissions vs Compliance)
+
+**Decision:** Separate authentication, identity, authorisation, and compliance into distinct entities.
+
+**Rationale:** The system needs to support:
+- Admin users who don't need compliance tracking (IT staff)
+- Candidates who only need compliance tracking (agency nurses)
+- Staff who need BOTH permissions AND compliance (clinical compliance managers)
+- Passport model where one person works with multiple organisations
+- Different permission levels at different organisations
+
+**Implementation:**
+
+```
+auth.users (Supabase)
+    ↓ (1:1)
+User (global identity)
+    ↓ (1:many)
+OrgMembership (per-org: role + optional compliance)
+    ↓ (1:1, optional)
+Profile (compliance data if needed)
+```
+
+| Layer | Entity | Purpose |
+|-------|--------|---------|
+| Authentication | auth.users | Supabase handles login/sessions |
+| Identity | User | Who you are globally (email, name) |
+| Authorisation | OrgMembership | What you can do, per organisation |
+| Compliance | Profile | Your compliance data (if applicable) |
+
+**Key principle:** UserRole determines **permissions** (what you can do). Profile existence determines **compliance requirements** (what you need). These are independent:
+
+| Scenario | UserRole | Has Profile? |
+|----------|----------|--------------|
+| IT Admin | Admin | No |
+| Agency Nurse | Candidate | Yes |
+| Clinical Compliance Manager | ComplianceManager | Yes |
+| Nurse promoted to Team Lead | TeamLead | Yes |
+
+**Passport model:** One User can have OrgMemberships at multiple orgs. Candidate-owned evidence is portable across organisations.
+
 ---
 
 ## Core Entities
@@ -181,7 +222,7 @@ interface WorkNode {
 
 ### Role
 
-Job roles/types within the organisation. Already exists in current system.
+Job roles/types within the organisation. Drives compliance requirements.
 
 ```ts
 interface Role {
@@ -195,6 +236,163 @@ interface Role {
   customFields?: Record<string, unknown>;
 }
 ```
+
+---
+
+## Identity & Access Entities
+
+### User
+
+Global identity for a person using the system. Links to Supabase auth.
+
+```ts
+interface User {
+  id: string;
+  authUserId: string;          // Links to Supabase auth.users
+
+  // Global identity
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+
+  // Preferences (global, not org-specific)
+  preferences?: {
+    timezone?: string;
+    locale?: string;
+    notifications?: {
+      email: boolean;
+      sms: boolean;
+      push: boolean;
+    };
+  };
+
+  // Current context (which org they're viewing)
+  currentOrgId?: string;
+
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+### OrgMembership
+
+Links a User to an Organisation with a specific role. Optionally links to a Profile for compliance tracking.
+
+```ts
+interface OrgMembership {
+  id: string;
+  userId: string;              // Which User
+  organisationId: string;      // Which Organisation
+  userRoleId: string;          // Their permission role in this org
+
+  // Optional link to Profile (if this person needs compliance tracking)
+  profileId?: string;
+
+  // Membership status
+  status: 'invited' | 'active' | 'suspended' | 'archived';
+  invitedAt?: string;
+  joinedAt?: string;
+
+  // Extensibility
+  customFields?: Record<string, unknown>;
+
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+**Key relationships:**
+- User → OrgMembership: One-to-many (one person, multiple orgs)
+- OrgMembership → UserRole: Many-to-one (defines permissions)
+- OrgMembership → Profile: One-to-one optional (compliance data if needed)
+
+**Examples:**
+
+```ts
+// IT Admin - no compliance requirements
+{
+  userId: 'user-123',
+  organisationId: 'org-abc',
+  userRoleId: 'role-admin',
+  profileId: null,  // No compliance tracking
+  status: 'active'
+}
+
+// Agency Nurse - candidate with compliance requirements
+{
+  userId: 'user-456',
+  organisationId: 'org-abc',
+  userRoleId: 'role-candidate',
+  profileId: 'profile-789',  // Has compliance data
+  status: 'active'
+}
+
+// Clinical Compliance Manager - admin WITH compliance requirements
+{
+  userId: 'user-789',
+  organisationId: 'org-abc',
+  userRoleId: 'role-compliance-manager',
+  profileId: 'profile-012',  // They also need DBS, training, etc.
+  status: 'active'
+}
+
+// Travel Nurse - same person at two agencies (passport model)
+// Membership 1:
+{
+  userId: 'user-456',
+  organisationId: 'org-agency-a',
+  userRoleId: 'role-candidate',
+  profileId: 'profile-a1',
+  status: 'active'
+}
+// Membership 2:
+{
+  userId: 'user-456',
+  organisationId: 'org-agency-b',
+  userRoleId: 'role-candidate',
+  profileId: 'profile-b1',  // Separate profile, but can share evidence
+  status: 'active'
+}
+```
+
+### UserRole
+
+Permission roles within an organisation. Defines what users can do.
+
+```ts
+interface UserRole {
+  id: string;
+  organisationId: string;
+
+  name: string;                // "Admin", "Compliance Officer", "Recruiter", "Candidate"
+  slug: string;                // "admin", "compliance-officer"
+  description?: string;
+
+  // Permission strings
+  // Format: "resource:action" or "resource:*" for all actions
+  // Examples: "*" (superadmin), "profiles:*", "evidence:approve", "own:*"
+  permissions: string[];
+
+  // Whether this is the default role for new members
+  isDefault: boolean;
+
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+**Standard roles:**
+
+| Role | Permissions | Typical Use |
+|------|-------------|-------------|
+| Admin | `["*"]` | Full system access |
+| Compliance Manager | `["profiles:*", "evidence:*", "escalations:*"]` | Manage compliance |
+| Recruiter | `["profiles:read", "profiles:create", "applications:*"]` | Manage candidates |
+| Team Lead | `["profiles:read", "evidence:read", "team:*"]` | View team compliance |
+| Candidate | `["own:*"]` | Manage own data only |
 
 ---
 
@@ -366,35 +564,65 @@ interface AssignmentRule {
 
 ## Profile & Placement Entities
 
-### Profile (Candidate)
+### Profile
 
-The person being onboarded/managed.
+Compliance data for a person at an organisation. Created when someone needs compliance tracking (candidates, clinical staff, etc.).
+
+**Important:** Profile is linked via OrgMembership, not directly to User. Personal identity (name, email) lives on User. Profile holds org-specific compliance data.
 
 ```ts
 interface Profile {
   id: string;
   organisationId: string;
 
-  // Personal info
+  // Denormalised from User for convenience (synced on change)
   firstName: string;
   lastName: string;
   email: string;
   phone?: string;
+
+  // Compliance-specific personal data
   dateOfBirth?: string;
+  nationalId?: string;                    // NI number, SSN, etc.
+  professionalRegistration?: string;       // NMC PIN, GMC number
+  address?: Address;
+  emergencyContact?: EmergencyContact;
+
+  // Job context (which Role drives their compliance requirements)
+  roleId?: string;
 
   // Candidate-scoped evidence (fulfilled items)
-  // These apply to ALL placements
+  // These apply to ALL placements for this profile
   evidence: Evidence[];
 
   // Computed: overall status across all placements
   overallStatus: 'compliant' | 'non_compliant' | 'pending';
 
+  // Lifecycle
+  status: 'invited' | 'onboarding' | 'active' | 'inactive' | 'archived';
+
+  // Data ownership (for passport model)
+  // Determines if evidence can be shared to other orgs
+  dataOwnership: 'candidate' | 'organisation';
+
   // Extensibility
   customFields?: Record<string, unknown>;
 
   createdAt: string;
+  updatedAt: string;
 }
 ```
+
+**Relationship to User:**
+```
+User (global identity)
+    ↓
+OrgMembership (per-org access)
+    ↓
+Profile (compliance data, if needed)
+```
+
+A person can have multiple Profiles (one per org they work with). Candidate-owned evidence can be shared across Profiles via the passport model.
 
 ### Job (ATS Mode)
 
@@ -928,11 +1156,19 @@ Summary of each entity's purpose and what it enables. Used for ERD tooltips and 
 | **CandidateExperience** | Environment/context experience | Track where candidate has worked | ER vs ICU vs Ward experience for matching |
 | **SkillRequirement** | Skills required for job/shift | Define what skills are needed | Workforce matching, rostering integration |
 
+### Identity & Access Domain
+
+| Entity | Description | Purpose | Enables |
+|--------|-------------|---------|---------|
+| **User** | Global identity linked to auth | Who you are across all orgs | Single sign-on, global preferences, passport identity |
+| **OrgMembership** | User's access to an organisation | Per-org permissions and profile link | Multi-org access, different roles per org, passport model |
+| **UserRole** | Permission role within an organisation | What users can do | Admin, Compliance Manager, Recruiter, Candidate permissions |
+
 ### People Domain
 
 | Entity | Description | Purpose | Enables |
 |--------|-------------|---------|---------|
-| **Profile** | The candidate/worker being onboarded | Core person record | Candidate-scoped evidence, overall compliance status |
+| **Profile** | Compliance data for a person at an org | Track compliance requirements and evidence | Candidate-scoped evidence, overall compliance status, passport sharing |
 
 ### Work Domain
 
@@ -980,6 +1216,18 @@ Key relationships between entities and what they enable.
 | Org owns WorkNodeTypes | WorkNodeType → Organisation | Many-to-one | Each org defines their own hierarchy levels |
 | Org owns WorkNodes | WorkNode → Organisation | Many-to-one | Locations belong to an org |
 | Org owns Roles | Role → Organisation | Many-to-one | Job roles are org-specific |
+| Org owns UserRoles | UserRole → Organisation | Many-to-one | Permission roles are org-specific |
+
+### Identity & Access Relationships
+
+| Relationship | From → To | Cardinality | Purpose |
+|--------------|-----------|-------------|---------|
+| User to auth | User → auth.users | One-to-one | Links to Supabase authentication |
+| User memberships | OrgMembership → User | Many-to-one | One person can belong to multiple orgs |
+| Membership org | OrgMembership → Organisation | Many-to-one | Which org this membership is for |
+| Membership role | OrgMembership → UserRole | Many-to-one | What permissions they have in this org |
+| Membership profile | OrgMembership → Profile | One-to-one (optional) | Links to compliance data if needed |
+| User current org | User → Organisation | Many-to-one (optional) | Which org user is currently viewing |
 
 ### WorkNode Relationships
 
@@ -1804,6 +2052,13 @@ This enables dashboards showing "candidates with expiring items this month" or "
 
 ## Changelog
 
+- **2026-01-04** (user-model): Added unified User model (D5):
+  - New entities: User, OrgMembership, UserRole
+  - Separates authentication (auth.users), identity (User), authorisation (OrgMembership), and compliance (Profile)
+  - Supports passport model: one User can have multiple OrgMemberships across orgs
+  - Supports staff with compliance requirements (clinical managers with own DBS)
+  - Updated Profile to be compliance-focused, linked via OrgMembership
+  - Added Identity & Access Domain to entity descriptions and relationships
 - **2025-12-28** (erd): Added documentation for ERD visualisation:
   - Entity Descriptions section with purpose and enables for each entity
   - Relationship Descriptions section with cardinality and purpose

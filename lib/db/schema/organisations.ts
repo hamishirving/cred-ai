@@ -83,6 +83,9 @@ export const organisations = pgTable("organisations", {
 	/** URL-friendly identifier */
 	slug: text("slug").notNull().unique(),
 
+	/** Short description (e.g., "UK Healthcare Agency") */
+	description: text("description"),
+
 	/** Parent org for hierarchy (null = root org) */
 	parentId: uuid("parent_id"),
 

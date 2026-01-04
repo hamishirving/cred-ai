@@ -7,14 +7,15 @@ import { Suspense, useEffect } from "react";
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
 	useEffect(() => {
-		posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-			api_host: "/ingest",
-			ui_host: "https://eu.posthog.com",
-			capture_pageview: false, // We capture manually below
-			capture_pageleave: true,
-			capture_exceptions: true,
-			debug: false, // Set to true if you need to debug PostHog
-		});
+		if (typeof window !== "undefined" && !posthog.__loaded) {
+			posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+				api_host: "/ingest",
+				ui_host: "https://eu.posthog.com",
+				capture_pageview: false, // We capture manually below
+				capture_pageleave: true,
+				debug: false,
+			});
+		}
 	}, []);
 
 	return (

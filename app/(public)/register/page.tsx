@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { AuthForm } from "@/components/auth-form";
+import { RegisterForm } from "@/components/register-form";
 import { SubmitButton } from "@/components/submit-button";
 import { signUpWithEmail } from "@/lib/auth/actions";
 import { auth } from "@/lib/auth";
+import { getAllOrganisations } from "@/lib/db/queries";
 
 export default async function RegisterPage() {
 	const session = await auth();
@@ -14,6 +15,9 @@ export default async function RegisterPage() {
 		redirect("/");
 	}
 
+	// Fetch organisations for the dropdown
+	const organisations = await getAllOrganisations();
+
 	return (
 		<div className="flex h-dvh w-screen items-start pt-12 md:pt-0 md:items-center justify-center bg-background">
 			<div className="w-full max-w-md overflow-hidden rounded-2xl flex flex-col gap-12">
@@ -22,11 +26,19 @@ export default async function RegisterPage() {
 						Create Account
 					</h3>
 					<p className="text-sm text-gray-500 dark:text-zinc-400">
-						Create an account with your email and password
+						Join your organisation to get started
 					</p>
 				</div>
 
-				<AuthForm action={signUpWithEmail}>
+				<RegisterForm
+					action={signUpWithEmail}
+					organisations={organisations.map((org) => ({
+						id: org.id,
+						name: org.name,
+						slug: org.slug,
+						description: org.description,
+					}))}
+				>
 					<SubmitButton>Sign up</SubmitButton>
 
 					<p className="text-center text-sm text-gray-600 mt-4 dark:text-zinc-400">
@@ -39,7 +51,7 @@ export default async function RegisterPage() {
 						</Link>
 						{" instead."}
 					</p>
-				</AuthForm>
+				</RegisterForm>
 			</div>
 		</div>
 	);
