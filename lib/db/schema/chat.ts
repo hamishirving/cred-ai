@@ -25,15 +25,7 @@ import type {
 	VoiceCallStatus,
 	FieldSchema,
 } from "../../voice/types";
-
-export const user = pgTable("users", {
-	id: uuid("id").primaryKey().notNull().defaultRandom(),
-	email: varchar("email", { length: 64 }).notNull(),
-	/** Currently selected profile (determines active org) */
-	currentProfileId: uuid("current_profile_id"),
-});
-
-export type User = InferSelectModel<typeof user>;
+import { users } from "./users";
 
 export const chat = pgTable("chats", {
 	id: uuid("id").primaryKey().notNull().defaultRandom(),
@@ -41,7 +33,7 @@ export const chat = pgTable("chats", {
 	title: text("title").notNull(),
 	userId: uuid("user_id")
 		.notNull()
-		.references(() => user.id),
+		.references(() => users.id),
 	visibility: varchar("visibility", { enum: ["public", "private"] })
 		.notNull()
 		.default("private"),
@@ -93,7 +85,7 @@ export const document = pgTable(
 			.default("text"),
 		userId: uuid("user_id")
 			.notNull()
-			.references(() => user.id),
+			.references(() => users.id),
 	},
 	(table) => ({
 		pk: primaryKey({ columns: [table.id, table.createdAt] }),
@@ -114,7 +106,7 @@ export const suggestion = pgTable(
 		isResolved: boolean("is_resolved").notNull().default(false),
 		userId: uuid("user_id")
 			.notNull()
-			.references(() => user.id),
+			.references(() => users.id),
 		createdAt: timestamp("created_at").notNull(),
 	},
 	(table) => ({
@@ -173,7 +165,7 @@ export const voiceTemplate = pgTable("voice_templates", {
 	captureSchema: jsonb("capture_schema").$type<FieldSchema[]>(),
 
 	// Ownership & status
-	userId: uuid("user_id").references(() => user.id),
+	userId: uuid("user_id").references(() => users.id),
 	isActive: boolean("is_active").notNull().default(true),
 
 	createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -192,7 +184,7 @@ export const voiceCall = pgTable("voice_calls", {
 	// Relationships
 	userId: uuid("user_id")
 		.notNull()
-		.references(() => user.id),
+		.references(() => users.id),
 	templateId: uuid("template_id").references(() => voiceTemplate.id),
 	templateSlug: text("template_slug").notNull(),
 

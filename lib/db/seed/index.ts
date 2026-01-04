@@ -15,6 +15,8 @@ import {
 	complianceElements,
 	compliancePackages,
 	packageElements,
+	users,
+	orgMemberships,
 	profiles,
 	placements,
 	evidence,
@@ -165,17 +167,58 @@ const orgConfigs: OrgConfig[] = [
 async function seedOrganisation(config: OrgConfig) {
 	console.log(`\n📦 Seeding ${config.name}...`);
 
-	// 1. Create organisation
+	// 1. Create organisation with AI companion settings
+	const marketLabel = config.market === "uk" ? "UK" : "US";
+	const typeLabel = config.type === "agency" ? "Healthcare Agency" : "Healthcare Provider";
+
 	const [org] = await db
 		.insert(organisations)
 		.values({
 			name: config.name,
 			slug: config.slug,
+			description: `${marketLabel} ${typeLabel}`,
 			settings: {
 				defaultDataOwnership: "organisation",
 				terminology: config.market === "uk"
 					? { candidate: "Candidate", placement: "Booking" }
 					: { candidate: "Traveler", placement: "Assignment" },
+				// AI Companion configuration
+				complianceContact: config.market === "uk"
+					? {
+							name: "Sarah Jones",
+							email: `compliance@${config.slug}.com`,
+							phone: "0800 123 4567",
+						}
+					: {
+							name: "Michael Chen",
+							email: `compliance@${config.slug}.com`,
+							phone: "1-800-555-0123",
+						},
+				supportContact: {
+					email: `support@${config.slug}.com`,
+					phone: config.market === "uk" ? "0800 999 8888" : "1-800-555-0199",
+				},
+				aiCompanion: {
+					enabled: true,
+					orgPrompt: config.market === "uk"
+						? `You're writing on behalf of ${config.name}, a leading healthcare staffing partner in the UK.
+
+Tone: Warm, supportive, and professional. We help healthcare professionals find flexible work opportunities across NHS trusts and private care providers.
+
+Be encouraging about the shifts and opportunities available once compliant. Mention that we have roles at NHS trusts and private care homes across the country.
+
+Sign off as: "${config.name} Compliance Team"`
+						: `You're writing on behalf of ${config.name}, a premier healthcare staffing agency serving facilities across the United States.
+
+Tone: Friendly, professional, and supportive. We connect healthcare professionals with rewarding travel and permanent positions at top facilities.
+
+Emphasize the variety of assignments available and our support throughout the credentialing process.
+
+Sign off as: "${config.name} Credentialing Team"`,
+					emailFrequency: "daily",
+					sendTime: config.market === "uk" ? "09:00" : "08:00",
+					timezone: config.market === "uk" ? "Europe/London" : "America/Chicago",
+				},
 			},
 		})
 		.returning();
@@ -338,20 +381,47 @@ async function seedOrganisation(config: OrgConfig) {
 	console.log(`   ✓ Created onboarding pipeline with ${stageNames.length} stages`);
 
 	// 8. Create candidates with evidence and activities
+	let userCount = 0;
 	let profileCount = 0;
 	let evidenceCount = 0;
 	let activityCount = 0;
 
 	for (const candidateConfig of config.candidates) {
+		// Create User (global identity)
+		const [user] = await db
+			.insert(users)
+			.values({
+				authUserId: null, // Seeded users don't have Supabase auth
+				email: candidateConfig.profile.email,
+				firstName: candidateConfig.profile.firstName,
+				lastName: candidateConfig.profile.lastName,
+				phone: candidateConfig.profile.phone,
+				currentOrgId: org.id,
+			})
+			.returning();
+		userCount++;
+
+		// Create Profile (compliance data)
 		const [profile] = await db
 			.insert(profiles)
 			.values({
 				...candidateConfig.profile,
 				organisationId: org.id,
-				userRoleId: userRoleMap.get("candidate"), // All seeded profiles are candidates
 			})
 			.returning();
 		profileCount++;
+
+		// Create OrgMembership (links user to org with role and profile)
+		await db
+			.insert(orgMemberships)
+			.values({
+				userId: user.id,
+				organisationId: org.id,
+				userRoleId: userRoleMap.get("candidate")!,
+				profileId: profile.id,
+				status: "active",
+				joinedAt: new Date(),
+			});
 
 		// Determine pipeline stage based on status
 		let stageName: string;
@@ -409,6 +479,8 @@ async function seedOrganisation(config: OrgConfig) {
 		const allElements = config.market === "uk" ? ukComplianceElements : usComplianceElements;
 		const missingSet = new Set(candidateConfig.state.missingElements || []);
 		const expiringSet = new Set(candidateConfig.state.expiringElements || []);
+		const pendingAdminSet = new Set(candidateConfig.state.pendingAdminReview || []);
+		const pendingThirdPartySet = new Set(candidateConfig.state.pendingThirdParty || []);
 
 		for (const element of allElements) {
 			if (element.scope === "placement") continue; // Skip placement-scoped for now
@@ -417,15 +489,40 @@ async function seedOrganisation(config: OrgConfig) {
 			const elementId = elementMap.get(element.slug);
 			if (!elementId) continue;
 
+			// Determine status and source based on blocking state
+			let status: "pending" | "processing" | "requires_review" | "approved" | "rejected" | "expired" = "approved";
+			let source: "user_upload" | "cv_extraction" | "document_extraction" | "external_check" | "ai_extraction" | "admin_entry" | "attestation" = randomPick(["user_upload", "admin_entry"]);
+			let verificationStatus: "unverified" | "auto_verified" | "human_verified" | "external_verified" = "human_verified";
+			let verifiedAt: Date | null = daysFromNow(-randomInt(1, 30));
+
+			if (pendingAdminSet.has(element.slug)) {
+				// Waiting on admin review - document uploaded but not yet approved
+				status = "requires_review";
+				source = "user_upload";
+				verificationStatus = "unverified";
+				verifiedAt = null;
+			} else if (pendingThirdPartySet.has(element.slug)) {
+				// Waiting on third party - external check in progress
+				status = "pending";
+				source = "external_check";
+				verificationStatus = "unverified";
+				verifiedAt = null;
+			} else if (expiringSet.has(element.slug) && candidateConfig.state.status === "non_compliant") {
+				// Already expired
+				status = "expired";
+			}
+
 			// Calculate expiry
 			let expiresAt: Date | null = null;
 			if (element.expiryDays) {
 				if (expiringSet.has(element.slug)) {
-					// Expiring soon
-					expiresAt = daysFromNow(randomInt(5, 20));
-				} else if (candidateConfig.state.status === "non_compliant" && expiringSet.has(element.slug)) {
-					// Already expired
-					expiresAt = daysFromNow(-randomInt(1, 5));
+					if (candidateConfig.state.status === "non_compliant") {
+						// Already expired
+						expiresAt = daysFromNow(-randomInt(1, 5));
+					} else {
+						// Expiring soon
+						expiresAt = daysFromNow(randomInt(5, 20));
+					}
 				} else {
 					// Normal expiry in the future
 					expiresAt = daysFromNow(randomInt(60, element.expiryDays - 30));
@@ -437,15 +534,13 @@ async function seedOrganisation(config: OrgConfig) {
 				complianceElementId: elementId,
 				profileId: profile.id,
 				evidenceType: element.evidenceType,
-				source: randomPick(["user_upload", "admin_entry", "external_check"]),
-				status: expiringSet.has(element.slug) && candidateConfig.state.status === "non_compliant"
-					? "expired"
-					: "approved",
-				verificationStatus: "human_verified",
+				source,
+				status,
+				verificationStatus,
 				dataOwnership: "organisation",
 				issuedAt: daysFromNow(-randomInt(30, 365)),
 				expiresAt,
-				verifiedAt: daysFromNow(-randomInt(1, 30)),
+				verifiedAt,
 			});
 			evidenceCount++;
 		}
@@ -537,7 +632,8 @@ async function seedOrganisation(config: OrgConfig) {
 		}
 	}
 
-	console.log(`   ✓ Created ${profileCount} candidates`);
+	console.log(`   ✓ Created ${userCount} users`);
+	console.log(`   ✓ Created ${profileCount} profiles`);
 	console.log(`   ✓ Created ${evidenceCount} evidence records`);
 	console.log(`   ✓ Created ${activityCount} activities`);
 

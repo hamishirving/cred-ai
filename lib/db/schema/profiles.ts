@@ -1,9 +1,12 @@
 /**
- * Profile - The candidate/worker being onboarded.
+ * Profile - Compliance data for a person.
  *
- * @description Core person record
- * @purpose Candidate-scoped evidence, overall compliance status
+ * @description Compliance-focused data for candidates/workers
+ * @purpose Candidate-scoped evidence, compliance requirements, professional details
  * @see DATA_MODEL.md#profile
+ *
+ * Note: Auth and role are now managed via User + OrgMembership.
+ * Profile is linked via OrgMembership.profileId when compliance tracking is needed.
  */
 import {
 	boolean,
@@ -15,30 +18,25 @@ import {
 	varchar,
 } from "drizzle-orm/pg-core";
 import { organisations } from "./organisations";
-import { userRoles } from "./user-roles";
 
 /**
- * Profiles represent candidates/workers in the system.
+ * Profiles hold compliance data for people who need compliance tracking.
  *
- * A profile is the core person record. Evidence and compliance
- * is tracked against profiles (candidate-scoped) or placements
- * (placement-scoped).
+ * A Profile is linked from OrgMembership when a user needs compliance
+ * tracking in an organisation (e.g., candidates, nurses, contractors).
+ *
+ * Identity and authorisation are managed via User + OrgMembership.
+ * Profile focuses purely on compliance-relevant data.
  */
 export const profiles = pgTable("profiles", {
 	id: uuid("id").primaryKey().notNull().defaultRandom(),
 
-	/** Primary organisation for this profile */
+	/** Organisation this profile belongs to */
 	organisationId: uuid("organisation_id")
 		.notNull()
 		.references(() => organisations.id),
 
-	/** Auth user ID (links to Supabase auth) */
-	authUserId: uuid("auth_user_id"),
-
-	/** Permission role (what they can do in the system) */
-	userRoleId: uuid("user_role_id").references(() => userRoles.id),
-
-	/** Email address */
+	/** Email address (denormalised from User for compliance comms) */
 	email: text("email").notNull(),
 
 	/** First name */

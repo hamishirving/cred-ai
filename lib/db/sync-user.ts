@@ -1,9 +1,17 @@
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { user } from "./schema";
+import { users } from "./schema";
 
-// Sync a Supabase auth user to our User table
-export async function syncUserToDatabase(userId: string, email: string) {
+/**
+ * Get or create a User record for a Supabase auth user.
+ *
+ * This is a legacy sync function that ensures a User record exists.
+ * For new registrations with org/role selection, use the signup action directly.
+ *
+ * Returns the User record.
+ */
+export async function syncUserToDatabase(authUserId: string, email: string) {
 	const databaseUrl = process.env.DATABASE_URL;
 	if (!databaseUrl) {
 		throw new Error("DATABASE_URL is not defined");
@@ -13,16 +21,35 @@ export async function syncUserToDatabase(userId: string, email: string) {
 	const db = drizzle(client);
 
 	try {
-		// Insert or update user in our User table
-		await db
-			.insert(user)
+		// Check if user already exists
+		const [existing] = await db
+			.select()
+			.from(users)
+			.where(eq(users.authUserId, authUserId));
+
+		if (existing) {
+			return existing;
+		}
+
+		// Create minimal User record for legacy auth flow
+		// Note: New registrations should use the full signup flow with org/role
+		const [firstName, ...lastNameParts] = email.split("@")[0].split(".");
+		const lastName = lastNameParts.join(" ") || "User";
+
+		const [user] = await db
+			.insert(users)
 			.values({
-				id: userId,
+				authUserId,
 				email,
+				firstName: firstName.charAt(0).toUpperCase() + firstName.slice(1),
+				lastName: lastName.charAt(0).toUpperCase() + lastName.slice(1),
 			})
-			.onConflictDoNothing();
+			.returning();
+
+		return user;
 	} catch (error) {
 		console.error("Failed to sync user to database:", error);
+		throw error;
 	} finally {
 		await client.end();
 	}

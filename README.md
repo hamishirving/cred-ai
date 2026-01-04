@@ -20,10 +20,10 @@ An AI-powered chatbot for employee data management, built with Next.js, Supabase
   - Email/password authentication
   - SSR-ready auth with automatic session management
 
-- **Drizzle ORM**
-  - Type-safe database queries
-  - Automated migrations
-  - Full control over database schema
+- **Drizzle ORM + Hybrid Migrations**
+  - Type-safe database queries with full schema inference
+  - Drizzle Kit generates SQL migrations from schema changes
+  - Supabase CLI applies migrations (avoids [drizzle-kit introspection bug](https://github.com/drizzle-team/drizzle-orm/issues/4632))
 
 - **Credentially API Integration**
   - Employee profile lookup and management
@@ -42,7 +42,7 @@ An AI-powered chatbot for employee data management, built with Next.js, Supabase
 ## Tech Stack
 
 - **Frontend**: Next.js 16, React 19, TypeScript
-- **Database**: Supabase Postgres + Drizzle ORM
+- **Database**: Supabase Postgres + Drizzle ORM (hybrid migrations)
 - **Authentication**: Supabase Auth (email/password)
 - **AI Provider**: Anthropic Claude 4.5 (direct API)
 - **Analytics**: PostHog (client + server-side)
@@ -98,9 +98,9 @@ See `.env.example` for more details.
    # Edit .env.local with your credentials
    ```
 
-4. **Run database migrations**
+4. **Apply database migrations**
    ```bash
-   pnpm db:migrate
+   pnpm db:push
    ```
 
 5. **Start the development server**
@@ -112,21 +112,34 @@ Your app should now be running on [localhost:3000](http://localhost:3000).
 
 ## Database Management
 
-The project uses Drizzle ORM for database operations:
+The project uses a **hybrid migration approach**:
+
+| Tool | Purpose |
+|------|---------|
+| **Drizzle ORM** | Schema definitions, type-safe queries |
+| **Drizzle Kit** | Generate SQL migrations from schema |
+| **Supabase CLI** | Apply migrations to database |
+
+**Why hybrid?** Drizzle Kit has a [known bug](https://github.com/drizzle-team/drizzle-orm/issues/4632) when introspecting Supabase databases (fails on auth schema). We use Drizzle Kit for migration *generation* (no introspection needed) and Supabase CLI for *application* (just runs SQL).
+
+### Workflow
 
 ```bash
-# Generate new migration
+# 1. Edit schema in lib/db/schema/
+# 2. Generate SQL migration
 pnpm db:generate
 
-# Run migrations
-pnpm db:migrate
+# 3. Apply to database
+pnpm db:push
 
-# Open Drizzle Studio (GUI)
+# Browse data
 pnpm db:studio
 
-# Push schema changes (dev only)
-pnpm db:push
+# Seed demo data
+pnpm db:seed
 ```
+
+See `lib/db/CLAUDE.md` for detailed workflow.
 
 ## AI Models
 

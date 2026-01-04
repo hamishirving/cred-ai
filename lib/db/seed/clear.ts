@@ -34,8 +34,10 @@ import {
 	packageElements,
 	compliancePackages,
 	complianceElements,
-	// People
+	// Identity & People
+	orgMemberships,
 	profiles,
+	users,
 	// Structure
 	workNodes,
 	workNodeTypes,
@@ -71,7 +73,9 @@ export async function clearAllData() {
 		{ name: "package_elements", table: packageElements },
 		{ name: "compliance_packages", table: compliancePackages },
 		{ name: "compliance_elements", table: complianceElements },
+		{ name: "org_memberships", table: orgMemberships },
 		{ name: "profiles", table: profiles },
+		{ name: "users", table: users },
 		{ name: "work_nodes", table: workNodes },
 		{ name: "work_node_types", table: workNodeTypes },
 		{ name: "roles", table: roles },

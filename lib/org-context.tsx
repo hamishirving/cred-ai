@@ -5,6 +5,7 @@ import {
 	useContext,
 	useState,
 	useEffect,
+	useCallback,
 	type ReactNode,
 } from "react";
 
@@ -23,10 +24,27 @@ interface OrgContextValue {
 
 const OrgContext = createContext<OrgContextValue | null>(null);
 
+// Helper to set cookie (client-side)
+function setOrgCookie(orgId: string) {
+	document.cookie = `selectedOrgId=${orgId}; path=/; max-age=${60 * 60 * 24 * 365}`; // 1 year
+}
+
+// Helper to get cookie value
+function getOrgCookie(): string | null {
+	const match = document.cookie.match(/selectedOrgId=([^;]+)/);
+	return match ? match[1] : null;
+}
+
 export function OrgProvider({ children }: { children: ReactNode }) {
 	const [organisations, setOrganisations] = useState<Organisation[]>([]);
-	const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+	const [selectedOrgId, setSelectedOrgIdState] = useState<string | null>(null);
 	const [loading, setLoading] = useState(true);
+
+	// Wrapper that also sets cookie
+	const setSelectedOrgId = useCallback((id: string) => {
+		setSelectedOrgIdState(id);
+		setOrgCookie(id);
+	}, []);
 
 	// Fetch organisations on mount
 	useEffect(() => {
@@ -36,8 +54,19 @@ export function OrgProvider({ children }: { children: ReactNode }) {
 				const data = await response.json();
 				if (data.organisations?.length > 0) {
 					setOrganisations(data.organisations);
-					// Select first org by default
-					setSelectedOrgId(data.organisations[0].id);
+
+					// Check for existing cookie first
+					const cookieOrgId = getOrgCookie();
+					const validCookieOrg = cookieOrgId && data.organisations.some((o: Organisation) => o.id === cookieOrgId);
+
+					if (validCookieOrg) {
+						setSelectedOrgIdState(cookieOrgId);
+					} else {
+						// Select first org by default and set cookie
+						const firstOrgId = data.organisations[0].id;
+						setSelectedOrgIdState(firstOrgId);
+						setOrgCookie(firstOrgId);
+					}
 				}
 			} catch (err) {
 				console.error("Failed to fetch organisations:", err);

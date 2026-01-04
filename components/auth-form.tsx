@@ -1,21 +1,29 @@
-import Form from "next/form";
+"use client";
 
+import { useActionState } from "react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import type { AuthResult } from "@/lib/auth/actions";
 
 export function AuthForm({
 	action,
 	children,
 	defaultEmail = "",
 }: {
-	action: NonNullable<
-		string | ((formData: FormData) => void | Promise<void>) | undefined
-	>;
+	action: (prevState: AuthResult, formData: FormData) => Promise<AuthResult>;
 	children: React.ReactNode;
 	defaultEmail?: string;
 }) {
+	const [state, formAction, isPending] = useActionState(action, {});
+
 	return (
-		<Form action={action} className="flex flex-col gap-4 px-4 sm:px-16">
+		<form action={formAction} className="flex flex-col gap-4 px-4 sm:px-16">
+			{state.error && (
+				<div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
+					{state.error}
+				</div>
+			)}
+
 			<div className="flex flex-col gap-2">
 				<Label
 					className="font-normal text-zinc-600 dark:text-zinc-400"
@@ -31,9 +39,10 @@ export function AuthForm({
 					defaultValue={defaultEmail}
 					id="email"
 					name="email"
-					placeholder="user@acme.com"
+					placeholder="user@credentially.io"
 					required
 					type="email"
+					disabled={isPending}
 				/>
 			</div>
 
@@ -51,10 +60,11 @@ export function AuthForm({
 					name="password"
 					required
 					type="password"
+					disabled={isPending}
 				/>
 			</div>
 
 			{children}
-		</Form>
+		</form>
 	);
 }

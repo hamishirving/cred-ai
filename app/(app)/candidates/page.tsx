@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, Fragment, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
 	type ColumnDef,
 	flexRender,
@@ -185,6 +186,7 @@ const columns: ColumnDef<Candidate>[] = [
 ];
 
 export default function CandidatesPage() {
+	const router = useRouter();
 	const { selectedOrg, loading: orgLoading } = useOrg();
 	const [stages, setStages] = useState<PipelineStage[]>([]);
 	const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -397,9 +399,14 @@ export default function CandidatesPage() {
 													<TableRow
 														key={row.id}
 														data-state={row.getIsSelected() && "selected"}
+														className="cursor-pointer"
+														onClick={() => router.push(`/candidates/${row.original.id}`)}
 													>
 														{row.getVisibleCells().map((cell) => (
-															<TableCell key={cell.id}>
+															<TableCell
+																key={cell.id}
+																onClick={cell.column.id === "select" ? (e) => e.stopPropagation() : undefined}
+															>
 																{flexRender(
 																	cell.column.columnDef.cell,
 																	cell.getContext(),
@@ -427,9 +434,14 @@ export default function CandidatesPage() {
 									<TableRow
 										key={row.id}
 										data-state={row.getIsSelected() && "selected"}
+										className="cursor-pointer"
+										onClick={() => router.push(`/candidates/${row.original.id}`)}
 									>
 										{row.getVisibleCells().map((cell) => (
-											<TableCell key={cell.id}>
+											<TableCell
+												key={cell.id}
+												onClick={cell.column.id === "select" ? (e) => e.stopPropagation() : undefined}
+											>
 												{flexRender(
 													cell.column.columnDef.cell,
 													cell.getContext(),

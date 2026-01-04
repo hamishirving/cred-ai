@@ -20,7 +20,11 @@ export function useAuth() {
 						user: {
 							id: supabaseSession.user.id,
 							email: supabaseSession.user.email || "",
+							firstName: "",
+							lastName: "",
 							type: "regular",
+							roleName: null,
+							roleSlug: null,
 						},
 					});
 				}
@@ -36,7 +40,11 @@ export function useAuth() {
 					user: {
 						id: supabaseSession.user.id,
 						email: supabaseSession.user.email || "",
+						firstName: "",
+						lastName: "",
 						type: "regular",
+						roleName: null,
+						roleSlug: null,
 					},
 				});
 			} else {
