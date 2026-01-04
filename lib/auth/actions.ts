@@ -7,7 +7,14 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { users, orgMemberships, profiles, userRoles } from "@/lib/db/schema";
 
-export async function signUpWithEmail(formData: FormData) {
+export interface AuthResult {
+	error?: string;
+}
+
+export async function signUpWithEmail(
+	_prevState: AuthResult,
+	formData: FormData
+): Promise<AuthResult> {
 	const email = formData.get("email") as string;
 	const password = formData.get("password") as string;
 	const firstName = formData.get("firstName") as string;
@@ -17,13 +24,13 @@ export async function signUpWithEmail(formData: FormData) {
 
 	// Validate required fields
 	if (!email || !password) {
-		throw new Error("Email and password are required");
+		return { error: "Email and password are required" };
 	}
 	if (!firstName || !lastName) {
-		throw new Error("First name and last name are required");
+		return { error: "First name and last name are required" };
 	}
 	if (!organisationId || !userRoleId) {
-		throw new Error("Organisation and role are required");
+		return { error: "Organisation and role are required" };
 	}
 
 	const supabase = await createClient();
@@ -35,11 +42,11 @@ export async function signUpWithEmail(formData: FormData) {
 	});
 
 	if (error) {
-		throw new Error(error.message);
+		return { error: error.message };
 	}
 
 	if (!data.user) {
-		throw new Error("Failed to create user");
+		return { error: "Failed to create user" };
 	}
 
 	// 2. Create User record
@@ -120,12 +127,15 @@ export async function signUpWithEmail(formData: FormData) {
 	redirect("/");
 }
 
-export async function signInWithEmail(formData: FormData) {
+export async function signInWithEmail(
+	_prevState: AuthResult,
+	formData: FormData
+): Promise<AuthResult> {
 	const email = formData.get("email") as string;
 	const password = formData.get("password") as string;
 
 	if (!email || !password) {
-		throw new Error("Email and password are required");
+		return { error: "Email and password are required" };
 	}
 
 	const supabase = await createClient();
@@ -136,7 +146,7 @@ export async function signInWithEmail(formData: FormData) {
 	});
 
 	if (error) {
-		throw new Error(error.message);
+		return { error: error.message };
 	}
 
 	// Track sign-in event

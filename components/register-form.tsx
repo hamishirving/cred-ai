@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Form from "next/form";
+import { useActionState, useEffect, useState } from "react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import {
@@ -11,6 +10,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "./ui/select";
+import type { AuthResult } from "@/lib/auth/actions";
 
 interface Organisation {
 	id: string;
@@ -32,10 +32,11 @@ export function RegisterForm({
 	children,
 	organisations,
 }: {
-	action: (formData: FormData) => void | Promise<void>;
+	action: (prevState: AuthResult, formData: FormData) => Promise<AuthResult>;
 	children: React.ReactNode;
 	organisations: Organisation[];
 }) {
+	const [state, formAction, isPending] = useActionState(action, {});
 	const [selectedOrgId, setSelectedOrgId] = useState<string>("");
 	const [roles, setRoles] = useState<UserRole[]>([]);
 	const [selectedRoleId, setSelectedRoleId] = useState<string>("");
@@ -81,7 +82,13 @@ export function RegisterForm({
 	}, [selectedOrgId]);
 
 	return (
-		<Form action={action} className="flex flex-col gap-4 px-4 sm:px-16">
+		<form action={formAction} className="flex flex-col gap-4 px-4 sm:px-16">
+			{state.error && (
+				<div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
+					{state.error}
+				</div>
+			)}
+
 			<div className="grid grid-cols-2 gap-4">
 				<div className="flex flex-col gap-2">
 					<Label
@@ -99,6 +106,7 @@ export function RegisterForm({
 						placeholder="John"
 						required
 						type="text"
+						disabled={isPending}
 					/>
 				</div>
 
@@ -117,6 +125,7 @@ export function RegisterForm({
 						placeholder="Doe"
 						required
 						type="text"
+						disabled={isPending}
 					/>
 				</div>
 			</div>
@@ -136,6 +145,7 @@ export function RegisterForm({
 					placeholder="user@credentially.io"
 					required
 					type="email"
+					disabled={isPending}
 				/>
 			</div>
 
@@ -153,6 +163,7 @@ export function RegisterForm({
 					required
 					type="password"
 					minLength={6}
+					disabled={isPending}
 				/>
 			</div>
 
@@ -168,6 +179,7 @@ export function RegisterForm({
 					onValueChange={setSelectedOrgId}
 					name="organisationId"
 					required
+					disabled={isPending}
 				>
 					<SelectTrigger className="bg-muted">
 						<SelectValue placeholder="Select an organisation" />
@@ -200,7 +212,7 @@ export function RegisterForm({
 					value={selectedRoleId}
 					onValueChange={setSelectedRoleId}
 					name="userRoleId"
-					disabled={!selectedOrgId || isLoadingRoles}
+					disabled={!selectedOrgId || isLoadingRoles || isPending}
 					required
 				>
 					<SelectTrigger className="bg-muted">
@@ -232,6 +244,6 @@ export function RegisterForm({
 			</div>
 
 			{children}
-		</Form>
+		</form>
 	);
 }
