@@ -1,7 +1,7 @@
 # Data Model: Credentially 2.0 Playground
 
 **Status:** Draft - In Discussion
-**Last Updated:** 2025-12-28
+**Last Updated:** 2026-01-04
 
 ---
 
@@ -1201,6 +1201,7 @@ Summary of each entity's purpose and what it enables. Used for ERD tooltips and 
 | **Activity** | Log of AI and human actions | Track what happened | Audit trail, AI transparency, candidate timeline |
 | **Escalation** | Decision requiring human input | Route exceptions to humans | AI escalations, approval workflows, HITL |
 | **EscalationOption** | Available action for an escalation | Present choices to human | Structured decision-making, recommendation highlighting |
+| **Task** | Actionable items for staff | In-app task management for compliance teams | AI-generated tasks, chase reminders, expiry alerts, manual follow-ups |
 
 ---
 
@@ -1286,6 +1287,14 @@ Key relationships between entities and what they enable.
 | Activity for placements | Activity → Placement | Many-to-many | Which placements drove this |
 | Escalation about profile | Escalation → Profile | Many-to-one | Who the escalation concerns |
 | Escalation for element | Escalation → ComplianceElement | Many-to-one | Which requirement triggered it |
+
+### Task Relationships
+
+| Relationship | From → To | Cardinality | Purpose |
+|--------------|-----------|-------------|---------|
+| Task for org | Task → Organisation | Many-to-one | Org that owns this task |
+| Task subject | Task → Profile/Placement/Evidence/Escalation | Many-to-one (polymorphic) | What entity this task is about |
+| Task assignee | Task → User | Many-to-one (optional) | Who is responsible for this task |
 
 ---
 
@@ -2052,6 +2061,11 @@ This enables dashboards showing "candidates with expiring items this month" or "
 
 ## Changelog
 
+- **2026-01-04** (schema-sync): Synced documentation with current schema:
+  - Added Task entity to Operations Domain (in-app task management for staff)
+  - Added Task Relationships section
+  - Verified Identity & Access entities (User, OrgMembership, UserRole) match schema
+  - Removed outdated profiles → userRoleId relationship (now via OrgMembership)
 - **2026-01-04** (user-model): Added unified User model (D5):
   - New entities: User, OrgMembership, UserRole
   - Separates authentication (auth.users), identity (User), authorisation (OrgMembership), and compliance (Profile)

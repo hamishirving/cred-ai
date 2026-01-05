@@ -59,17 +59,21 @@ export async function GET(
 					percentage: candidate.compliance.percentage,
 				},
 			},
-			history: emailHistory.map((activity) => ({
-				id: activity.id,
-				type: "email",
-				direction: "outbound",
-				subject: (activity.details as Record<string, unknown>)?.subject as string || "Compliance Update",
-				preview: activity.summary || "",
-				status: (activity.details as Record<string, unknown>)?.status === "sent" ? "sent" : "preview",
-				createdAt: activity.createdAt.toISOString(),
-				actor: "ai",
-				reasoning: activity.aiReasoning,
-			})),
+			history: emailHistory.map((activity) => {
+				const details = activity.details as Record<string, unknown>;
+				return {
+					id: activity.id,
+					type: "email",
+					direction: "outbound",
+					subject: details?.subject as string || "Compliance Update",
+					body: details?.body as string || "",
+					preview: activity.summary || "",
+					status: details?.status === "sent" ? "sent" : "preview",
+					createdAt: activity.createdAt.toISOString(),
+					actor: "ai",
+					reasoning: activity.aiReasoning,
+				};
+			}),
 			orgSettings: org?.settings,
 		});
 	} catch (error) {
@@ -148,6 +152,7 @@ export async function POST(
 		const emailContent = await generateEmailContent(
 			insight,
 			org.settings.orgPrompt,
+			{ organisationId },
 		);
 
 		// Log the preview

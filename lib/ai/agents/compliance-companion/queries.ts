@@ -394,6 +394,7 @@ export async function logEmailActivity(params: {
 		summary: `${params.status === "preview" ? "Previewed" : "Sent"} compliance update email`,
 		details: {
 			subject: params.subject,
+			body: params.body,
 			bodyPreview: params.body.substring(0, 200),
 			status: params.status,
 		},

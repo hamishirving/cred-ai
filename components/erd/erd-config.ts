@@ -4,6 +4,7 @@
 
 export type DomainKey =
 	| "tenant"
+	| "identity"
 	| "compliance"
 	| "skills"
 	| "people"
@@ -30,7 +31,13 @@ export const erdConfig: ErdConfig = {
 			label: "Tenant & Structure",
 			color: "#3b82f6", // blue-500
 			bgColor: "#3b82f620",
-			tables: ["organisations", "work_node_types", "work_nodes", "roles", "user_roles"],
+			tables: ["organisations", "work_node_types", "work_nodes", "roles"],
+		},
+		identity: {
+			label: "Identity & Access",
+			color: "#8b5cf6", // violet-500
+			bgColor: "#8b5cf620",
+			tables: ["users", "org_memberships", "user_roles"],
 		},
 		compliance: {
 			label: "Compliance",
@@ -89,7 +96,7 @@ export const erdConfig: ErdConfig = {
 			label: "Operations",
 			color: "#ef4444", // red-500
 			bgColor: "#ef444420",
-			tables: ["activities", "escalations", "escalation_options"],
+			tables: ["activities", "escalations", "escalation_options", "tasks"],
 		},
 	},
 
@@ -101,7 +108,11 @@ export const erdConfig: ErdConfig = {
 		work_node_types: { x: 50, y: 300 },
 		work_nodes: { x: 300, y: 150 },
 		roles: { x: 300, y: 400 },
-		user_roles: { x: 50, y: 500 },
+
+		// Identity & Access (below tenant)
+		users: { x: 50, y: 500 },
+		org_memberships: { x: 300, y: 600 },
+		user_roles: { x: 50, y: 750 },
 
 		// People (center-top)
 		profiles: { x: 600, y: 50 },
@@ -139,6 +150,7 @@ export const erdConfig: ErdConfig = {
 		activities: { x: 1400, y: 750 },
 		escalations: { x: 1400, y: 900 },
 		escalation_options: { x: 1650, y: 850 },
+		tasks: { x: 1650, y: 1000 },
 	},
 };
 
@@ -168,6 +180,13 @@ export const relationships: Relationship[] = [
 	{ source: "work_nodes", sourceColumn: "typeId", target: "work_node_types", description: "What level in hierarchy (Trust, Hospital, Ward, etc.)" },
 	{ source: "work_nodes", sourceColumn: "parentId", target: "work_nodes", description: "Parent location for hierarchy tree" },
 	{ source: "roles", sourceColumn: "organisationId", target: "organisations", description: "Org that defined this role" },
+
+	// Identity & Access
+	{ source: "users", sourceColumn: "currentOrgId", target: "organisations", description: "Currently selected organisation context" },
+	{ source: "org_memberships", sourceColumn: "userId", target: "users", description: "User who has this membership" },
+	{ source: "org_memberships", sourceColumn: "organisationId", target: "organisations", description: "Organisation they belong to" },
+	{ source: "org_memberships", sourceColumn: "userRoleId", target: "user_roles", description: "Permission role in this org" },
+	{ source: "org_memberships", sourceColumn: "profileId", target: "profiles", description: "Optional profile for compliance tracking" },
 	{ source: "user_roles", sourceColumn: "organisationId", target: "organisations", description: "Org that defined this permission role" },
 
 	// Compliance
@@ -193,7 +212,6 @@ export const relationships: Relationship[] = [
 
 	// People
 	{ source: "profiles", sourceColumn: "organisationId", target: "organisations", description: "Primary org for this candidate" },
-	{ source: "profiles", sourceColumn: "userRoleId", target: "user_roles", description: "Permission role in the system" },
 
 	// Work
 	{ source: "jobs", sourceColumn: "organisationId", target: "organisations", description: "Org posting this job" },
@@ -230,6 +248,7 @@ export const relationships: Relationship[] = [
 	{ source: "escalations", sourceColumn: "profileId", target: "profiles", description: "Candidate this escalation concerns" },
 	{ source: "escalations", sourceColumn: "complianceElementId", target: "compliance_elements", description: "Requirement that triggered escalation" },
 	{ source: "escalation_options", sourceColumn: "escalationId", target: "escalations", description: "Escalation these options belong to" },
+	{ source: "tasks", sourceColumn: "organisationId", target: "organisations", description: "Org that owns this task" },
 ];
 
 // Helper to get relationship info for a specific FK column

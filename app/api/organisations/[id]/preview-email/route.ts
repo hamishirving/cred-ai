@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
+import { withTracing } from "@posthog/ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { organisations } from "@/lib/db/schema";
+import { getPostHogClient } from "@/lib/posthog-server";
 import { SYSTEM_PROMPT } from "@/lib/ai/agents/compliance-companion/prompts";
 
 // Database connection
@@ -101,8 +103,22 @@ Return your response as a JSON object with "subject", "body", and "reasoning" fi
 			apiKey: process.env.ANTHROPIC_API_KEY,
 		});
 
+		// Wrap model with PostHog tracing for LLM analytics
+		const tracedModel = withTracing(
+			anthropic("claude-sonnet-4-5"),
+			getPostHogClient(),
+			{
+				posthogDistinctId: id,
+				posthogProperties: {
+					agent: "compliance-companion",
+					action: "preview-email",
+					organisationId: id,
+				},
+			},
+		);
+
 		const result = await generateText({
-			model: anthropic("claude-sonnet-4-5"),
+			model: tracedModel,
 			prompt: fullPrompt,
 		});
 

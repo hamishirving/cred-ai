@@ -10,7 +10,9 @@
  */
 
 import { generateText } from "ai";
+import { withTracing } from "@posthog/ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { getPostHogClient } from "@/lib/posthog-server";
 import type {
 	Agent,
 	AgentContext,
@@ -228,6 +230,7 @@ function buildInsightSummary(
 export async function generateEmailContent(
 	insight: AgentInsight,
 	orgPrompt?: string,
+	options?: { organisationId?: string },
 ): Promise<{ subject: string; body: string; reasoning: string }> {
 	// Build context from insight details
 	const details = insight.details as {
@@ -300,8 +303,24 @@ export async function generateEmailContent(
 			apiKey: process.env.ANTHROPIC_API_KEY,
 		});
 
+		// Wrap model with PostHog tracing for LLM analytics
+		const tracedModel = withTracing(
+			anthropic("claude-sonnet-4-5"),
+			getPostHogClient(),
+			{
+				posthogDistinctId: options?.organisationId || "anonymous",
+				posthogProperties: {
+					agent: "compliance-companion",
+					profileId: insight.subjectId,
+					organisationId: options?.organisationId,
+					insightCategory: insight.category,
+					insightPriority: insight.priority,
+				},
+			},
+		);
+
 		const result = await generateText({
-			model: anthropic("claude-sonnet-4-5"),
+			model: tracedModel,
 			prompt,
 		});
 

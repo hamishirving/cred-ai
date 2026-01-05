@@ -108,14 +108,33 @@ function findDomain(tableName: string): DomainKey {
 	return "operations"; // Default fallback
 }
 
+// Check if a value is a Drizzle table object
+function isDrizzleTable(value: unknown): boolean {
+	if (!value || typeof value !== "object") return false;
+
+	// Check for drizzle symbol key on the object
+	const drizzleSymbol = Symbol.for("drizzle:Name");
+	if (drizzleSymbol in value) return true;
+
+	// Check for internal _ property with name (Drizzle table structure)
+	if ("_" in value) {
+		const internal = (value as any)._;
+		if (internal && typeof internal === "object" && "name" in internal) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 // Extract all tables from schema
 function extractTables(): TableInfo[] {
 	const tables: TableInfo[] = [];
 	const excludeTables = ["user", "chat", "message", "vote", "document", "suggestion", "stream", "voiceTemplate", "voiceCall"];
 
 	for (const [key, value] of Object.entries(schema)) {
-		if (!value || typeof value !== "object") continue;
-		if (!("_" in value) && !Symbol.for("drizzle:Name")) continue;
+		// Only process Drizzle table objects
+		if (!isDrizzleTable(value)) continue;
 
 		// Skip non-table exports (types, etc)
 		const tableName = getTableName(value);

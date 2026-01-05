@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
-import { User, Mail, Phone, MapPin, Calendar, Briefcase, Shield } from "lucide-react";
+import { User, Calendar, Briefcase, Shield } from "lucide-react";
 import { cookies } from "next/headers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { CandidateCommunications } from "@/components/candidate/communications";
+import { ComplianceChecklist } from "@/components/candidate/compliance-checklist";
 import { getCandidateContext, getOrganisationSettings } from "@/lib/ai/agents/compliance-companion/queries";
 
 export default async function CandidateDetailPage({
@@ -161,6 +162,7 @@ export default async function CandidateDetailPage({
 				</TabsContent>
 
 				<TabsContent value="compliance" className="mt-6 space-y-4">
+					{/* Progress summary */}
 					<Card>
 						<CardHeader>
 							<CardTitle>Compliance Progress</CardTitle>
@@ -173,106 +175,18 @@ export default async function CandidateDetailPage({
 						</CardContent>
 					</Card>
 
-					{/* Group items by blocker */}
-					{compliance.items.filter((i) => i.blockedBy === "candidate").length > 0 && (
-						<Card className="border-orange-200">
-							<CardHeader className="pb-3">
-								<CardTitle className="text-base flex items-center gap-2">
-									<span className="h-2 w-2 rounded-full bg-orange-500" />
-									Needs Candidate Action
-								</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<ul className="space-y-2">
-									{compliance.items
-										.filter((i) => i.blockedBy === "candidate")
-										.map((item) => (
-											<li key={item.elementId} className="flex items-center justify-between text-sm">
-												<span>{item.elementName}</span>
-												<Badge variant="outline" className="text-orange-600 border-orange-300">
-													{item.actionRequired || "Action needed"}
-												</Badge>
-											</li>
-										))}
-								</ul>
-							</CardContent>
-						</Card>
-					)}
-
-					{compliance.items.filter((i) => i.blockedBy === "admin").length > 0 && (
-						<Card className="border-blue-200">
-							<CardHeader className="pb-3">
-								<CardTitle className="text-base flex items-center gap-2">
-									<span className="h-2 w-2 rounded-full bg-blue-500" />
-									Under Review
-								</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<ul className="space-y-2">
-									{compliance.items
-										.filter((i) => i.blockedBy === "admin")
-										.map((item) => (
-											<li key={item.elementId} className="flex items-center justify-between text-sm">
-												<span>{item.elementName}</span>
-												<Badge variant="outline" className="text-blue-600 border-blue-300">
-													{item.blockingReason}
-												</Badge>
-											</li>
-										))}
-								</ul>
-							</CardContent>
-						</Card>
-					)}
-
-					{compliance.items.filter((i) => i.blockedBy === "third_party").length > 0 && (
-						<Card className="border-purple-200">
-							<CardHeader className="pb-3">
-								<CardTitle className="text-base flex items-center gap-2">
-									<span className="h-2 w-2 rounded-full bg-purple-500" />
-									With External Provider
-								</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<ul className="space-y-2">
-									{compliance.items
-										.filter((i) => i.blockedBy === "third_party")
-										.map((item) => (
-											<li key={item.elementId} className="flex items-center justify-between text-sm">
-												<span>{item.elementName}</span>
-												<Badge variant="outline" className="text-purple-600 border-purple-300">
-													{item.blockingReason}
-												</Badge>
-											</li>
-										))}
-								</ul>
-							</CardContent>
-						</Card>
-					)}
-
-					{compliance.items.filter((i) => i.blockedBy === "complete").length > 0 && (
-						<Card className="border-green-200">
-							<CardHeader className="pb-3">
-								<CardTitle className="text-base flex items-center gap-2">
-									<span className="h-2 w-2 rounded-full bg-green-500" />
-									Completed
-								</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<ul className="space-y-2">
-									{compliance.items
-										.filter((i) => i.blockedBy === "complete")
-										.map((item) => (
-											<li key={item.elementId} className="flex items-center justify-between text-sm">
-												<span>{item.elementName}</span>
-												<Badge variant="default" className="bg-green-500">
-													Approved
-												</Badge>
-											</li>
-										))}
-								</ul>
-							</CardContent>
-						</Card>
-					)}
+					{/* Compliance checklist grouped by blocker */}
+					<ComplianceChecklist
+						items={compliance.items}
+						placement={candidate.placement ? {
+							id: candidate.placement.id,
+							roleName: candidate.role?.name,
+							workNodeName: candidate.placement.workNodeName,
+							startDate: candidate.placement.startDate,
+						} : undefined}
+						showPlacementHeader={false}
+						defaultExpanded={["candidate", "admin", "third_party"]}
+					/>
 				</TabsContent>
 
 				<TabsContent value="communications" className="mt-6">

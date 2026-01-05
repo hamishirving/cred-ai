@@ -7,12 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Response } from "@/components/elements/response";
 
 interface CommunicationItem {
 	id: string;
 	type: "email";
 	direction: "outbound";
 	subject: string;
+	body: string;
 	preview: string;
 	status: "sent" | "preview";
 	createdAt: string;
@@ -218,10 +220,8 @@ export function CandidateCommunications({
 						</div>
 
 						{/* Email Body */}
-						<div className="rounded-md border p-4">
-							<pre className="whitespace-pre-wrap font-sans text-sm">
-								{generatedEmail.email.body}
-							</pre>
+						<div className="rounded-md border p-6 prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-ul:my-2 prose-li:my-0">
+							<Response>{generatedEmail.email.body}</Response>
 						</div>
 
 						{/* AI Reasoning */}
@@ -323,26 +323,43 @@ export function CandidateCommunications({
 											{new Date(item.createdAt).toLocaleString()}
 										</p>
 									</div>
-									{item.reasoning && (
-										<Collapsible
-											open={expandedId === item.id}
-											onOpenChange={(open) => setExpandedId(open ? item.id : null)}
-										>
-											<CollapsibleTrigger asChild>
-												<Button variant="ghost" size="sm">
-													{expandedId === item.id ? (
-														<ChevronUp className="h-4 w-4" />
-													) : (
-														<ChevronDown className="h-4 w-4" />
-													)}
-												</Button>
-											</CollapsibleTrigger>
-										</Collapsible>
-									)}
+									<Collapsible
+										open={expandedId === item.id}
+										onOpenChange={(open) => setExpandedId(open ? item.id : null)}
+									>
+										<CollapsibleTrigger asChild>
+											<Button variant="ghost" size="sm">
+												{expandedId === item.id ? (
+													<ChevronUp className="h-4 w-4" />
+												) : (
+													<ChevronDown className="h-4 w-4" />
+												)}
+											</Button>
+										</CollapsibleTrigger>
+									</Collapsible>
 								</div>
-								{item.reasoning && expandedId === item.id && (
-									<div className="mt-3 rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
-										{item.reasoning}
+								{expandedId === item.id && (
+									<div className="mt-4 space-y-3">
+										{/* Email Body */}
+										<div className="rounded-md border p-4 prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-ul:my-2 prose-li:my-0">
+											<Response>{item.body}</Response>
+										</div>
+										{/* AI Reasoning */}
+										{item.reasoning && (
+											<Collapsible>
+												<CollapsibleTrigger asChild>
+													<Button variant="ghost" size="sm" className="w-full justify-start">
+														<ChevronDown className="mr-2 h-4 w-4" />
+														View AI Reasoning
+													</Button>
+												</CollapsibleTrigger>
+												<CollapsibleContent>
+													<div className="mt-2 rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
+														{item.reasoning}
+													</div>
+												</CollapsibleContent>
+											</Collapsible>
+										)}
 									</div>
 								)}
 							</CardContent>
