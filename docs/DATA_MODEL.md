@@ -126,6 +126,62 @@ Profile (compliance data if needed)
 
 **Passport model:** One User can have OrgMemberships at multiple orgs. Candidate-owned evidence is portable across organisations.
 
+**Profile isolation (no auto-linking):** This model inherently solves the Cred 1.0 "unlinking" problem:
+- Each Profile belongs to one org via OrgMembership
+- No automatic cross-org linking by email/identity
+- Multi-brand agencies (e.g., Health Carousel's HCTN and HCI) can manage the same person independently
+- Passport/portability is opt-in at the **Evidence level** via `Evidence.ownership` and `Evidence.sharedWithOrgIds`
+
+### D6: Profile Lifecycle States
+
+**Decision:** Profiles have distinct lifecycle states beyond simple active/inactive to support different engagement and billing models.
+
+**Rationale:** Current "archived" concept conflates several different states:
+- Candidates temporarily not working but may return
+- Candidates who have left permanently
+- Large candidate pools imported for assessment (never actively engaged)
+- Candidates being assessed for compliance status only
+
+Different states have different implications for:
+- **Billing** - Active vs dormant vs pool pricing tiers
+- **Notifications** - Whether AI Companion should chase
+- **Document processing** - LLM OCR costs (~$0.06/doc × 10s of docs = significant for large pools)
+- **Storage** - Document retention policies
+
+**Implementation:**
+
+```ts
+type ProfileLifecycleState =
+  | 'invited'         // Invited by org, candidate hasn't accepted yet
+  | 'active'          // Currently engaged, onboarding or working
+  | 'dormant'         // Temporarily inactive, may return (e.g., on break, between assignments)
+  | 'pool'            // Prospect/database candidate, never actively engaged yet
+  | 'assessment_only' // Compliance assessment only, no active engagement
+  | 'departed'        // Left permanently, data retained for records
+  | 'offboarded';     // Formally offboarded, minimal data retained
+```
+
+**State Behaviours:**
+
+| State | Notifications | Doc Processing | Billing Tier | Typical Use |
+|-------|---------------|----------------|--------------|-------------|
+| `invited` | Invite reminders | None | None | Awaiting candidate acceptance |
+| `active` | Yes | Full | Standard | Currently onboarding/working |
+| `dormant` | No | On-demand | Reduced | Between assignments, on break |
+| `pool` | Campaign only | On activation | Pool rate | ATS/CRM imports, re-engagement targets |
+| `assessment_only` | No | Minimal | Assessment | Bulk compliance checks |
+| `departed` | No | None | Minimal/free | Left, records retained |
+| `offboarded` | No | None | None | Formal exit, minimal retention |
+
+**Use Cases:**
+- Agency imports 100k candidates from ATS → `pool` state, no auto-processing
+- Candidate goes on maternity leave → `dormant` state, no chasing
+- Candidate resigns → `departed` state, data retained
+- Bulk compliance assessment of existing workforce → `assessment_only`
+- Org sends invite to new candidate → `invited` state until they accept
+- Candidate accepts invite → transitions to `active`, onboarding begins
+- Re-engaging pool candidate → transition to `active`, trigger processing
+
 ---
 
 ## Core Entities
@@ -590,6 +646,11 @@ interface Profile {
 
   // Job context (which Role drives their compliance requirements)
   roleId?: string;
+
+  // Lifecycle state (see D6: Profile Lifecycle States)
+  lifecycleState: 'invited' | 'active' | 'dormant' | 'pool' | 'assessment_only' | 'departed' | 'offboarded';
+  lifecycleStateChangedAt?: string;
+  lifecycleStateReason?: string;    // "Maternity leave", "Contract ended", etc.
 
   // Candidate-scoped evidence (fulfilled items)
   // These apply to ALL placements for this profile
