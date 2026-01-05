@@ -174,12 +174,12 @@ type ProfileLifecycleState =
 | `offboarded` | No | None | None | Formal exit, minimal retention |
 
 **Use Cases:**
+- Org sends invite to new candidate → `invited` state until they accept
+- Candidate accepts invite → transitions to `active`, onboarding begins
 - Agency imports 100k candidates from ATS → `pool` state, no auto-processing
 - Candidate goes on maternity leave → `dormant` state, no chasing
 - Candidate resigns → `departed` state, data retained
 - Bulk compliance assessment of existing workforce → `assessment_only`
-- Org sends invite to new candidate → `invited` state until they accept
-- Candidate accepts invite → transitions to `active`, onboarding begins
 - Re-engaging pool candidate → transition to `active`, trigger processing
 
 ---
