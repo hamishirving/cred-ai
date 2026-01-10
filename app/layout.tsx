@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { Suspense } from "react";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/components/auth-provider";
@@ -19,16 +19,56 @@ export const viewport = {
 	maximumScale: 1, // Disable auto-zoom on mobile Safari
 };
 
-const geist = Geist({
-	subsets: ["latin"],
-	display: "swap",
+// Use local font with system font fallback to avoid network dependency on Google Fonts
+const geist = localFont({
+	src: [
+		{
+			path: "../node_modules/geist/dist/fonts/geist-sans/Geist-Regular.woff2",
+			weight: "400",
+			style: "normal",
+		},
+		{
+			path: "../node_modules/geist/dist/fonts/geist-sans/Geist-Medium.woff2",
+			weight: "500",
+			style: "normal",
+		},
+		{
+			path: "../node_modules/geist/dist/fonts/geist-sans/Geist-SemiBold.woff2",
+			weight: "600",
+			style: "normal",
+		},
+		{
+			path: "../node_modules/geist/dist/fonts/geist-sans/Geist-Bold.woff2",
+			weight: "700",
+			style: "normal",
+		},
+	],
 	variable: "--font-geist",
+	display: "swap",
+	fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
 });
 
-const geistMono = Geist_Mono({
-	subsets: ["latin"],
-	display: "swap",
+const geistMono = localFont({
+	src: [
+		{
+			path: "../node_modules/geist/dist/fonts/geist-mono/GeistMono-Regular.woff2",
+			weight: "400",
+			style: "normal",
+		},
+		{
+			path: "../node_modules/geist/dist/fonts/geist-mono/GeistMono-Medium.woff2",
+			weight: "500",
+			style: "normal",
+		},
+		{
+			path: "../node_modules/geist/dist/fonts/geist-mono/GeistMono-SemiBold.woff2",
+			weight: "600",
+			style: "normal",
+		},
+	],
 	variable: "--font-geist-mono",
+	display: "swap",
+	fallback: ["ui-monospace", "SFMono-Regular", "Monaco", "Consolas", "monospace"],
 });
 
 const LIGHT_THEME_COLOR = "hsl(0 0% 100%)";
