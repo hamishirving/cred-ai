@@ -1,4 +1,3 @@
-```
 {
   "openapi": "3.1.0",
   "info": {
@@ -20,10 +19,92 @@
     {
       "name": "Profiles",
       "description": "Profile management proxy endpoints"
+    },
+    {
+      "name": "Compliance-packages",
+      "description": "Profile's compliance packages management proxy endpoints"
     }
   ],
   "paths": {
     "/api/{organisationId}/profile": {
+      "get": {
+        "tags": [
+          "Profiles"
+        ],
+        "summary": "Load Profiles",
+        "description": "Fetches a paginated list of profiles for the organisation.",
+        "operationId": "loadProfiles",
+        "parameters": [
+          {
+            "name": "organisationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProfileListFilterRequest"
+            }
+          },
+          {
+            "name": "X-API-Version",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "default": "2.0.0",
+              "enum": [
+                "2.0.0"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profiles loaded",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileListPageDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer-key": []
+          }
+        ]
+      },
       "put": {
         "tags": [
           "Profiles"
@@ -139,6 +220,296 @@
           },
           "404": {
             "description": "Profile not found for email"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer-key": []
+          }
+        ]
+      }
+    },
+    "/api/{organisationId}/documents/{profileId}": {
+      "get": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Get Profile Documents",
+        "description": "Fetches documents for a profile, enriched with extra OCR fields.",
+        "operationId": "getDocuments",
+        "parameters": [
+          {
+            "name": "organisationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-API-Version",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "default": "2.0.0",
+              "enum": [
+                "2.0.0"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Documents retrieved successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Documents or profile not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer-key": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Upload Profile Document",
+        "description": "Uploads a document for a specific profile and triggers processing.",
+        "operationId": "uploadDocument",
+        "parameters": [
+          {
+            "name": "organisationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-API-Version",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "default": "2.0.0",
+              "enum": [
+                "2.0.0"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "$ref": "#/components/schemas/DocumentUploadRequest"
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "data",
+                  "file"
+                ]
+              },
+              "encoding": {
+                "data": {
+                  "contentType": "application/json"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Document uploaded and processing started"
+          },
+          "400": {
+            "description": "Invalid request data"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer-key": []
+          }
+        ]
+      }
+    },
+    "/api/{organisationId}/compliance-packages/{profileId}": {
+      "get": {
+        "tags": [
+          "Compliance-packages"
+        ],
+        "summary": "Get all profile's compliance packages",
+        "description": "Fetches a list of all compliance requirements for all assigned packages for the profile.",
+        "operationId": "getProfileCompliancePackages",
+        "parameters": [
+          {
+            "name": "organisationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-API-Version",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "default": "2.0.0",
+              "enum": [
+                "2.0.0"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Compliance packages retrieved successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CompliancePackageDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Compliance packages or profile not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer-key": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Compliance-packages"
+        ],
+        "summary": "Assign compliance packages to profile",
+        "description": "Assign compliance packages (list of their ids) to profile.",
+        "operationId": "assign",
+        "parameters": [
+          {
+            "name": "organisationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-API-Version",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "default": "2.0.0",
+              "enum": [
+                "2.0.0"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Compliance packages were assigned successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CompliancePackageDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Compliance packages or profile not found"
           },
           "500": {
             "description": "Internal server error"
@@ -329,14 +700,14 @@
         ]
       }
     },
-    "/api/{organisationId}/documents/{profileId}": {
+    "/api/{organisationId}/compliance-packages": {
       "get": {
         "tags": [
-          "Documents"
+          "Compliance-packages"
         ],
-        "summary": "Get Profile Documents",
-        "description": "Fetches documents for a profile, enriched with extra OCR fields.",
-        "operationId": "getDocuments",
+        "summary": "Get all organisation's compliance packages",
+        "description": "Fetches a list of all organisation's compliance packages.",
+        "operationId": "getOrganisationCompliancePackages",
         "parameters": [
           {
             "name": "organisationId",
@@ -345,14 +716,6 @@
             "schema": {
               "type": "integer",
               "format": "int64"
-            }
-          },
-          {
-            "name": "profileId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
             }
           },
           {
@@ -369,20 +732,20 @@
         ],
         "responses": {
           "200": {
-            "description": "Documents retrieved successfully",
+            "description": "Compliance packages retrieved successfully",
             "content": {
               "*/*": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/DocumentDto"
+                    "$ref": "#/components/schemas/CompliancePackageBasicDto"
                   }
                 }
               }
             }
           },
           "404": {
-            "description": "Documents or profile not found"
+            "description": "Compliance packages not found"
           },
           "500": {
             "description": "Internal server error"
@@ -465,11 +828,12 @@
           "key": {
             "type": "string"
           },
-          "name": {
-            "type": "string"
-          },
           "group": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "COMPLIANCE_ERROR",
+              "COMPLIANCE_OK"
+            ]
           }
         }
       },
@@ -674,6 +1038,195 @@
           }
         }
       },
+      "DocumentUploadRequest": {
+        "type": "object",
+        "description": "Request body for uploading a document, none of the fields are mandatory.",
+        "properties": {
+          "documentTypeKey": {
+            "type": "string"
+          },
+          "statutoryDocumentTypeKey": {
+            "type": "string"
+          },
+          "otherDocumentTypeName": {
+            "type": "string"
+          },
+          "skipDuplicates": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CheckIntegrationDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "CompliancePackageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "modified": {
+            "type": "boolean"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeComplianceGroupDto"
+            }
+          }
+        }
+      },
+      "DocumentTypeBaseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          }
+        }
+      },
+      "EmployeeBasicDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "smallAvatarUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "EmployeeComplianceGroupDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "requirements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmployeeComplianceRequirementDto"
+            }
+          }
+        }
+      },
+      "EmployeeComplianceRequirementDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "DOCUMENT_TYPE",
+              "INTEGRATION",
+              "REFERENCE_FORM",
+              "TEXT_REQUIREMENT"
+            ]
+          },
+          "complianceStatus": {
+            "type": "string",
+            "enum": [
+              "COMPLIANT",
+              "NOT_COMPLIANT"
+            ]
+          },
+          "complianceTags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplianceTagDto"
+            },
+            "uniqueItems": true
+          },
+          "documentType": {
+            "$ref": "#/components/schemas/DocumentTypeBaseDto"
+          },
+          "referenceForm": {
+            "$ref": "#/components/schemas/ReferenceFormBaseDto"
+          },
+          "requiredReferencesNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "integration": {
+            "$ref": "#/components/schemas/CheckIntegrationDto"
+          },
+          "textRequirement": {
+            "$ref": "#/components/schemas/TextRequirementShortDto"
+          },
+          "approved": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approvedBy": {
+            "$ref": "#/components/schemas/EmployeeBasicDto"
+          }
+        }
+      },
+      "ReferenceFormBaseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "businessRules": {
+            "type": "string"
+          },
+          "phoneRequired": {
+            "type": "boolean"
+          },
+          "prohibitPersonalEmails": {
+            "type": "boolean"
+          },
+          "expired": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TextRequirementShortDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
       "UpdateProfileFieldsRequestDto": {
         "type": "object",
         "properties": {
@@ -750,6 +1303,41 @@
             "additionalProperties": {
 
             }
+          }
+        }
+      },
+      "ProfileListFilterRequest": {
+        "type": "object",
+        "properties": {
+          "nameOrEmail": {
+            "type": "string"
+          }
+        }
+      },
+      "ProfileListPageDto": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileDto"
+            }
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -944,6 +1532,58 @@
             "format": "date-time"
           }
         }
+      },
+      "BaseRoleDto": {
+        "type": "object",
+        "properties": {
+          "roleId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "roleName": {
+            "type": "string"
+          }
+        }
+      },
+      "CompliancePackageBasicDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BaseRoleDto"
+            }
+          },
+          "totalRequirements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "updated": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "compliantAssignmentCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalAssignmentCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalAllAssignmentCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updateInProgress": {
+            "type": "boolean"
+          }
+        }
       }
     },
     "securitySchemes": {
@@ -955,4 +1595,3 @@
     }
   }
 }
-```

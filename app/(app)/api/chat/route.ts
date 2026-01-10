@@ -21,6 +21,7 @@ import { myProvider } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { createForm } from "@/lib/ai/tools/create-form";
 import { draftEmail } from "@/lib/ai/tools/draft-email";
+import { getCompliancePackages } from "@/lib/ai/tools/get-compliance-packages";
 import { getMetadata } from "@/lib/ai/tools/get-org-metadata";
 import { getProfile } from "@/lib/ai/tools/get-profile";
 import { getDocuments } from "@/lib/ai/tools/get-profile-documents";
@@ -200,6 +201,7 @@ export async function POST(request: Request) {
 									"queryDataAgent",
 									"getProfile",
 									"getDocuments",
+									"getCompliancePackages",
 									"getMetadata",
 									"manageProfile",
 									"createForm",
@@ -213,6 +215,7 @@ export async function POST(request: Request) {
 						queryDataAgent,
 						getProfile,
 						getDocuments,
+						getCompliancePackages,
 						getMetadata,
 						manageProfile,
 						createForm,

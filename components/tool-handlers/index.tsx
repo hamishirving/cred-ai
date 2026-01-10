@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 // Import all tool handlers
+import { CompliancePackagesTool } from "./handlers/compliance-packages-tool";
 import { DataAgentTool } from "./handlers/data-agent-tool";
 import { DocumentCreateTool } from "./handlers/document-create-tool";
 import { DocumentUpdateTool } from "./handlers/document-update-tool";
@@ -22,6 +23,7 @@ const toolRegistry: Record<string, ToolHandler> = {
 	"tool-queryDataAgent": DataAgentTool as ToolHandler,
 	"tool-getProfile": ProfileTool as ToolHandler,
 	"tool-getDocuments": DocumentsTool as ToolHandler,
+	"tool-getCompliancePackages": CompliancePackagesTool as ToolHandler,
 	"tool-createForm": FormTool as ToolHandler,
 	"tool-draftEmail": EmailTool as ToolHandler,
 	"tool-createDocument": DocumentCreateTool as ToolHandler,

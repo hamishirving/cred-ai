@@ -189,6 +189,75 @@ export interface DocumentDto {
 	statusType: string;
 }
 
+// Compliance Packages Types
+export interface CheckIntegrationDto {
+	name: string;
+	type: string;
+}
+
+export interface DocumentTypeBaseDto {
+	id: number;
+	name: string;
+	description: string;
+	key: string;
+}
+
+export interface EmployeeBasicDto {
+	id: string;
+	firstName: string;
+	lastName: string;
+	smallAvatarUrl?: string;
+}
+
+export interface ReferenceFormBaseDto {
+	id: string;
+	title: string;
+	businessRules?: string;
+	phoneRequired: boolean;
+	prohibitPersonalEmails: boolean;
+	expired: boolean;
+}
+
+export interface TextRequirementShortDto {
+	id: string;
+	name: string;
+}
+
+export type ComplianceRequirementType =
+	| "DOCUMENT_TYPE"
+	| "INTEGRATION"
+	| "REFERENCE_FORM"
+	| "TEXT_REQUIREMENT";
+
+export type ComplianceStatus = "COMPLIANT" | "NOT_COMPLIANT";
+
+export interface EmployeeComplianceRequirementDto {
+	id: string;
+	type: ComplianceRequirementType;
+	complianceStatus: ComplianceStatus;
+	complianceTags: ComplianceTagDto[];
+	documentType?: DocumentTypeBaseDto;
+	referenceForm?: ReferenceFormBaseDto;
+	requiredReferencesNumber?: number;
+	integration?: CheckIntegrationDto;
+	textRequirement?: TextRequirementShortDto;
+	approved?: string;
+	approvedBy?: EmployeeBasicDto;
+}
+
+export interface EmployeeComplianceGroupDto {
+	id: string;
+	name: string;
+	requirements: EmployeeComplianceRequirementDto[];
+}
+
+export interface CompliancePackageDto {
+	id: string;
+	name: string;
+	modified: boolean;
+	groups: EmployeeComplianceGroupDto[];
+}
+
 // API Error Response
 export interface ApiError {
 	status: number;
