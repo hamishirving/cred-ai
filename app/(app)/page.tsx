@@ -934,10 +934,7 @@ export default function HomePage() {
 				</p>
 			</div>
 
-			{/* Urgent Alerts */}
-			<UrgentAlertsBanner alerts={MOCK_ALERTS} />
-
-			{/* Stats Bar */}
+				{/* Stats Bar */}
 			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
 				<StatsCard
 					title="Active Onboarding"
@@ -961,9 +958,6 @@ export default function HomePage() {
 					sparklineColor="#3b82f6"
 				/>
 			</div>
-
-			{/* Pipeline */}
-			<PipelineFunnel />
 
 			{/* Main Content: Activity Feed + Tasks */}
 			<div className="grid gap-6 lg:grid-cols-2">

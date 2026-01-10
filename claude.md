@@ -38,6 +38,15 @@ See `lib/db/CLAUDE.md` for detailed workflow.
 - Tools render results directly in UI - keep AI responses brief after tool calls
 - Never modify `components/ui/` directly - extend via composition
 
+## Design Principles
+
+See `docs/DESIGN-PRINCIPLES.md` for full guidelines. Key points:
+
+- **Compact & dense** - Users come from spreadsheets, comfortable with information density
+- **Snappy & fast** - Optimistic updates, skeleton states, short animations (150-300ms)
+- **Tight spacing** - Use `gap-2`, `p-3`, avoid `gap-6`, `p-8`
+- **Small buttons** - Prefer `size="sm"` unless primary CTA
+
 ## Git Rules
 
 - Do NOT commit until user explicitly says to
