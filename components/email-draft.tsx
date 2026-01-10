@@ -33,7 +33,7 @@ export function EmailDraftComponent({ email }: EmailDraftProps) {
 
 	if (sent) {
 		return (
-			<div className="rounded-xl border bg-card p-6 shadow-sm">
+			<div className="w-[600px] max-w-full rounded-xl border bg-card p-6 shadow-sm">
 				<div className="flex flex-col items-center gap-3 text-center">
 					<div className="flex size-12 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
 						<CheckIcon className="size-6" />
@@ -48,7 +48,7 @@ export function EmailDraftComponent({ email }: EmailDraftProps) {
 	}
 
 	return (
-		<div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+		<div className="w-[600px] max-w-full overflow-hidden rounded-xl border bg-card shadow-sm">
 			{/* Email Header */}
 			<div className="border-b bg-muted/30 px-4 py-3">
 				<div className="space-y-1.5 text-sm">

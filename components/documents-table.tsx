@@ -23,7 +23,7 @@ export function DocumentsTable({ documents }: DocumentsTableProps) {
 	}
 
 	return (
-		<div className="rounded-md border">
+		<div className="w-fit min-w-96 max-w-2xl rounded-md border">
 			<Table>
 				<TableHeader>
 					<TableRow>

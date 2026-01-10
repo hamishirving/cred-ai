@@ -63,7 +63,7 @@ export function ProfileCard({ profile }: { profile: ProfileDto }) {
 		profile.jobs.find((job) => job.status === "Active") || profile.jobs[0];
 
 	return (
-		<div className="not-prose my-4 overflow-hidden rounded-lg border bg-card shadow-sm">
+		<div className="not-prose my-4 w-fit min-w-80 max-w-2xl overflow-hidden rounded-lg border bg-card shadow-sm">
 			{/* Header Section */}
 			<div className="border-b bg-muted/30 px-6 py-4">
 				<div className="flex items-start justify-between gap-4">

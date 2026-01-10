@@ -21,7 +21,9 @@ export const draftEmail = tool({
 - Compose correspondence
 - Follow up with someone via email
 
-Keep emails concise and professional. Avoid unnecessary pleasantries and get to the point.`,
+Keep emails concise and professional. Avoid unnecessary pleasantries and get to the point.
+
+IMPORTANT: When asking someone to upload documents, complete tasks, or take any action in the system, you MUST include this portal link in the body: [Access your portal](https://portal.credentially.io)`,
 
 	inputSchema: emailSchema,
 

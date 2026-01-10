@@ -226,7 +226,7 @@ export function CompliancePackagesView({
 	}
 
 	return (
-		<div className="space-y-4">
+		<div className="w-fit min-w-80 max-w-2xl space-y-4">
 			{packages.map((pkg) => (
 				<PackageCard key={pkg.id} pkg={pkg} />
 			))}
