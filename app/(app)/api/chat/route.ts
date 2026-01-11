@@ -28,6 +28,7 @@ import { getDocuments } from "@/lib/ai/tools/get-profile-documents";
 import { manageProfile } from "@/lib/ai/tools/manage-profile";
 import { queryDataAgent } from "@/lib/ai/tools/query-data-agent";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
+import { searchKnowledge } from "@/lib/ai/tools/search-knowledge";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { isProductionEnvironment } from "@/lib/constants";
 import { getPostHogClient } from "@/lib/posthog-server";
@@ -209,6 +210,7 @@ export async function POST(request: Request) {
 									"createDocument",
 									"updateDocument",
 									"requestSuggestions",
+									"searchKnowledge",
 								],
 					experimental_transform: smoothStream({ chunking: "word" }),
 					tools: {
@@ -226,6 +228,7 @@ export async function POST(request: Request) {
 							session,
 							dataStream,
 						}),
+						searchKnowledge,
 					},
 					experimental_telemetry: {
 						isEnabled: isProductionEnvironment,
