@@ -598,6 +598,16 @@ async rewrites() {
 
 ## Component Architecture
 
+### Design Principles
+
+See **[DESIGN-PRINCIPLES.md](./DESIGN-PRINCIPLES.md)** for visual design guidelines.
+
+Key points:
+- **Compact by default** - Tight padding, smaller gaps, high information density
+- **Snappy & fast** - Optimistic updates, skeleton states, short animations
+- **Spreadsheet familiarity** - Inline editing, keyboard navigation, bulk actions
+- **Tight spacing scale** - Use gap-2/gap-3, avoid gap-6+
+
 ### UI Components (shadcn/ui)
 
 Located in `components/ui/`. Do not modify directly - extend via composition:
