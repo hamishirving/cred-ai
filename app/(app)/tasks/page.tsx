@@ -128,7 +128,6 @@ function AIBadge() {
 			className="text-xs gap-1 border-purple-500/50 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.4)]"
 		>
 			<Sparkles className="h-3 w-3" />
-			AI
 		</Badge>
 	);
 }

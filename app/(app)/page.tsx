@@ -606,7 +606,6 @@ function ActivityFeedItem({ item, isNew }: { item: ActivityItem; isNew?: boolean
 								<div className="flex items-center gap-2">
 									<Badge variant="outline" className="text-[10px] gap-1 px-1.5 border-purple-500/50 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.4)]">
 										<Sparkles className="h-2.5 w-2.5" />
-										AI
 									</Badge>
 									<span className="text-xs text-muted-foreground">
 										{formatDistanceToNow(item.timestamp, { addSuffix: true })}
@@ -767,7 +766,6 @@ function TaskPreviewCard({ task }: { task: TaskPreview }) {
 					{task.source === "ai_agent" && (
 						<Badge variant="outline" className="text-[10px] gap-0.5 px-1 border-purple-500/50 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.4)]">
 							<Sparkles className="h-2.5 w-2.5" />
-							AI
 						</Badge>
 					)}
 					<StatusIcon

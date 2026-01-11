@@ -10,6 +10,7 @@ import { DocumentsTool } from "./handlers/documents-tool";
 import { EmailTool } from "./handlers/email-tool";
 import { FormTool } from "./handlers/form-tool";
 import { ProfileTool } from "./handlers/profile-tool";
+import { KnowledgeTool } from "./handlers/knowledge-tool";
 import { SuggestionsTool } from "./handlers/suggestions-tool";
 import type { ToolHandlerProps } from "./types";
 
@@ -29,6 +30,7 @@ const toolRegistry: Record<string, ToolHandler> = {
 	"tool-createDocument": DocumentCreateTool as ToolHandler,
 	"tool-updateDocument": DocumentUpdateTool as ToolHandler,
 	"tool-requestSuggestions": SuggestionsTool as ToolHandler,
+	"tool-searchKnowledge": KnowledgeTool as ToolHandler,
 };
 
 /**
