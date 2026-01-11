@@ -311,17 +311,41 @@ function getActivityIcon(type: ActivityItem["type"]) {
 function getActivityColor(type: ActivityItem["type"]) {
 	switch (type) {
 		case "message":
-			return "text-blue-500";
+			return {
+				bg: "bg-blue-500",
+				text: "text-blue-500",
+				glow: "shadow-[0_0_10px_rgba(59,130,246,0.5)]",
+			};
 		case "document":
-			return "text-purple-500";
+			return {
+				bg: "bg-purple-500",
+				text: "text-purple-500",
+				glow: "shadow-[0_0_10px_rgba(168,85,247,0.5)]",
+			};
 		case "compliance":
-			return "text-orange-500";
+			return {
+				bg: "bg-orange-500",
+				text: "text-orange-500",
+				glow: "shadow-[0_0_10px_rgba(249,115,22,0.5)]",
+			};
 		case "reference":
-			return "text-green-500";
+			return {
+				bg: "bg-green-500",
+				text: "text-green-500",
+				glow: "shadow-[0_0_10px_rgba(34,197,94,0.5)]",
+			};
 		case "verification":
-			return "text-teal-500";
+			return {
+				bg: "bg-teal-500",
+				text: "text-teal-500",
+				glow: "shadow-[0_0_10px_rgba(20,184,166,0.5)]",
+			};
 		default:
-			return "text-gray-500";
+			return {
+				bg: "bg-gray-500",
+				text: "text-gray-500",
+				glow: "",
+			};
 	}
 }
 
@@ -558,7 +582,7 @@ function UrgentAlertsBanner({ alerts }: { alerts: UrgentAlert[] }) {
 function ActivityFeedItem({ item, isNew }: { item: ActivityItem; isNew?: boolean }) {
 	const [isOpen, setIsOpen] = useState(false);
 	const Icon = getActivityIcon(item.type);
-	const iconColor = getActivityColor(item.type);
+	const colors = getActivityColor(item.type);
 
 	return (
 		<motion.div
@@ -573,16 +597,16 @@ function ActivityFeedItem({ item, isNew }: { item: ActivityItem; isNew?: boolean
 						isNew && "bg-primary/5 border-primary/20"
 					)}
 				>
-					<div className={cn("mt-0.5 rounded-full p-1.5 bg-muted", iconColor)}>
+					<div className={cn("mt-0.5 rounded-full p-1.5", colors.bg, colors.glow)}>
 						<Icon className="h-3.5 w-3.5 text-white" />
 					</div>
 					<div className="flex-1 min-w-0">
 						<div className="flex items-start justify-between gap-2">
 							<div className="flex-1">
 								<div className="flex items-center gap-2">
-									<Badge variant="outline" className="text-[10px] gap-1 px-1.5">
+									<Badge variant="outline" className="text-[10px] gap-1 px-1.5 border-purple-500/50 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.4)]">
 										<Sparkles className="h-2.5 w-2.5" />
-										Cred AI
+										AI
 									</Badge>
 									<span className="text-xs text-muted-foreground">
 										{formatDistanceToNow(item.timestamp, { addSuffix: true })}
@@ -654,7 +678,7 @@ function ActivityFeed({
 							<Zap className="h-5 w-5" />
 							Agent Activity
 						</CardTitle>
-						<CardDescription>Real-time updates from Cred AI</CardDescription>
+						<CardDescription>Real-time updates from AI</CardDescription>
 					</div>
 					<div className="flex items-center gap-1">
 						<span className="relative flex h-2 w-2">
@@ -741,7 +765,7 @@ function TaskPreviewCard({ task }: { task: TaskPreview }) {
 						{priorityConfig[task.priority].label}
 					</Badge>
 					{task.source === "ai_agent" && (
-						<Badge variant="outline" className="text-[10px] gap-0.5 px-1">
+						<Badge variant="outline" className="text-[10px] gap-0.5 px-1 border-purple-500/50 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.4)]">
 							<Sparkles className="h-2.5 w-2.5" />
 							AI
 						</Badge>

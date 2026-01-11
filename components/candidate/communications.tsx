@@ -22,12 +22,6 @@ interface CommunicationItem {
 	reasoning?: string | null;
 }
 
-interface ComplianceInfo {
-	completed: number;
-	total: number;
-	percentage: number;
-}
-
 interface EmailPreview {
 	to: string;
 	cc?: string;
@@ -73,7 +67,6 @@ export function CandidateCommunications({
 	candidateName,
 }: CandidateCommunicationsProps) {
 	const [history, setHistory] = useState<CommunicationItem[]>([]);
-	const [compliance, setCompliance] = useState<ComplianceInfo | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [generating, setGenerating] = useState(false);
 	const [generatedEmail, setGeneratedEmail] = useState<GeneratedEmail | null>(null);
@@ -93,7 +86,6 @@ export function CandidateCommunications({
 			}
 			const data = await response.json();
 			setHistory(data.history || []);
-			setCompliance(data.candidate?.compliance || null);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Failed to load");
 		} finally {
@@ -149,43 +141,15 @@ export function CandidateCommunications({
 				</div>
 				<div className="flex gap-2">
 					<Button variant="outline" size="sm" onClick={fetchHistory} disabled={loading}>
-						<RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+						<RefreshCw className={`mr-2 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
 						Refresh
 					</Button>
-					<Button onClick={generatePreview} disabled={generating}>
-						<Sparkles className={`mr-2 h-4 w-4 ${generating ? "animate-pulse" : ""}`} />
+					<Button size="sm" onClick={generatePreview} disabled={generating}>
+						<Sparkles className={`mr-2 h-3.5 w-3.5 ${generating ? "animate-pulse" : ""}`} />
 						{generating ? "Generating..." : "Preview Next Email"}
 					</Button>
 				</div>
 			</div>
-
-			{/* Compliance Summary */}
-			{compliance && (
-				<Card>
-					<CardContent className="py-4">
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-4">
-								<div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-									<span className="text-lg font-bold text-primary">
-										{compliance.percentage}%
-									</span>
-								</div>
-								<div>
-									<p className="font-medium">Compliance Progress</p>
-									<p className="text-sm text-muted-foreground">
-										{compliance.completed} of {compliance.total} items complete
-									</p>
-								</div>
-							</div>
-							{compliance.percentage === 100 && (
-								<Badge variant="default" className="bg-green-500">
-									Fully Compliant
-								</Badge>
-							)}
-						</div>
-					</CardContent>
-				</Card>
-			)}
 
 			{/* Error State */}
 			{error && (

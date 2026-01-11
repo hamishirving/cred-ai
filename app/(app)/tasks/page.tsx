@@ -19,7 +19,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -34,6 +34,14 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useOrg } from "@/lib/org-context";
 
@@ -113,7 +121,19 @@ function PriorityBadge({ priority }: { priority: Task["priority"] }) {
 	);
 }
 
-function TaskCard({
+function AIBadge() {
+	return (
+		<Badge
+			variant="outline"
+			className="text-xs gap-1 border-purple-500/50 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.4)]"
+		>
+			<Sparkles className="h-3 w-3" />
+			AI
+		</Badge>
+	);
+}
+
+function TaskRow({
 	task,
 	onComplete,
 	onDismiss,
@@ -128,131 +148,141 @@ function TaskCard({
 }) {
 	const isActionable = task.status === "pending" || task.status === "in_progress" || task.status === "snoozed";
 	const StatusIcon = statusConfig[task.status].icon;
+	const isOverdue = task.dueAt && new Date(task.dueAt) < new Date() && task.status === "pending";
 
 	return (
-		<Card className={cn(
-			"transition-all hover:shadow-md",
+		<TableRow className={cn(
 			task.status === "completed" && "opacity-60",
 			task.status === "dismissed" && "opacity-50",
 		)}>
-			<CardHeader className="pb-2">
-				<div className="flex items-start justify-between gap-2">
-					<div className="flex items-start gap-3 flex-1 min-w-0">
-						{/* Priority indicator */}
-						<div className={cn("w-1 h-12 rounded-full shrink-0", priorityConfig[task.priority].color)} />
-
-						<div className="flex-1 min-w-0">
-							<div className="flex items-center gap-2 mb-1">
-								<PriorityBadge priority={task.priority} />
-								{task.source === "ai_agent" && (
-									<Badge variant="outline" className="text-xs gap-1">
-										<Sparkles className="h-3 w-3" />
-										AI
-									</Badge>
-								)}
-								<StatusIcon className={cn("h-4 w-4", statusConfig[task.status].color)} />
+			{/* Priority indicator + Title */}
+			<TableCell>
+				<div className="flex items-center gap-3">
+					<div className={cn("w-1 h-8 rounded-full shrink-0", priorityConfig[task.priority].color)} />
+					<div className="min-w-0">
+						<div className="font-medium truncate max-w-[300px]">{task.title}</div>
+						{task.description && (
+							<div className="text-xs text-muted-foreground truncate max-w-[300px]">
+								{task.description.split("\n")[0]}
 							</div>
-							<CardTitle className="text-base line-clamp-1">{task.title}</CardTitle>
-							{task.subject?.name && (
-								<CardDescription className="mt-1 flex items-center gap-2">
-									<Avatar className="h-5 w-5">
-										<AvatarFallback className={cn(getAvatarColor(task.subject.name), "text-[10px] text-white")}>
-											{getInitials(task.subject.name)}
-										</AvatarFallback>
-									</Avatar>
-									<Link
-										href={`/candidates/${task.subjectId}`}
-										className="hover:underline"
-									>
-										{task.subject.name}
-									</Link>
-								</CardDescription>
-							)}
-						</div>
+						)}
 					</div>
-
-					{/* Actions */}
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-								<MoreHorizontal className="h-4 w-4" />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							{isActionable && (
-								<>
-									<DropdownMenuItem onClick={() => onComplete(task.id)}>
-										<Check className="mr-2 h-4 w-4" />
-										Mark Complete
-									</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => onSnooze(task.id, new Date(Date.now() + 24 * 60 * 60 * 1000))}>
-										<Clock className="mr-2 h-4 w-4" />
-										Snooze 1 Day
-									</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => onSnooze(task.id, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))}>
-										<Clock className="mr-2 h-4 w-4" />
-										Snooze 1 Week
-									</DropdownMenuItem>
-									<DropdownMenuSeparator />
-									<DropdownMenuItem onClick={() => onDismiss(task.id)} className="text-muted-foreground">
-										<X className="mr-2 h-4 w-4" />
-										Dismiss
-									</DropdownMenuItem>
-								</>
-							)}
-							{(task.status === "completed" || task.status === "dismissed") && (
-								<DropdownMenuItem onClick={() => onReopen(task.id)}>
-									<ArrowUpRight className="mr-2 h-4 w-4" />
-									Reopen
-								</DropdownMenuItem>
-							)}
-							{task.subjectId && (
-								<>
-									{isActionable && <DropdownMenuSeparator />}
-									<DropdownMenuItem asChild>
-										<Link href={`/candidates/${task.subjectId}`}>
-											<User className="mr-2 h-4 w-4" />
-											View Candidate
-										</Link>
-									</DropdownMenuItem>
-								</>
-							)}
-						</DropdownMenuContent>
-					</DropdownMenu>
 				</div>
-			</CardHeader>
-			<CardContent className="pt-0">
-				{task.description && (
-					<p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-						{task.description.split("\n")[0]}
-					</p>
+			</TableCell>
+
+			{/* Subject */}
+			<TableCell>
+				{task.subject?.name ? (
+					<Link
+						href={`/candidates/${task.subjectId}`}
+						className="flex items-center gap-2 hover:underline"
+					>
+						<Avatar className="h-6 w-6">
+							<AvatarFallback className={cn(getAvatarColor(task.subject.name), "text-[10px] text-white")}>
+								{getInitials(task.subject.name)}
+							</AvatarFallback>
+						</Avatar>
+						<span className="text-sm">{task.subject.name}</span>
+					</Link>
+				) : (
+					<span className="text-muted-foreground text-sm">-</span>
 				)}
-				<div className="flex items-center justify-between text-xs text-muted-foreground">
-					<div className="flex items-center gap-3">
-						{task.dueAt && (
-							<span className={cn(
-								"flex items-center gap-1",
-								new Date(task.dueAt) < new Date() && task.status === "pending" && "text-red-600 font-medium"
-							)}>
-								{new Date(task.dueAt) < new Date() && task.status === "pending" && (
-									<AlertTriangle className="h-3 w-3" />
-								)}
-								Due {format(new Date(task.dueAt), "MMM d")}
-							</span>
-						)}
-						{task.snoozedUntil && task.status === "snoozed" && (
-							<span className="flex items-center gap-1 text-purple-600">
-								<Bell className="h-3 w-3" />
-								Until {format(new Date(task.snoozedUntil), "MMM d")}
-							</span>
-						)}
-					</div>
-					<span>
-						{formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}
+			</TableCell>
+
+			{/* Priority + Source */}
+			<TableCell>
+				<div className="flex items-center gap-2">
+					<PriorityBadge priority={task.priority} />
+					{task.source === "ai_agent" && <AIBadge />}
+				</div>
+			</TableCell>
+
+			{/* Status */}
+			<TableCell>
+				<div className="flex items-center gap-1.5">
+					<StatusIcon className={cn("h-4 w-4", statusConfig[task.status].color)} />
+					<span className={cn("text-sm", statusConfig[task.status].color)}>
+						{statusConfig[task.status].label}
 					</span>
 				</div>
-			</CardContent>
-		</Card>
+			</TableCell>
+
+			{/* Due date */}
+			<TableCell>
+				{task.dueAt ? (
+					<span className={cn(
+						"text-sm",
+						isOverdue && "text-red-600 font-medium flex items-center gap-1"
+					)}>
+						{isOverdue && <AlertTriangle className="h-3 w-3" />}
+						{format(new Date(task.dueAt), "MMM d")}
+					</span>
+				) : task.snoozedUntil && task.status === "snoozed" ? (
+					<span className="text-sm text-purple-600 flex items-center gap-1">
+						<Bell className="h-3 w-3" />
+						{format(new Date(task.snoozedUntil), "MMM d")}
+					</span>
+				) : (
+					<span className="text-muted-foreground text-sm">-</span>
+				)}
+			</TableCell>
+
+			{/* Created */}
+			<TableCell className="text-muted-foreground text-sm">
+				{formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}
+			</TableCell>
+
+			{/* Actions */}
+			<TableCell>
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button variant="ghost" size="icon" className="h-8 w-8">
+							<MoreHorizontal className="h-4 w-4" />
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						{isActionable && (
+							<>
+								<DropdownMenuItem onClick={() => onComplete(task.id)}>
+									<Check className="mr-2 h-4 w-4" />
+									Mark Complete
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => onSnooze(task.id, new Date(Date.now() + 24 * 60 * 60 * 1000))}>
+									<Clock className="mr-2 h-4 w-4" />
+									Snooze 1 Day
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => onSnooze(task.id, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))}>
+									<Clock className="mr-2 h-4 w-4" />
+									Snooze 1 Week
+								</DropdownMenuItem>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem onClick={() => onDismiss(task.id)} className="text-muted-foreground">
+									<X className="mr-2 h-4 w-4" />
+									Dismiss
+								</DropdownMenuItem>
+							</>
+						)}
+						{(task.status === "completed" || task.status === "dismissed") && (
+							<DropdownMenuItem onClick={() => onReopen(task.id)}>
+								<ArrowUpRight className="mr-2 h-4 w-4" />
+								Reopen
+							</DropdownMenuItem>
+						)}
+						{task.subjectId && (
+							<>
+								{isActionable && <DropdownMenuSeparator />}
+								<DropdownMenuItem asChild>
+									<Link href={`/candidates/${task.subjectId}`}>
+										<User className="mr-2 h-4 w-4" />
+										View Candidate
+									</Link>
+								</DropdownMenuItem>
+							</>
+						)}
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</TableCell>
+		</TableRow>
 	);
 }
 
@@ -336,73 +366,73 @@ export default function TasksPage() {
 	const handleSnooze = (id: string, until: Date) => updateTask(id, { status: "snoozed", snoozedUntil: until.toISOString() });
 	const handleReopen = (id: string) => updateTask(id, { status: "pending" });
 
-	// Stats
+	// Stats - computed from visible tasks (all status-based)
 	const stats = useMemo(() => {
 		return {
-			urgent: tasks.filter(t => t.priority === "urgent" && t.status !== "completed" && t.status !== "dismissed").length,
-			overdue: tasks.filter(t => t.dueAt && new Date(t.dueAt) < new Date() && t.status === "pending").length,
 			pending: tasks.filter(t => t.status === "pending").length,
+			inProgress: tasks.filter(t => t.status === "in_progress").length,
 			snoozed: tasks.filter(t => t.status === "snoozed").length,
+			completed: tasks.filter(t => t.status === "completed").length,
 		};
 	}, [tasks]);
 
 	const isLoading = orgLoading || loading;
 
 	return (
-		<div className="flex flex-1 flex-col gap-6 p-6">
+		<div className="flex flex-1 flex-col gap-4 p-6">
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="text-2xl font-semibold">Tasks</h1>
-					<p className="text-muted-foreground">
+					<p className="text-muted-foreground text-sm">
 						Compliance actions and follow-ups requiring attention
 					</p>
 				</div>
 			</div>
 
 			{/* Stats */}
-			<div className="grid gap-4 md:grid-cols-4">
-				<Card className="border-l-4 border-l-red-500">
-					<CardContent className="p-4">
+			<div className="grid gap-3 md:grid-cols-4">
+				<Card className="border-l-4 border-l-yellow-500">
+					<CardContent className="p-3">
 						<div className="flex items-center justify-between">
 							<div>
-								<p className="text-sm text-muted-foreground">Urgent</p>
-								<p className="text-2xl font-bold">{stats.urgent}</p>
+								<p className="text-xs text-muted-foreground">Pending</p>
+								<p className="text-xl font-bold">{stats.pending}</p>
 							</div>
-							<AlertTriangle className="h-8 w-8 text-red-500 opacity-50" />
-						</div>
-					</CardContent>
-				</Card>
-				<Card className="border-l-4 border-l-orange-500">
-					<CardContent className="p-4">
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-sm text-muted-foreground">Overdue</p>
-								<p className="text-2xl font-bold">{stats.overdue}</p>
-							</div>
-							<Clock className="h-8 w-8 text-orange-500 opacity-50" />
+							<Clock className="h-6 w-6 text-yellow-500 opacity-50" />
 						</div>
 					</CardContent>
 				</Card>
 				<Card className="border-l-4 border-l-blue-500">
-					<CardContent className="p-4">
+					<CardContent className="p-3">
 						<div className="flex items-center justify-between">
 							<div>
-								<p className="text-sm text-muted-foreground">Pending</p>
-								<p className="text-2xl font-bold">{stats.pending}</p>
+								<p className="text-xs text-muted-foreground">In Progress</p>
+								<p className="text-xl font-bold">{stats.inProgress}</p>
 							</div>
-							<ArrowUpRight className="h-8 w-8 text-blue-500 opacity-50" />
+							<ArrowUpRight className="h-6 w-6 text-blue-500 opacity-50" />
 						</div>
 					</CardContent>
 				</Card>
 				<Card className="border-l-4 border-l-purple-500">
-					<CardContent className="p-4">
+					<CardContent className="p-3">
 						<div className="flex items-center justify-between">
 							<div>
-								<p className="text-sm text-muted-foreground">Snoozed</p>
-								<p className="text-2xl font-bold">{stats.snoozed}</p>
+								<p className="text-xs text-muted-foreground">Snoozed</p>
+								<p className="text-xl font-bold">{stats.snoozed}</p>
 							</div>
-							<Bell className="h-8 w-8 text-purple-500 opacity-50" />
+							<Bell className="h-6 w-6 text-purple-500 opacity-50" />
+						</div>
+					</CardContent>
+				</Card>
+				<Card className="border-l-4 border-l-green-500">
+					<CardContent className="p-3">
+						<div className="flex items-center justify-between">
+							<div>
+								<p className="text-xs text-muted-foreground">Completed</p>
+								<p className="text-xl font-bold">{stats.completed}</p>
+							</div>
+							<Check className="h-6 w-6 text-green-500 opacity-50" />
 						</div>
 					</CardContent>
 				</Card>
@@ -412,7 +442,7 @@ export default function TasksPage() {
 			<div className="flex items-center gap-3">
 				<Filter className="h-4 w-4 text-muted-foreground" />
 				<Select value={statusFilter} onValueChange={setStatusFilter}>
-					<SelectTrigger className="w-[140px]">
+					<SelectTrigger className="w-[130px] h-8">
 						<SelectValue placeholder="Status" />
 					</SelectTrigger>
 					<SelectContent>
@@ -426,7 +456,7 @@ export default function TasksPage() {
 					</SelectContent>
 				</Select>
 				<Select value={priorityFilter} onValueChange={setPriorityFilter}>
-					<SelectTrigger className="w-[140px]">
+					<SelectTrigger className="w-[130px] h-8">
 						<SelectValue placeholder="Priority" />
 					</SelectTrigger>
 					<SelectContent>
@@ -438,7 +468,7 @@ export default function TasksPage() {
 					</SelectContent>
 				</Select>
 				<Select value={sourceFilter} onValueChange={setSourceFilter}>
-					<SelectTrigger className="w-[140px]">
+					<SelectTrigger className="w-[130px] h-8">
 						<SelectValue placeholder="Source" />
 					</SelectTrigger>
 					<SelectContent>
@@ -464,32 +494,51 @@ export default function TasksPage() {
 				</div>
 			)}
 
-			{/* Tasks list */}
+			{/* Tasks table */}
 			{!isLoading && !error && (
-				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-					{tasks.length > 0 ? (
-						tasks.map((task) => (
-							<TaskCard
-								key={task.id}
-								task={task}
-								onComplete={handleComplete}
-								onDismiss={handleDismiss}
-								onSnooze={handleSnooze}
-								onReopen={handleReopen}
-							/>
-						))
-					) : (
-						<div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
-							<Check className="h-12 w-12 text-muted-foreground mb-4" />
-							<h3 className="font-medium">No tasks found</h3>
-							<p className="text-muted-foreground text-sm">
-								{statusFilter === "active"
-									? "All caught up! No active tasks requiring attention."
-									: "No tasks match your current filters."}
-							</p>
-						</div>
-					)}
-				</div>
+				<Card>
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead className="w-[350px]">Task</TableHead>
+								<TableHead className="w-[180px]">Subject</TableHead>
+								<TableHead className="w-[150px]">Priority</TableHead>
+								<TableHead className="w-[120px]">Status</TableHead>
+								<TableHead className="w-[100px]">Due</TableHead>
+								<TableHead className="w-[120px]">Created</TableHead>
+								<TableHead className="w-[50px]"></TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{tasks.length > 0 ? (
+								tasks.map((task) => (
+									<TaskRow
+										key={task.id}
+										task={task}
+										onComplete={handleComplete}
+										onDismiss={handleDismiss}
+										onSnooze={handleSnooze}
+										onReopen={handleReopen}
+									/>
+								))
+							) : (
+								<TableRow>
+									<TableCell colSpan={7} className="h-32 text-center">
+										<div className="flex flex-col items-center justify-center">
+											<Check className="h-10 w-10 text-muted-foreground mb-3" />
+											<h3 className="font-medium">No tasks found</h3>
+											<p className="text-muted-foreground text-sm">
+												{statusFilter === "active"
+													? "All caught up! No active tasks requiring attention."
+													: "No tasks match your current filters."}
+											</p>
+										</div>
+									</TableCell>
+								</TableRow>
+							)}
+						</TableBody>
+					</Table>
+				</Card>
 			)}
 		</div>
 	);

@@ -4,6 +4,7 @@
  * Seeds the database with multi-market demo data.
  * Run with: pnpm db:seed
  */
+import { eq } from "drizzle-orm";
 import { db, closeConnection } from "./db";
 import { clearAllData } from "./clear";
 import {
@@ -26,6 +27,7 @@ import {
 	activities,
 	escalations,
 	escalationOptions,
+	tasks,
 } from "../schema";
 import {
 	ukComplianceElements,
@@ -166,6 +168,18 @@ const orgConfigs: OrgConfig[] = [
 
 async function seedOrganisation(config: OrgConfig) {
 	console.log(`\n📦 Seeding ${config.name}...`);
+
+	// Check if org already exists (preserved from real user)
+	const existingOrg = await db
+		.select()
+		.from(organisations)
+		.where(eq(organisations.slug, config.slug))
+		.limit(1);
+
+	if (existingOrg.length > 0) {
+		console.log(`   ⏭ Skipping - org already exists (preserved)`);
+		return;
+	}
 
 	// 1. Create organisation with AI companion settings
 	const marketLabel = config.market === "uk" ? "UK" : "US";
@@ -385,6 +399,7 @@ Sign off as: "${config.name} Credentialing Team"`,
 	let profileCount = 0;
 	let evidenceCount = 0;
 	let activityCount = 0;
+	let taskCount = 0;
 
 	for (const candidateConfig of config.candidates) {
 		// Create User (global identity)
@@ -402,11 +417,19 @@ Sign off as: "${config.name} Credentialing Team"`,
 		userCount++;
 
 		// Create Profile (compliance data)
+		// Set createdAt in the past to simulate realistic onboarding duration
+		const onboardingDays = candidateConfig.state.status === "compliant"
+			? randomInt(30, 60) // Compliant candidates have been around longer
+			: candidateConfig.state.status === "stuck"
+				? randomInt(14, 30) // Stuck candidates have been waiting
+				: randomInt(5, 20); // Others are more recent
+
 		const [profile] = await db
 			.insert(profiles)
 			.values({
 				...candidateConfig.profile,
 				organisationId: org.id,
+				createdAt: daysFromNow(-onboardingDays),
 			})
 			.returning();
 		profileCount++;
@@ -630,12 +653,89 @@ Sign off as: "${config.name} Credentialing Team"`,
 			});
 			activityCount++;
 		}
+
+		// Create tasks based on candidate state
+		if (candidateConfig.state.status === "stuck") {
+			await db.insert(tasks).values({
+				organisationId: org.id,
+				subjectType: "profile",
+				subjectId: profile.id,
+				title: `Chase ${profile.firstName} ${profile.lastName} for outstanding documents`,
+				description: `Candidate has not responded to multiple automated reminders. Manual follow-up required.`,
+				priority: "urgent",
+				category: "chase_candidate",
+				source: "ai_agent",
+				agentId: "onboarding-companion",
+				aiReasoning: "Candidate has not responded to 3 automated reminders over 14 days.",
+				status: "pending",
+				dueAt: daysFromNow(1),
+				createdAt: daysFromNow(-1),
+				updatedAt: daysFromNow(-1),
+			});
+			taskCount++;
+		} else if (candidateConfig.state.status === "near_complete") {
+			const missing = candidateConfig.state.missingElements?.[0] || "Right to Work";
+			await db.insert(tasks).values({
+				organisationId: org.id,
+				subjectType: "profile",
+				subjectId: profile.id,
+				title: `Review uploaded ${missing} document`,
+				description: `${profile.firstName} has uploaded their ${missing}. Please review and verify.`,
+				priority: "high",
+				category: "review_document",
+				source: "ai_agent",
+				agentId: "document-processor",
+				aiReasoning: "Document uploaded and awaiting manual verification.",
+				status: "pending",
+				dueAt: daysFromNow(2),
+				createdAt: daysFromNow(0),
+				updatedAt: daysFromNow(0),
+			});
+			taskCount++;
+		} else if (candidateConfig.state.status === "expiring") {
+			const expiring = candidateConfig.state.expiringElements?.[0] || "DBS";
+			await db.insert(tasks).values({
+				organisationId: org.id,
+				subjectType: "profile",
+				subjectId: profile.id,
+				title: `Renew expiring ${expiring} for ${profile.firstName} ${profile.lastName}`,
+				description: `${expiring} certificate expires soon. Initiate renewal process.`,
+				priority: "high",
+				category: "expiry",
+				source: "system",
+				aiReasoning: `${expiring} expires within 30 days.`,
+				status: "pending",
+				dueAt: daysFromNow(7),
+				createdAt: daysFromNow(-3),
+				updatedAt: daysFromNow(-3),
+			});
+			taskCount++;
+		} else if (candidateConfig.state.status === "in_progress") {
+			await db.insert(tasks).values({
+				organisationId: org.id,
+				subjectType: "profile",
+				subjectId: profile.id,
+				title: `Follow up on ${profile.firstName}'s reference request`,
+				description: `Reference request sent to previous employer. Follow up if no response within 5 days.`,
+				priority: "medium",
+				category: "follow_up",
+				source: "ai_agent",
+				agentId: "reference-chaser",
+				aiReasoning: "Reference request pending for 3 days.",
+				status: "in_progress",
+				dueAt: daysFromNow(5),
+				createdAt: daysFromNow(-3),
+				updatedAt: daysFromNow(-1),
+			});
+			taskCount++;
+		}
 	}
 
 	console.log(`   ✓ Created ${userCount} users`);
 	console.log(`   ✓ Created ${profileCount} profiles`);
 	console.log(`   ✓ Created ${evidenceCount} evidence records`);
 	console.log(`   ✓ Created ${activityCount} activities`);
+	console.log(`   ✓ Created ${taskCount} tasks`);
 
 	return org;
 }
