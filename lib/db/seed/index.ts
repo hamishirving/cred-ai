@@ -654,6 +654,120 @@ Sign off as: "${config.name} Credentialing Team"`,
 			activityCount++;
 		}
 
+		// Generate realistic activity history with bursts showing quick turnarounds
+		// This demonstrates the speed of the onboarding process
+
+		// Helper to create a timestamp with specific hours/minutes offset from a base date
+		const createTimestamp = (daysAgo: number, hours: number, minutes: number) => {
+			const date = new Date();
+			date.setDate(date.getDate() - daysAgo);
+			date.setHours(hours, minutes, randomInt(0, 59), 0);
+			return date;
+		};
+
+		// Activity burst templates - sequences that happen in quick succession
+		const activityBursts = [
+			// Document upload -> AI processing -> Admin review burst
+			[
+				{ type: "document_uploaded", actor: "candidate", channel: "portal", summary: `${profile.firstName} uploaded passport`, offsetMins: 0 },
+				{ type: "system_action", actor: "ai", channel: "api", summary: `AI extracted data from ${profile.firstName}'s passport`, offsetMins: 1 },
+				{ type: "document_reviewed", actor: "ai", channel: "portal", summary: `AI verified ${profile.firstName}'s passport authenticity`, offsetMins: 2 },
+				{ type: "status_changed", actor: "ai", channel: "portal", summary: `${profile.firstName}'s ID verification complete`, offsetMins: 3 },
+			],
+			// Reference request flow
+			[
+				{ type: "message_sent", actor: "ai", channel: "email", summary: `Reference request sent for ${profile.firstName}`, offsetMins: 0 },
+				{ type: "system_action", actor: "system", channel: "api", summary: `Reference portal link generated`, offsetMins: 1 },
+			],
+			// Reference response burst
+			[
+				{ type: "check_completed", actor: "integration", channel: "api", summary: `Reference received for ${profile.firstName}`, offsetMins: 0 },
+				{ type: "system_action", actor: "ai", channel: "api", summary: `AI analysed reference content`, offsetMins: 2 },
+				{ type: "status_changed", actor: "ai", channel: "portal", summary: `Reference verified for ${profile.firstName}`, offsetMins: 3 },
+			],
+			// DBS check flow
+			[
+				{ type: "check_initiated", actor: "system", channel: "api", summary: `DBS check initiated for ${profile.firstName}`, offsetMins: 0 },
+				{ type: "message_sent", actor: "ai", channel: "email", summary: `DBS application link sent to ${profile.firstName}`, offsetMins: 1 },
+			],
+			// Candidate engagement burst
+			[
+				{ type: "message_sent", actor: "ai", channel: "sms", summary: `SMS reminder sent to ${profile.firstName}`, offsetMins: 0 },
+				{ type: "message_received", actor: "candidate", channel: "portal", summary: `${profile.firstName} logged into portal`, offsetMins: 15 },
+				{ type: "document_uploaded", actor: "candidate", channel: "portal", summary: `${profile.firstName} uploaded proof of address`, offsetMins: 22 },
+				{ type: "system_action", actor: "ai", channel: "api", summary: `AI verified address document`, offsetMins: 23 },
+			],
+			// Admin review burst
+			[
+				{ type: "note_added", actor: "admin", channel: "portal", summary: `Admin reviewed ${profile.firstName}'s application`, offsetMins: 0 },
+				{ type: "status_changed", actor: "admin", channel: "portal", summary: `${profile.firstName} moved to final checks`, offsetMins: 5 },
+			],
+			// Quick AI chase sequence
+			[
+				{ type: "system_action", actor: "ai", channel: "api", summary: `AI detected missing Right to Work for ${profile.firstName}`, offsetMins: 0 },
+				{ type: "message_sent", actor: "ai", channel: "email", summary: `Reminder sent: Please upload Right to Work`, offsetMins: 1 },
+			],
+		];
+
+		// Create single activities spread evenly across the last 14 days
+		// Each activity on a different day for clear visualization
+		const activityPool = [
+			{ type: "document_uploaded", actor: "candidate", channel: "portal", summary: `${profile.firstName} uploaded passport` },
+			{ type: "system_action", actor: "ai", channel: "api", summary: `AI verified ${profile.firstName}'s document` },
+			{ type: "message_sent", actor: "ai", channel: "email", summary: `Onboarding update sent to ${profile.firstName}` },
+			{ type: "check_initiated", actor: "system", channel: "api", summary: `DBS check initiated for ${profile.firstName}` },
+			{ type: "message_received", actor: "candidate", channel: "portal", summary: `${profile.firstName} logged into portal` },
+			{ type: "document_reviewed", actor: "admin", channel: "portal", summary: `Admin reviewed ${profile.firstName}'s documents` },
+			{ type: "check_completed", actor: "integration", channel: "api", summary: `Reference received for ${profile.firstName}` },
+			{ type: "status_changed", actor: "ai", channel: "portal", summary: `${profile.firstName}'s status updated` },
+			{ type: "message_sent", actor: "ai", channel: "sms", summary: `SMS reminder sent to ${profile.firstName}` },
+			{ type: "note_added", actor: "admin", channel: "portal", summary: `Admin added note about ${profile.firstName}` },
+		];
+
+		// Create 30-40 activities spread evenly across last 6 days (not today to avoid future)
+		const numActivities = randomInt(30, 40);
+		const days = [1, 2, 3, 4, 5, 6]; // daysAgo values
+
+		// Track how many activities per day for time spacing
+		const activitiesPerDay: Record<number, number> = {};
+		const activityIndexPerDay: Record<number, number> = {};
+		days.forEach(d => { activitiesPerDay[d] = 0; activityIndexPerDay[d] = 0; });
+
+		// First pass: count activities per day (round-robin distribution)
+		for (let i = 0; i < numActivities; i++) {
+			const daysAgo = days[i % days.length];
+			activitiesPerDay[daysAgo]++;
+		}
+
+		for (let i = 0; i < numActivities; i++) {
+			// Round-robin across days for even distribution
+			const daysAgo = days[i % days.length];
+
+			// Space times evenly within 6am-8pm (14 hour window)
+			const totalMinutes = 14 * 60; // 840 minutes
+			const countForDay = activitiesPerDay[daysAgo];
+			const indexForDay = activityIndexPerDay[daysAgo]++;
+			const slotSize = totalMinutes / countForDay;
+			const minuteOffset = Math.floor(slotSize * indexForDay + randomInt(0, Math.floor(slotSize * 0.5)));
+			const hour = 6 + Math.floor(minuteOffset / 60);
+			const minute = minuteOffset % 60;
+
+			const activity = activityPool[i % activityPool.length];
+			const timestamp = createTimestamp(daysAgo, hour, minute);
+
+			await db.insert(activities).values({
+				organisationId: org.id,
+				profileId: profile.id,
+				activityType: activity.type as typeof activities.$inferInsert["activityType"],
+				actor: activity.actor as typeof activities.$inferInsert["actor"],
+				channel: activity.channel as typeof activities.$inferInsert["channel"],
+				summary: activity.summary,
+				details: {},
+				createdAt: timestamp,
+			});
+			activityCount++;
+		}
+
 		// Create tasks based on candidate state
 		if (candidateConfig.state.status === "stuck") {
 			await db.insert(tasks).values({

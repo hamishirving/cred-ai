@@ -4,9 +4,11 @@ import { cookies } from "next/headers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { ActivityTimeline } from "@/components/candidate/activity-timeline";
 import { CandidateCommunications } from "@/components/candidate/communications";
 import { ComplianceChecklist } from "@/components/candidate/compliance-checklist";
 import { getCandidateContext, getOrganisationSettings } from "@/lib/ai/agents/compliance-companion/queries";
+import { getProfileTimeline } from "@/lib/db/queries";
 
 export default async function CandidateDetailPage({
 	params,
@@ -28,8 +30,11 @@ export default async function CandidateDetailPage({
 	}
 
 	// Get candidate data
-	const candidate = await getCandidateContext(id, organisationId);
-	const org = await getOrganisationSettings(organisationId);
+	const [candidate, org, timeline] = await Promise.all([
+		getCandidateContext(id, organisationId),
+		getOrganisationSettings(organisationId),
+		getProfileTimeline({ profileId: id, days: 7 }),
+	]);
 
 	if (!candidate) {
 		notFound();
@@ -127,6 +132,9 @@ export default async function CandidateDetailPage({
 					</div>
 				</CardContent>
 			</Card>
+
+			{/* Activity Timeline */}
+			<ActivityTimeline data={timeline} profileId={id} />
 
 			{/* Two column layout: Compliance and Communications */}
 			<div className="grid gap-4 lg:grid-cols-2 flex-1">
