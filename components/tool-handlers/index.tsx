@@ -12,6 +12,7 @@ import { FormTool } from "./handlers/form-tool";
 import { ProfileTool } from "./handlers/profile-tool";
 import { KnowledgeTool } from "./handlers/knowledge-tool";
 import { SuggestionsTool } from "./handlers/suggestions-tool";
+import { TaskTool } from "./handlers/task-tool";
 import type { ToolHandlerProps } from "./types";
 
 // Type for tool handler components with any input/output
@@ -31,6 +32,7 @@ const toolRegistry: Record<string, ToolHandler> = {
 	"tool-updateDocument": DocumentUpdateTool as ToolHandler,
 	"tool-requestSuggestions": SuggestionsTool as ToolHandler,
 	"tool-searchKnowledge": KnowledgeTool as ToolHandler,
+	"tool-createTask": TaskTool as ToolHandler,
 };
 
 /**
