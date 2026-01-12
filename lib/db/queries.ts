@@ -50,6 +50,8 @@ import {
 	tasks,
 	type Task,
 	type NewTask,
+	activities,
+	type Activity,
 } from "./schema";
 import type {
 	TranscriptMessage,
@@ -1119,4 +1121,48 @@ export async function createTask({
 		console.error("Failed to create task:", error);
 		throw new ChatSDKError("bad_request:database", "Failed to create task");
 	}
+}
+
+// =============================================================================
+// ACTIVITIES / TIMELINE
+// =============================================================================
+
+export type TimelineData = {
+	activities: Activity[];
+	startDate: Date;
+	endDate: Date;
+};
+
+/**
+ * Get activities for a profile for timeline display.
+ * Returns individual activities with their exact timestamps.
+ */
+export async function getProfileTimeline({
+	profileId,
+	days = 30,
+}: {
+	profileId: string;
+	days?: number;
+}): Promise<TimelineData> {
+	const endDate = new Date();
+	const startDate = new Date();
+	startDate.setDate(startDate.getDate() - days);
+	startDate.setHours(0, 0, 0, 0);
+
+	const results = await db
+		.select()
+		.from(activities)
+		.where(
+			and(
+				eq(activities.profileId, profileId),
+				gte(activities.createdAt, startDate)
+			)
+		)
+		.orderBy(asc(activities.createdAt));
+
+	return {
+		activities: results,
+		startDate,
+		endDate,
+	};
 }

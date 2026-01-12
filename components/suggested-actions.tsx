@@ -16,10 +16,10 @@ type SuggestedActionsProps = {
 
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
 	const suggestedActions = [
-		"Look up employee pavel.liaukovich@credentially.io",
-		"Draft a GMC registration reminder email",
-		"Generate an evaluation form for a manager",
-		"Show Dr. Ian Renfrew's CV highlights",
+		"Find a candidate by name",
+		"Draft a document reminder email",
+		"Create a feedback form",
+		"What's the DBS check policy?",
 	];
 
 	return (

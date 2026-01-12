@@ -6,6 +6,8 @@ import type {
 	DocumentDto,
 	OrganisationMetadataDto,
 	ProfileDto,
+	ProfileListFilterRequest,
+	ProfileListPageDto,
 	UpdateProfileFieldsRequestDto,
 } from "./types";
 
@@ -97,6 +99,35 @@ export async function getProfileById(
 ): Promise<ProfileDto | { error: string }> {
 	return credentiallyFetch<ProfileDto>(
 		`/api/${ORG_ID}/profile/${encodeURIComponent(profileId)}`,
+	);
+}
+
+/**
+ * Load profiles (paginated) with filter support
+ */
+export async function loadProfiles({
+	page = 0,
+	size = 20,
+	filter,
+}: {
+	page?: number;
+	size?: number;
+	filter: ProfileListFilterRequest;
+}): Promise<ProfileListPageDto | { error: string }> {
+	// OpenAPI default serialization for a query param with an object schema is
+	// `style=form` + `explode=true`, which means each property becomes its own
+	// query param (i.e. `?nameOrEmail=...`) rather than `filter=<json>`.
+	//
+	// The Swagger UI "object" editor is confusing here; it still serializes to
+	// separate params unless the spec uses `style=deepObject`.
+	const searchParams = new URLSearchParams();
+	searchParams.set("page", String(page));
+	searchParams.set("size", String(size));
+	if (filter.nameOrEmail) {
+		searchParams.set("nameOrEmail", filter.nameOrEmail);
+	}
+	return credentiallyFetch<ProfileListPageDto>(
+		`/api/${ORG_ID}/profile?${searchParams.toString()}`,
 	);
 }
 
