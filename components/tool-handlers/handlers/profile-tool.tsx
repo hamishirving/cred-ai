@@ -7,6 +7,9 @@ import type { ToolHandlerProps } from "../types";
 
 interface ProfileOutput {
 	data?: ProfileDto;
+	matches?: ProfileDto[];
+	total?: number;
+	query?: string;
 	error?: string;
 }
 
@@ -37,6 +40,23 @@ export function ProfileTool({
 
 	if (output.data) {
 		return <ProfileCard profile={output.data} />;
+	}
+
+	if (output.matches && output.matches.length > 0) {
+		return (
+			<div className="not-prose my-4">
+				<div className="mb-2 text-muted-foreground text-sm">
+					Found {output.total ?? output.matches.length} matches
+					{output.query ? ` for "${output.query}"` : ""} (showing{" "}
+					{output.matches.length})
+				</div>
+				<div className="flex flex-col gap-2">
+					{output.matches.map((profile) => (
+						<ProfileCard key={profile.id} profile={profile} />
+					))}
+				</div>
+			</div>
+		);
 	}
 
 	return null;

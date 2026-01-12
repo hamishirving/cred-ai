@@ -124,6 +124,18 @@ export interface OrganisationMetadataDto {
 	roles: OrganisationRoleDto[];
 }
 
+export interface ProfileListFilterRequest {
+	nameOrEmail?: string;
+}
+
+export interface ProfileListPageDto {
+	content: ProfileDto[];
+	totalPages: number;
+	totalElements: number;
+	size: number;
+	number: number;
+}
+
 export interface UserSummaryDto {
 	id: string;
 	firstName: string;

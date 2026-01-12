@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "https://dev-eu-london.drfocused.com/gateway",
+      "url": "https://qa-eu-london.drfocused.com/gateway",
       "description": "Generated server url"
     }
   ],
