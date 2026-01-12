@@ -57,13 +57,29 @@ export type RequestHints = {
 	country: Geo["country"];
 };
 
-export const getRequestPromptFromHints = (requestHints: RequestHints) => `\
+export const getRequestPromptFromHints = (requestHints: RequestHints) => {
+	const now = new Date();
+	const dateStr = now.toLocaleDateString("en-GB", {
+		weekday: "long",
+		day: "numeric",
+		month: "long",
+		year: "numeric",
+	});
+	const timeStr = now.toLocaleTimeString("en-GB", {
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+
+	return `\
+Current date and time: ${dateStr}, ${timeStr}
+
 About the origin of user's request:
 - lat: ${requestHints.latitude}
 - lon: ${requestHints.longitude}
 - city: ${requestHints.city}
 - country: ${requestHints.country}
 `;
+};
 
 export const systemPrompt = ({
 	selectedChatModel,
