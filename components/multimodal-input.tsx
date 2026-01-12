@@ -23,9 +23,12 @@ import { saveChatModelAsCookie } from "@/app/(app)/actions";
 import { SelectItem } from "@/components/ui/select";
 import { chatModels } from "@/lib/ai/models";
 import { myProvider } from "@/lib/ai/providers";
+import type { AdminUser } from "@/lib/data/mock-admins";
+import { useMentions } from "@/lib/hooks/use-mentions";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import type { AppUsage } from "@/lib/usage";
 import { cn } from "@/lib/utils";
+import { MentionPopover } from "./mention-popover";
 import { Context } from "./elements/context";
 import {
 	PromptInput,
@@ -84,6 +87,26 @@ function PureMultimodalInput({
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const { width } = useWindowSize();
 
+	// Mention state
+	const { mentionedUsers, addMention, clearMentions, syncMentionsWithText } =
+		useMentions();
+	const [mentionPopoverOpen, setMentionPopoverOpen] = useState(false);
+	const [mentionQuery, setMentionQuery] = useState("");
+	const [mentionStartIndex, setMentionStartIndex] = useState<number | null>(
+		null,
+	);
+	const [admins, setAdmins] = useState<AdminUser[]>([]);
+
+	// Fetch admins when popover opens
+	useEffect(() => {
+		if (mentionPopoverOpen && admins.length === 0) {
+			fetch("/api/admins")
+				.then((res) => res.json())
+				.then((data) => setAdmins(data.admins ?? []))
+				.catch(console.error);
+		}
+	}, [mentionPopoverOpen, admins.length]);
+
 	const adjustHeight = useCallback(() => {
 		if (textareaRef.current) {
 			textareaRef.current.style.height = "44px";
@@ -124,8 +147,59 @@ function PureMultimodalInput({
 	}, [input, setLocalStorageInput]);
 
 	const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-		setInput(event.target.value);
+		const value = event.target.value;
+		const cursorPos = event.target.selectionStart || 0;
+		setInput(value);
+
+		// Sync mentions with text (remove orphaned mentions)
+		syncMentionsWithText(value);
+
+		// Check for @ mention trigger
+		const textBeforeCursor = value.slice(0, cursorPos);
+		const atIndex = textBeforeCursor.lastIndexOf("@");
+
+		if (atIndex !== -1) {
+			const textAfterAt = textBeforeCursor.slice(atIndex + 1);
+			// Only show popover if @ is at start or after whitespace, and no space after @
+			const charBeforeAt = atIndex > 0 ? value[atIndex - 1] : " ";
+			if (
+				(charBeforeAt === " " || charBeforeAt === "\n" || atIndex === 0) &&
+				!textAfterAt.includes(" ")
+			) {
+				setMentionQuery(textAfterAt);
+				setMentionStartIndex(atIndex);
+				setMentionPopoverOpen(true);
+				return;
+			}
+		}
+
+		// Close popover if no valid @ mention
+		setMentionPopoverOpen(false);
+		setMentionStartIndex(null);
 	};
+
+	const handleMentionSelect = useCallback(
+		(admin: AdminUser) => {
+			if (mentionStartIndex === null) return;
+
+			// Replace @query with @FirstName
+			const beforeMention = input.slice(0, mentionStartIndex);
+			const afterMention = input.slice(
+				mentionStartIndex + 1 + mentionQuery.length,
+			);
+			const newValue = `${beforeMention}@${admin.firstName} ${afterMention}`;
+
+			setInput(newValue);
+			addMention(admin);
+			setMentionPopoverOpen(false);
+			setMentionStartIndex(null);
+			setMentionQuery("");
+
+			// Focus back on textarea
+			textareaRef.current?.focus();
+		},
+		[input, mentionStartIndex, mentionQuery, setInput, addMention],
+	);
 
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [uploadQueue, setUploadQueue] = useState<string[]>([]);
@@ -140,6 +214,7 @@ function PureMultimodalInput({
 			has_attachments: attachments.length > 0,
 			attachment_count: attachments.length,
 			model_id: selectedModelId,
+			has_mentions: mentionedUsers.length > 0,
 		});
 
 		sendMessage({
@@ -162,6 +237,7 @@ function PureMultimodalInput({
 		setLocalStorageInput("");
 		resetHeight();
 		setInput("");
+		clearMentions();
 
 		if (width && width > 768) {
 			textareaRef.current?.focus();
@@ -177,6 +253,8 @@ function PureMultimodalInput({
 		chatId,
 		resetHeight,
 		selectedModelId,
+		mentionedUsers,
+		clearMentions,
 	]);
 
 	const uploadFile = useCallback(async (file: File) => {
@@ -308,6 +386,18 @@ function PureMultimodalInput({
 						sendMessage={sendMessage}
 					/>
 				)}
+
+			{/* @ Mention Popover */}
+			<MentionPopover
+				isOpen={mentionPopoverOpen}
+				admins={admins}
+				query={mentionQuery}
+				onSelect={handleMentionSelect}
+				onClose={() => {
+					setMentionPopoverOpen(false);
+					setMentionStartIndex(null);
+				}}
+			/>
 
 			<input
 				className="-top-4 -left-4 pointer-events-none fixed size-0.5 opacity-0"

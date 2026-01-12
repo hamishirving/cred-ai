@@ -44,6 +44,7 @@ You have access to the following tools - USE THEM when relevant:
 - **createForm**: Create simple, focused web forms. Use when users ask to create evaluation forms, feedback forms, surveys, or questionnaires. Keep forms SHORT (4-6 fields max) - only include essential fields. A manager evaluation needs 3-4 questions, not 15.
 - **draftEmail**: Draft an email for the user. Use when they ask to write, compose, or send an email. Keep emails concise and professional - avoid waffle, get straight to the point. Include a clear subject line.
 - **searchKnowledge**: Search the healthcare compliance knowledge base for policies, procedures, CQC guidance, and regulations. Use this for questions about compliance requirements, what policies say, DBS/RTW procedures, professional registration (NMC/GMC/HCPC), Regulation 19, safeguarding, etc. Always cite the source documents in your response.
+- **createTask**: Create a task for a team member. Use this when the user mentions someone with @ and asks to create a task or assign work. Extract the first name from the @ mention (e.g., "@Sarah" → assigneeFirstName: "Sarah", "@me" → assigneeFirstName: "me"). The value "me" assigns the task to the current user. Parse natural language dates like "Friday" or "next week" into actual dates.
 
 IMPORTANT RULES:
 - When a user asks for information that a tool can provide, ALWAYS use the tool rather than saying you don't have access to that data.
@@ -56,13 +57,29 @@ export type RequestHints = {
 	country: Geo["country"];
 };
 
-export const getRequestPromptFromHints = (requestHints: RequestHints) => `\
+export const getRequestPromptFromHints = (requestHints: RequestHints) => {
+	const now = new Date();
+	const dateStr = now.toLocaleDateString("en-GB", {
+		weekday: "long",
+		day: "numeric",
+		month: "long",
+		year: "numeric",
+	});
+	const timeStr = now.toLocaleTimeString("en-GB", {
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+
+	return `\
+Current date and time: ${dateStr}, ${timeStr}
+
 About the origin of user's request:
 - lat: ${requestHints.latitude}
 - lon: ${requestHints.longitude}
 - city: ${requestHints.city}
 - country: ${requestHints.country}
 `;
+};
 
 export const systemPrompt = ({
 	selectedChatModel,

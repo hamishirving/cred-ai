@@ -47,6 +47,9 @@ import {
 	type PipelineStage,
 	entityStagePositions,
 	type EntityStagePosition,
+	tasks,
+	type Task,
+	type NewTask,
 } from "./schema";
 import type {
 	TranscriptMessage,
@@ -1051,5 +1054,69 @@ export async function getAllOrganisations(): Promise<Organisation[]> {
 			"bad_request:database",
 			"Failed to get organisations",
 		);
+	}
+}
+
+// ============================================
+// Tasks
+// ============================================
+
+/**
+ * Create a new task.
+ */
+export async function createTask({
+	title,
+	description,
+	assigneeId,
+	priority,
+	category,
+	dueAt,
+	subjectType,
+	subjectId,
+	organisationId,
+}: {
+	title: string;
+	description?: string;
+	assigneeId: string;
+	priority?: "low" | "medium" | "high" | "urgent";
+	category?:
+		| "chase_candidate"
+		| "review_document"
+		| "follow_up"
+		| "escalation"
+		| "expiry"
+		| "general";
+	dueAt?: Date;
+	subjectType?: "profile" | "placement" | "evidence" | "escalation";
+	subjectId?: string;
+	organisationId?: string;
+}): Promise<Task> {
+	try {
+		// Use a default org ID for demo purposes if not provided
+		const orgId =
+			organisationId ?? "00000000-0000-0000-0000-000000000001";
+
+		const [task] = await db
+			.insert(tasks)
+			.values({
+				organisationId: orgId,
+				title,
+				description,
+				assigneeId,
+				priority: priority ?? "medium",
+				category: category ?? "general",
+				dueAt,
+				subjectType,
+				subjectId,
+				source: "ai_agent",
+				agentId: "chat-companion",
+				status: "pending",
+			})
+			.returning();
+
+		return task;
+	} catch (error) {
+		console.error("Failed to create task:", error);
+		throw new ChatSDKError("bad_request:database", "Failed to create task");
 	}
 }
