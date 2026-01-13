@@ -1059,6 +1059,23 @@ export async function getAllOrganisations(): Promise<Organisation[]> {
 	}
 }
 
+/**
+ * Get organisation by ID.
+ */
+export async function getOrganisationById({
+	id,
+}: { id: string }): Promise<Organisation | null> {
+	try {
+		const [org] = await db
+			.select()
+			.from(organisations)
+			.where(eq(organisations.id, id));
+		return org || null;
+	} catch (_error) {
+		return null;
+	}
+}
+
 // ============================================
 // Tasks
 // ============================================

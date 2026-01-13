@@ -42,7 +42,7 @@ export default async function CandidateDetailPage({
 		<div className="flex flex-col min-h-svh">
 			<header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
 				<Button variant="ghost" size="icon" asChild>
-					<Link href="/voice/demo">
+					<Link href="/voice/candidates">
 						<ChevronLeft className="h-4 w-4" />
 					</Link>
 				</Button>
@@ -147,7 +147,7 @@ export default async function CandidateDetailPage({
 											</div>
 											<Button size="sm" asChild>
 												<Link
-													href={`/voice/demo/${candidateId}/${work.id}`}
+													href={`/voice/candidates/${candidateId}/${work.id}`}
 												>
 													<PhoneCall className="mr-2 h-4 w-4" />
 													Verify

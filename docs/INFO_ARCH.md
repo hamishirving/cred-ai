@@ -93,13 +93,15 @@ Using shadcn sidebar component with collapsible sections.
 | `/settings/pipelines` | Pipeline Config | Onboarding stages, automation rules |
 | `/settings/integrations` | Integrations | API keys, external connections |
 
-#### Voice (Existing Feature)
+#### Voice
 
 | Route | Page | Description |
 |-------|------|-------------|
-| `/voice` | Voice Hub | Voice call templates and history |
-| `/voice/calls` | Call History | Past voice calls with transcripts |
-| `/voice/demo/[candidateId]` | Voice Demo | Demo voice call interface |
+| `/voice` | Voice Dashboard | Stats and recent calls |
+| `/voice/calls` | Call History | All voice calls with transcripts |
+| `/voice/candidates` | Candidate Selection | Select candidate for verification |
+| `/voice/candidates/[candidateId]` | Candidate Detail | Work history and references |
+| `/voice/candidates/[candidateId]/[workHistoryId]` | Verify Employment | Initiate verification call |
 
 #### Tools (Development/Debug)
 

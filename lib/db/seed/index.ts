@@ -4,9 +4,17 @@
  * Seeds the database with multi-market demo data.
  * Run with: pnpm db:seed
  */
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, closeConnection } from "./db";
-import { clearAllData } from "./clear";
+import { clearOrgData } from "./clear";
+
+// ============================================
+// Admin Configuration
+// ============================================
+
+const ADMIN_EMAILS = [
+	"hamish.irving@credentially.io",
+];
 import {
 	organisations,
 	workNodeTypes,
@@ -57,6 +65,9 @@ interface OrgConfig {
 	slug: string;
 	market: "uk" | "us";
 	type: "agency" | "direct";
+	description?: string;
+	orgPrompt?: string;
+	terminology?: Record<string, string>;
 	workNodeTypes: { name: string; level: number }[];
 	workNodes: { name: string; type: string; parent?: string; jurisdiction?: string }[];
 	candidates: CandidateProfile[];
@@ -91,25 +102,47 @@ const orgConfigs: OrgConfig[] = [
 		candidates: meridianCandidates,
 	},
 	{
-		name: "Oakwood Care",
+		name: "Oakwood Care Group",
 		slug: "oakwood-care",
 		market: "uk",
 		type: "direct",
+		description: "UK Domiciliary & Residential Care Provider",
 		workNodeTypes: [
 			{ name: "Region", level: 0 },
 			{ name: "Branch", level: 1 },
 		],
 		workNodes: [
-			{ name: "England North", type: "Region", jurisdiction: "england" },
-			{ name: "Manchester Branch", type: "Branch", parent: "England North", jurisdiction: "england" },
-			{ name: "Leeds Branch", type: "Branch", parent: "England North", jurisdiction: "england" },
-			{ name: "England South", type: "Region", jurisdiction: "england" },
-			{ name: "London Branch", type: "Branch", parent: "England South", jurisdiction: "england" },
-			{ name: "Bristol Branch", type: "Branch", parent: "England South", jurisdiction: "england" },
+			// England - North West
+			{ name: "North West", type: "Region", jurisdiction: "england" },
+			{ name: "Manchester Dom Care", type: "Branch", parent: "North West", jurisdiction: "england" },
+			{ name: "Liverpool Dom Care", type: "Branch", parent: "North West", jurisdiction: "england" },
+			{ name: "Willow House Residential", type: "Branch", parent: "North West", jurisdiction: "england" },
+			// England - South East
+			{ name: "South East", type: "Region", jurisdiction: "england" },
+			{ name: "London Dom Care", type: "Branch", parent: "South East", jurisdiction: "england" },
+			{ name: "Kent Dom Care", type: "Branch", parent: "South East", jurisdiction: "england" },
+			{ name: "Oakwood Manor Residential", type: "Branch", parent: "South East", jurisdiction: "england" },
+			// Scotland
 			{ name: "Scotland", type: "Region", jurisdiction: "scotland" },
-			{ name: "Edinburgh Branch", type: "Branch", parent: "Scotland", jurisdiction: "scotland" },
-			{ name: "Glasgow Branch", type: "Branch", parent: "Scotland", jurisdiction: "scotland" },
+			{ name: "Edinburgh Dom Care", type: "Branch", parent: "Scotland", jurisdiction: "scotland" },
+			{ name: "Glasgow Dom Care", type: "Branch", parent: "Scotland", jurisdiction: "scotland" },
+			{ name: "Heather Glen Residential", type: "Branch", parent: "Scotland", jurisdiction: "scotland" },
 		],
+		orgPrompt: `You're writing on behalf of Oakwood Care Group, a family-run care provider delivering domiciliary and residential care across England and Scotland.
+
+Tone: Warm, caring, and supportive. We're not a corporate - we're a family that genuinely cares about our team and the people we support.
+
+Key messages:
+- Person-centred care is everything
+- Our carers make a real difference to people's lives every day
+- CQC "Good" and "Outstanding" rated services
+- Flexible shifts, supportive team, real career progression
+- We invest in training and development
+
+When chasing compliance items, be encouraging not demanding. Acknowledge that carers are busy people juggling multiple responsibilities. Offer help and support to get things done.
+
+Sign off as: "The Oakwood Care Team"`,
+		terminology: { candidate: "Carer", placement: "Placement" },
 		candidates: oakwoodCandidates,
 	},
 	{
@@ -169,75 +202,94 @@ const orgConfigs: OrgConfig[] = [
 async function seedOrganisation(config: OrgConfig) {
 	console.log(`\n📦 Seeding ${config.name}...`);
 
-	// Check if org already exists (preserved from real user)
-	const existingOrg = await db
-		.select()
-		.from(organisations)
-		.where(eq(organisations.slug, config.slug))
-		.limit(1);
-
-	if (existingOrg.length > 0) {
-		console.log(`   ⏭ Skipping - org already exists (preserved)`);
-		return;
-	}
-
-	// 1. Create organisation with AI companion settings
+	// Build org settings
 	const marketLabel = config.market === "uk" ? "UK" : "US";
 	const typeLabel = config.type === "agency" ? "Healthcare Agency" : "Healthcare Provider";
+	const defaultDescription = `${marketLabel} ${typeLabel}`;
 
-	const [org] = await db
-		.insert(organisations)
-		.values({
-			name: config.name,
-			slug: config.slug,
-			description: `${marketLabel} ${typeLabel}`,
-			settings: {
-				defaultDataOwnership: "organisation",
-				terminology: config.market === "uk"
-					? { candidate: "Candidate", placement: "Booking" }
-					: { candidate: "Traveler", placement: "Assignment" },
-				// AI Companion configuration
-				complianceContact: config.market === "uk"
-					? {
-							name: "Sarah Jones",
-							email: `compliance@${config.slug}.com`,
-							phone: "0800 123 4567",
-						}
-					: {
-							name: "Michael Chen",
-							email: `compliance@${config.slug}.com`,
-							phone: "1-800-555-0123",
-						},
-				supportContact: {
-					email: `support@${config.slug}.com`,
-					phone: config.market === "uk" ? "0800 999 8888" : "1-800-555-0199",
+	const orgSettings = {
+		defaultDataOwnership: "organisation",
+		terminology: config.terminology || (config.market === "uk"
+			? { candidate: "Candidate", placement: "Booking" }
+			: { candidate: "Traveler", placement: "Assignment" }),
+		complianceContact: config.market === "uk"
+			? {
+					name: "Sarah Jones",
+					email: `compliance@${config.slug}.com`,
+					phone: "0800 123 4567",
+				}
+			: {
+					name: "Michael Chen",
+					email: `compliance@${config.slug}.com`,
+					phone: "1-800-555-0123",
 				},
-				aiCompanion: {
-					enabled: true,
-					orgPrompt: config.market === "uk"
-						? `You're writing on behalf of ${config.name}, a leading healthcare staffing partner in the UK.
+		supportContact: {
+			email: `support@${config.slug}.com`,
+			phone: config.market === "uk" ? "0800 999 8888" : "1-800-555-0199",
+		},
+		aiCompanion: {
+			enabled: true,
+			orgPrompt: config.orgPrompt || (config.market === "uk"
+				? `You're writing on behalf of ${config.name}, a leading healthcare staffing partner in the UK.
 
 Tone: Warm, supportive, and professional. We help healthcare professionals find flexible work opportunities across NHS trusts and private care providers.
 
 Be encouraging about the shifts and opportunities available once compliant. Mention that we have roles at NHS trusts and private care homes across the country.
 
 Sign off as: "${config.name} Compliance Team"`
-						: `You're writing on behalf of ${config.name}, a premier healthcare staffing agency serving facilities across the United States.
+				: `You're writing on behalf of ${config.name}, a premier healthcare staffing agency serving facilities across the United States.
 
 Tone: Friendly, professional, and supportive. We connect healthcare professionals with rewarding travel and permanent positions at top facilities.
 
 Emphasize the variety of assignments available and our support throughout the credentialing process.
 
-Sign off as: "${config.name} Credentialing Team"`,
-					emailFrequency: "daily",
-					sendTime: config.market === "uk" ? "09:00" : "08:00",
-					timezone: config.market === "uk" ? "Europe/London" : "America/Chicago",
-				},
-			},
-		})
-		.returning();
+Sign off as: "${config.name} Credentialing Team"`),
+			emailFrequency: "daily",
+			sendTime: config.market === "uk" ? "09:00" : "08:00",
+			timezone: config.market === "uk" ? "Europe/London" : "America/Chicago",
+		},
+	};
 
-	console.log(`   ✓ Created organisation: ${org.name}`);
+	// Check if org already exists
+	const existingOrg = await db
+		.select()
+		.from(organisations)
+		.where(eq(organisations.slug, config.slug))
+		.limit(1);
+
+	let org: typeof organisations.$inferSelect;
+
+	if (existingOrg.length > 0) {
+		// UPSERT: Update existing org and clear its data
+		org = existingOrg[0];
+		console.log(`   ↻ Updating existing organisation...`);
+
+		// Update org settings
+		await db
+			.update(organisations)
+			.set({
+				name: config.name,
+				description: config.description || defaultDescription,
+				settings: orgSettings,
+			})
+			.where(eq(organisations.id, org.id));
+
+		// Clear all seeded data for this org
+		await clearOrgData(org.id);
+	} else {
+		// CREATE: New organisation
+		const [newOrg] = await db
+			.insert(organisations)
+			.values({
+				name: config.name,
+				slug: config.slug,
+				description: config.description || defaultDescription,
+				settings: orgSettings,
+			})
+			.returning();
+		org = newOrg;
+		console.log(`   ✓ Created organisation: ${org.name}`);
+	}
 
 	// 2. Create work node types
 	const typeMap = new Map<string, string>();
@@ -858,19 +910,97 @@ Sign off as: "${config.name} Credentialing Team"`,
 // Main Entry Point
 // ============================================
 
+async function assignAdmins() {
+	console.log(`\n👑 Assigning admin roles...`);
+
+	for (const email of ADMIN_EMAILS) {
+		// Find user by email
+		const [user] = await db
+			.select()
+			.from(users)
+			.where(eq(users.email, email))
+			.limit(1);
+
+		if (!user) {
+			console.log(`   ⚠ User not found: ${email}`);
+			continue;
+		}
+
+		// Get all organisations
+		const allOrgs = await db.select().from(organisations);
+
+		for (const org of allOrgs) {
+			// Find or create admin role for this org
+			let [adminRole] = await db
+				.select()
+				.from(userRoles)
+				.where(and(
+					eq(userRoles.organisationId, org.id),
+					eq(userRoles.slug, "admin")
+				))
+				.limit(1);
+
+			if (!adminRole) {
+				[adminRole] = await db
+					.insert(userRoles)
+					.values({
+						organisationId: org.id,
+						name: "Admin",
+						slug: "admin",
+						description: "Full system access",
+						permissions: ["*"],
+						isDefault: false,
+					})
+					.returning();
+			}
+
+			// Check if membership exists
+			const [existingMembership] = await db
+				.select()
+				.from(orgMemberships)
+				.where(and(
+					eq(orgMemberships.userId, user.id),
+					eq(orgMemberships.organisationId, org.id)
+				))
+				.limit(1);
+
+			if (existingMembership) {
+				// Update to admin role
+				await db
+					.update(orgMemberships)
+					.set({ userRoleId: adminRole.id })
+					.where(eq(orgMemberships.id, existingMembership.id));
+			} else {
+				// Create membership with admin role
+				await db
+					.insert(orgMemberships)
+					.values({
+						userId: user.id,
+						organisationId: org.id,
+						userRoleId: adminRole.id,
+						status: "active",
+						joinedAt: new Date(),
+					});
+			}
+		}
+
+		console.log(`   ✓ ${email} is admin on ${allOrgs.length} orgs`);
+	}
+}
+
 async function main() {
 	console.log("🌱 Starting seed...\n");
 
 	const start = Date.now();
 
 	try {
-		// Clear existing data
-		await clearAllData();
-
-		// Seed each organisation
+		// Seed each organisation (upsert + clear + reseed)
 		for (const config of orgConfigs) {
 			await seedOrganisation(config);
 		}
+
+		// Assign admin roles to configured users
+		await assignAdmins();
 
 		const duration = Date.now() - start;
 		console.log(`\n✅ Seed completed in ${duration}ms`);

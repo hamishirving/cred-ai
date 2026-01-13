@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { geolocation } from "@vercel/functions";
 import { withTracing } from "@posthog/ai";
 import {
@@ -39,6 +40,7 @@ import {
 	getChatById,
 	getMessageCountByUserId,
 	getMessagesByChatId,
+	getOrganisationById,
 	saveChat,
 	saveMessages,
 	updateChatLastContextById,
@@ -161,6 +163,14 @@ export async function POST(request: Request) {
 			country,
 		};
 
+		// Fetch org settings for custom AI instructions (from cookie set by org switcher)
+		const cookieStore = await cookies();
+		const selectedOrgId = cookieStore.get("selectedOrgId")?.value || session.user.currentOrgId;
+		const org = selectedOrgId
+			? await getOrganisationById({ id: selectedOrgId })
+			: null;
+		const orgInstructions = org?.settings?.aiCompanion?.orgPrompt;
+
 		await saveMessages({
 			messages: [
 				{
@@ -193,7 +203,7 @@ export async function POST(request: Request) {
 
 				const result = streamText({
 					model: tracedModel,
-					system: systemPrompt({ selectedChatModel, requestHints }),
+					system: systemPrompt({ selectedChatModel, requestHints, orgInstructions }),
 					messages: await convertToModelMessages(uiMessages),
 					stopWhen: stepCountIs(5),
 					experimental_activeTools:

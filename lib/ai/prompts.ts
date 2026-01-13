@@ -85,17 +85,23 @@ About the origin of user's request:
 export const systemPrompt = ({
 	selectedChatModel,
 	requestHints,
+	orgInstructions,
 }: {
 	selectedChatModel: string;
 	requestHints: RequestHints;
+	orgInstructions?: string;
 }) => {
 	const requestPrompt = getRequestPromptFromHints(requestHints);
 
+	const orgSection = orgInstructions
+		? `\n\nORGANISATION CONTEXT:\n${orgInstructions}`
+		: "";
+
 	if (selectedChatModel === "chat-model-reasoning") {
-		return `${regularPrompt}\n\n${requestPrompt}`;
+		return `${regularPrompt}\n\n${requestPrompt}${orgSection}`;
 	}
 
-	return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+	return `${regularPrompt}\n\n${requestPrompt}${orgSection}\n\n${artifactsPrompt}`;
 };
 
 export const codePrompt = `

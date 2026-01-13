@@ -7,7 +7,7 @@
  * - Organisations they belong to
  * - All data within those organisations
  */
-import { isNull, isNotNull, notInArray, inArray } from "drizzle-orm";
+import { eq, isNull, isNotNull, notInArray, inArray, and } from "drizzle-orm";
 import { db } from "./db";
 import {
 	// Operations (leaf tables)
@@ -34,6 +34,7 @@ import {
 	skillFrameworks,
 	// Compliance
 	assignmentRules,
+	packageElements,
 	compliancePackages,
 	complianceElements,
 	// Identity & People
@@ -45,6 +46,7 @@ import {
 	workNodeTypes,
 	roles,
 	userRoles,
+	pipelineStages,
 	organisations,
 } from "../schema";
 
@@ -262,4 +264,138 @@ export async function clearAllData() {
 	console.log("   ✓ Cleared organisations (preserved linked orgs)");
 
 	console.log("✅ All seed data cleared (real user data preserved)");
+}
+
+/**
+ * Clear all seeded data for a specific organisation.
+ * Preserves:
+ * - The organisation itself
+ * - Real users (those with auth_user_id) and their memberships
+ *
+ * Deletes in FK-safe order.
+ *
+ * Tables with organisationId: activities, assignment-rules, compliance-elements,
+ * compliance-packages, escalations, evidence, jobs, org-memberships, pipelines,
+ * placements, profiles, roles, skill-categories, skills, tasks, user-roles,
+ * work-node-types, work-nodes
+ *
+ * Tables without organisationId (need indirect deletion):
+ * - applications: profileId, jobId
+ * - candidate-experiences: profileId
+ * - candidate-skills: profileId
+ * - compliance-gaps: profileId
+ * - entity-stage-positions: entityId (profileId)
+ * - escalation-options: escalationId (cascade)
+ * - package-elements: packageId (cascade)
+ * - pipeline-stages: pipelineId (cascade)
+ * - skill-frameworks: global template, don't delete
+ * - skill-requirements: skillId
+ * - stage-transitions: entityId (profileId)
+ */
+export async function clearOrgData(orgId: string) {
+	console.log(`   🗑️  Clearing org data...`);
+
+	// Find seeded users in this org (no auth_user_id)
+	const seededUsers = await db
+		.select({ id: users.id })
+		.from(users)
+		.innerJoin(orgMemberships, eq(orgMemberships.userId, users.id))
+		.where(and(
+			eq(orgMemberships.organisationId, orgId),
+			isNull(users.authUserId)
+		));
+	const seededUserIds = seededUsers.map(u => u.id);
+
+	// Get profile IDs for this org (needed for profile-scoped tables)
+	const orgProfiles = await db
+		.select({ id: profiles.id })
+		.from(profiles)
+		.where(eq(profiles.organisationId, orgId));
+	const profileIds = orgProfiles.map(p => p.id);
+
+	// Get job IDs for this org (needed for applications)
+	const orgJobs = await db
+		.select({ id: jobs.id })
+		.from(jobs)
+		.where(eq(jobs.organisationId, orgId));
+	const jobIds = orgJobs.map(j => j.id);
+
+	// Get skill IDs for this org (needed for skill-requirements)
+	const orgSkills = await db
+		.select({ id: skills.id })
+		.from(skills)
+		.where(eq(skills.organisationId, orgId));
+	const skillIds = orgSkills.map(s => s.id);
+
+	// Get package IDs for this org (needed for package-elements)
+	const orgPackages = await db
+		.select({ id: compliancePackages.id })
+		.from(compliancePackages)
+		.where(eq(compliancePackages.organisationId, orgId));
+	const packageIds = orgPackages.map(p => p.id);
+
+	// 1. Operations (leaf tables with organisationId)
+	await db.delete(tasks).where(eq(tasks.organisationId, orgId));
+	// escalation_options cascade from escalations
+	await db.delete(escalations).where(eq(escalations.organisationId, orgId));
+	await db.delete(activities).where(eq(activities.organisationId, orgId));
+
+	// 2. Journey - profile-scoped tables
+	if (profileIds.length > 0) {
+		await db.delete(stageTransitions).where(inArray(stageTransitions.entityId, profileIds));
+		await db.delete(entityStagePositions).where(inArray(entityStagePositions.entityId, profileIds));
+	}
+	// pipeline_stages cascade from pipelines
+	await db.delete(pipelines).where(eq(pipelines.organisationId, orgId));
+
+	// 3. Evidence & Gaps - profile-scoped
+	if (profileIds.length > 0) {
+		await db.delete(complianceGaps).where(inArray(complianceGaps.profileId, profileIds));
+	}
+	await db.delete(evidence).where(eq(evidence.organisationId, orgId));
+
+	// 4. Work - applications are profile/job scoped
+	if (profileIds.length > 0) {
+		await db.delete(applications).where(inArray(applications.profileId, profileIds));
+	}
+	await db.delete(placements).where(eq(placements.organisationId, orgId));
+	await db.delete(jobs).where(eq(jobs.organisationId, orgId));
+
+	// 5. Skills - profile-scoped and skill-scoped
+	if (profileIds.length > 0) {
+		await db.delete(candidateExperiences).where(inArray(candidateExperiences.profileId, profileIds));
+		await db.delete(candidateSkills).where(inArray(candidateSkills.profileId, profileIds));
+	}
+	if (skillIds.length > 0) {
+		await db.delete(skillRequirements).where(inArray(skillRequirements.skillId, skillIds));
+	}
+	await db.delete(skills).where(eq(skills.organisationId, orgId));
+	await db.delete(skillCategories).where(eq(skillCategories.organisationId, orgId));
+	// skill_frameworks are global templates, don't delete
+
+	// 6. Compliance - package-elements are package-scoped
+	if (packageIds.length > 0) {
+		await db.delete(packageElements).where(inArray(packageElements.packageId, packageIds));
+	}
+	await db.delete(assignmentRules).where(eq(assignmentRules.organisationId, orgId));
+	await db.delete(compliancePackages).where(eq(compliancePackages.organisationId, orgId));
+	await db.delete(complianceElements).where(eq(complianceElements.organisationId, orgId));
+
+	// 7. Identity
+	// Delete ALL org memberships for this org (admin assignment will recreate for real users)
+	await db.delete(orgMemberships).where(eq(orgMemberships.organisationId, orgId));
+	await db.delete(profiles).where(eq(profiles.organisationId, orgId));
+
+	// Delete seeded users (those with no authUserId)
+	if (seededUserIds.length > 0) {
+		await db.delete(users).where(inArray(users.id, seededUserIds));
+	}
+
+	// 8. Structure - user_roles must be deleted after org_memberships (FK constraint)
+	await db.delete(userRoles).where(eq(userRoles.organisationId, orgId));
+	await db.delete(workNodes).where(eq(workNodes.organisationId, orgId));
+	await db.delete(workNodeTypes).where(eq(workNodeTypes.organisationId, orgId));
+	await db.delete(roles).where(eq(roles.organisationId, orgId));
+
+	console.log(`   ✓ Cleared org data`);
 }

@@ -50,7 +50,7 @@ export default function VerifyWorkHistoryPage({ params }: VerifyPageProps) {
 			const resolvedParams = await params;
 			const cand = getCandidateById(resolvedParams.candidateId);
 			if (!cand) {
-				router.push("/voice/demo");
+				router.push("/voice/candidates");
 				return;
 			}
 			setCandidate(cand);
@@ -60,7 +60,7 @@ export default function VerifyWorkHistoryPage({ params }: VerifyPageProps) {
 				resolvedParams.workHistoryId,
 			);
 			if (!work || !work.reference) {
-				router.push(`/voice/demo/${resolvedParams.candidateId}`);
+				router.push(`/voice/candidates/${resolvedParams.candidateId}`);
 				return;
 			}
 			setWorkHistory(work);
@@ -157,7 +157,7 @@ export default function VerifyWorkHistoryPage({ params }: VerifyPageProps) {
 		<div className="flex flex-col min-h-svh">
 			<header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
 				<Button variant="ghost" size="icon" asChild>
-					<Link href={`/voice/demo/${candidate.id}`}>
+					<Link href={`/voice/candidates/${candidate.id}`}>
 						<ChevronLeft className="h-4 w-4" />
 					</Link>
 				</Button>

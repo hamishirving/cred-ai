@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
 import { auth } from "@/lib/auth";
 import { listVoiceCalls } from "@/lib/db/queries";
 import {
@@ -9,9 +10,23 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { CallCard } from "@/components/voice/call-card";
+import { CallStatusBadge } from "@/components/voice/call-status-badge";
 import { Phone, ChevronLeft, PhoneCall, Users } from "lucide-react";
+
+function formatDuration(seconds: number): string {
+	const mins = Math.floor(seconds / 60);
+	const secs = seconds % 60;
+	return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
 
 export default async function VoiceCallsPage({
 	searchParams,
@@ -50,7 +65,7 @@ export default async function VoiceCallsPage({
 				</div>
 				<div className="ml-auto">
 					<Button asChild>
-						<Link href="/voice/demo">
+						<Link href="/voice/candidates">
 							<PhoneCall className="mr-2 h-4 w-4" />
 							New Call
 						</Link>
@@ -59,7 +74,7 @@ export default async function VoiceCallsPage({
 			</header>
 
 			<main className="flex-1 p-4 md:p-6">
-				<div className="max-w-4xl mx-auto space-y-6">
+				<div className="max-w-5xl mx-auto space-y-6">
 					<Card>
 						<CardHeader>
 							<CardTitle>Call History</CardTitle>
@@ -73,27 +88,52 @@ export default async function VoiceCallsPage({
 									<Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
 									<p>No calls yet</p>
 									<Button className="mt-4" asChild>
-										<Link href="/voice/demo">Make Your First Call</Link>
+										<Link href="/voice/candidates">Make Your First Call</Link>
 									</Button>
 								</div>
 							) : (
-								<div className="space-y-4">
-									{result.calls.map((call) => (
-										<CallCard
-											key={call.id}
-											id={call.id}
-											templateSlug={call.templateSlug}
-											phoneNumber={call.phoneNumber}
-											recipientName={call.recipientName}
-											status={call.status}
-											outcome={call.outcome}
-											duration={call.duration}
-											createdAt={call.createdAt.toISOString()}
-											endedAt={call.endedAt?.toISOString()}
-											detailsHref={`/voice/calls/${call.id}`}
-										/>
-									))}
-								</div>
+								<Table>
+									<TableHeader>
+										<TableRow>
+											<TableHead>Recipient</TableHead>
+											<TableHead>Phone</TableHead>
+											<TableHead>Template</TableHead>
+											<TableHead>Status</TableHead>
+											<TableHead>Duration</TableHead>
+											<TableHead>Time</TableHead>
+											<TableHead className="w-[80px]" />
+										</TableRow>
+									</TableHeader>
+									<TableBody>
+										{result.calls.map((call) => (
+											<TableRow key={call.id}>
+												<TableCell className="font-medium">
+													{call.recipientName || "—"}
+												</TableCell>
+												<TableCell className="text-muted-foreground">
+													{call.phoneNumber}
+												</TableCell>
+												<TableCell className="text-muted-foreground">
+													{call.templateSlug}
+												</TableCell>
+												<TableCell>
+													<CallStatusBadge status={call.status} outcome={call.outcome} />
+												</TableCell>
+												<TableCell className="text-muted-foreground">
+													{call.duration ? formatDuration(call.duration) : "—"}
+												</TableCell>
+												<TableCell className="text-muted-foreground">
+													{formatDistanceToNow(call.createdAt, { addSuffix: true })}
+												</TableCell>
+												<TableCell>
+													<Button size="sm" variant="ghost" asChild>
+														<Link href={`/voice/calls/${call.id}`}>View</Link>
+													</Button>
+												</TableCell>
+											</TableRow>
+										))}
+									</TableBody>
+								</Table>
 							)}
 
 							{/* Pagination */}
