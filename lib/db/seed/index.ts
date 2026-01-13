@@ -208,7 +208,7 @@ async function seedOrganisation(config: OrgConfig) {
 	const defaultDescription = `${marketLabel} ${typeLabel}`;
 
 	const orgSettings = {
-		defaultDataOwnership: "organisation",
+		defaultDataOwnership: "organisation" as const,
 		terminology: config.terminology || (config.market === "uk"
 			? { candidate: "Candidate", placement: "Booking" }
 			: { candidate: "Traveler", placement: "Assignment" }),
@@ -244,7 +244,7 @@ Tone: Friendly, professional, and supportive. We connect healthcare professional
 Emphasize the variety of assignments available and our support throughout the credentialing process.
 
 Sign off as: "${config.name} Credentialing Team"`),
-			emailFrequency: "daily",
+			emailFrequency: "daily" as const,
 			sendTime: config.market === "uk" ? "09:00" : "08:00",
 			timezone: config.market === "uk" ? "Europe/London" : "America/Chicago",
 		},
