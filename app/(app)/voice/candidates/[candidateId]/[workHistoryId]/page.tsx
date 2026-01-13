@@ -2,14 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
 	getCandidateById,
 	getWorkHistoryById,
 	type WorkHistory,
 	type DemoCandidate,
 } from "@/data/demo/candidates";
-import { getTemplate } from "@/lib/voice";
 import {
 	Card,
 	CardContent,
@@ -18,19 +16,21 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CallForm } from "@/components/voice/call-form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { CallStatusBadge } from "@/components/voice/call-status-badge";
 import { CallResultsSheet } from "@/components/voice/call-results-sheet";
 import { useCallPolling } from "@/hooks/use-call-polling";
 import {
 	Phone,
-	ChevronLeft,
 	User,
 	Building2,
 	Calendar,
 	Loader2,
+	Briefcase,
+	Mail,
 } from "lucide-react";
-import type { VoiceTemplate } from "@/lib/voice/types";
+import { formatMonthYear } from "@/lib/utils";
 
 interface VerifyPageProps {
 	params: Promise<{ candidateId: string; workHistoryId: string }>;
@@ -40,9 +40,11 @@ export default function VerifyWorkHistoryPage({ params }: VerifyPageProps) {
 	const router = useRouter();
 	const [candidate, setCandidate] = useState<DemoCandidate | null>(null);
 	const [workHistory, setWorkHistory] = useState<WorkHistory | null>(null);
-	const [template, setTemplate] = useState<VoiceTemplate | null>(null);
 	const [callId, setCallId] = useState<string | null>(null);
 	const [showResults, setShowResults] = useState(false);
+	const [phoneNumber, setPhoneNumber] = useState("");
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
 	// Load data on mount
 	useEffect(() => {
@@ -64,14 +66,12 @@ export default function VerifyWorkHistoryPage({ params }: VerifyPageProps) {
 				return;
 			}
 			setWorkHistory(work);
-
-			const tmpl = getTemplate("employment-verification");
-			if (tmpl) setTemplate(tmpl);
+			setPhoneNumber(work.reference.phone);
 		}
 		loadData();
 	}, [params, router]);
 
-	// Poll for call status - now returns artifact object like voice-ai
+	// Poll for call status
 	const { status, artifact, isPolling, error: pollingError } = useCallPolling(
 		callId,
 		{
@@ -86,53 +86,53 @@ export default function VerifyWorkHistoryPage({ params }: VerifyPageProps) {
 		}
 	}, [status, artifact]);
 
-	// Handle form submission
-	const handleSubmit = useCallback(
-		async (data: {
-			phoneNumber: string;
-			recipientName?: string;
-			context: Record<string, unknown>;
-		}) => {
-			try {
-				const response = await fetch("/api/voice/calls", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						templateSlug: "employment-verification",
-						...data,
-					}),
-				});
+	// Handle call initiation
+	const handleInitiateCall = async () => {
+		if (!candidate || !workHistory) return;
 
-				const result = await response.json();
+		setIsSubmitting(true);
+		setError(null);
 
-				if (result.success && result.call?.id) {
-					return { success: true, callId: result.call.id };
-				}
+		try {
+			const response = await fetch("/api/voice/calls", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					templateSlug: "employment-verification",
+					phoneNumber,
+					recipientName: workHistory.reference?.name,
+					context: {
+						candidateName: candidate.name,
+						jobTitle: workHistory.jobTitle,
+						companyName: workHistory.companyName,
+						startDate: workHistory.startDate,
+						endDate: workHistory.endDate || "",
+						employmentType: workHistory.employmentType,
+					},
+				}),
+			});
 
-				return {
-					success: false,
-					error: result.error || "Failed to initiate call",
-				};
-			} catch (err) {
-				return {
-					success: false,
-					error: err instanceof Error ? err.message : "Network error",
-				};
+			const result = await response.json();
+
+			if (result.success && result.call?.id) {
+				setCallId(result.call.id);
+			} else {
+				setError(result.error || "Failed to initiate call");
 			}
-		},
-		[],
-	);
-
-	const handleCallInitiated = useCallback((id: string) => {
-		setCallId(id);
-	}, []);
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Network error");
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
 
 	const handleCallAgain = useCallback(() => {
 		setCallId(null);
 		setShowResults(false);
+		setError(null);
 	}, []);
 
-	if (!candidate || !workHistory || !template) {
+	if (!candidate || !workHistory) {
 		return (
 			<div className="flex items-center justify-center min-h-svh">
 				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -142,94 +142,102 @@ export default function VerifyWorkHistoryPage({ params }: VerifyPageProps) {
 
 	const isCallActive = callId && isPolling;
 	const isCallEnded = status === "ended";
-
-	// Prepare context with defaults from work history
-	const defaultContext = {
-		candidateName: candidate.name,
-		jobTitle: workHistory.jobTitle,
-		companyName: workHistory.companyName,
-		startDate: workHistory.startDate,
-		endDate: workHistory.endDate || "",
-		employmentType: workHistory.employmentType,
-	};
+	const isValidPhone = /^\+[1-9]\d{1,14}$/.test(phoneNumber);
 
 	return (
-		<div className="flex flex-col min-h-svh">
-			<header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
-				<Button variant="ghost" size="icon" asChild>
-					<Link href={`/voice/candidates/${candidate.id}`}>
-						<ChevronLeft className="h-4 w-4" />
-					</Link>
-				</Button>
-				<div className="flex items-center gap-2">
-					<Phone className="h-5 w-5" />
-					<h1 className="font-semibold">Verify Employment</h1>
+		<div className="flex flex-1 flex-col gap-4 p-6">
+			{/* Header */}
+			<div className="flex items-center justify-between">
+				<div>
+					<h1 className="text-2xl font-semibold">Verify Employment</h1>
+					<p className="text-muted-foreground text-sm">
+						{candidate.name} at {workHistory.companyName}
+					</p>
 				</div>
-				{status && (
-					<div className="ml-auto">
-						<CallStatusBadge status={status} />
-					</div>
-				)}
-			</header>
+				{status && <CallStatusBadge status={status} />}
+			</div>
 
-			<main className="flex-1 p-4 md:p-6">
-				<div className="max-w-2xl mx-auto space-y-6">
-					{/* Candidate & Work History Summary */}
+			{/* Two column layout */}
+			<div className="grid gap-4 lg:grid-cols-2">
+				{/* Left column - Context info */}
+				<div className="space-y-4">
+					{/* Candidate Info */}
 					<Card>
-						<CardHeader className="pb-2">
+						<CardHeader className="p-4 pb-2">
+							<CardTitle className="text-base">Candidate</CardTitle>
+						</CardHeader>
+						<CardContent className="p-4 pt-0">
 							<div className="flex items-center gap-3">
 								<div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
 									<User className="h-5 w-5 text-primary" />
 								</div>
 								<div>
-									<CardTitle className="text-base">{candidate.name}</CardTitle>
-									<CardDescription>{candidate.email}</CardDescription>
+									<div className="font-medium">{candidate.name}</div>
+									<div className="text-sm text-muted-foreground flex items-center gap-1">
+										<Mail className="h-3 w-3" />
+										{candidate.email}
+									</div>
 								</div>
 							</div>
+						</CardContent>
+					</Card>
+
+					{/* Employment Details */}
+					<Card>
+						<CardHeader className="p-4 pb-2">
+							<CardTitle className="text-base">Employment to Verify</CardTitle>
 						</CardHeader>
-						<CardContent className="space-y-2">
+						<CardContent className="p-4 pt-0 space-y-3">
+							<div className="flex items-center gap-2 text-sm">
+								<Briefcase className="h-4 w-4 text-muted-foreground" />
+								<span className="font-medium">{workHistory.jobTitle}</span>
+							</div>
 							<div className="flex items-center gap-2 text-sm">
 								<Building2 className="h-4 w-4 text-muted-foreground" />
-								<span className="font-medium">{workHistory.jobTitle}</span>
-								<span className="text-muted-foreground">at</span>
-								<span className="font-medium">{workHistory.companyName}</span>
+								<span>{workHistory.companyName}</span>
 							</div>
 							<div className="flex items-center gap-2 text-sm text-muted-foreground">
 								<Calendar className="h-4 w-4" />
 								<span>
-									{workHistory.startDate} - {workHistory.endDate || "Present"}
+									{formatMonthYear(workHistory.startDate)} - {workHistory.endDate ? formatMonthYear(workHistory.endDate) : "Present"}
 								</span>
+							</div>
+							<div className="text-sm">
+								<span className="text-muted-foreground">Type: </span>
+								<span className="capitalize">{workHistory.employmentType}</span>
 							</div>
 						</CardContent>
 					</Card>
 
 					{/* Reference Contact */}
 					<Card>
-						<CardHeader className="pb-2">
+						<CardHeader className="p-4 pb-2">
 							<CardTitle className="text-base">Reference Contact</CardTitle>
 							<CardDescription>
 								The AI will call this person to verify employment details
 							</CardDescription>
 						</CardHeader>
-						<CardContent>
+						<CardContent className="p-4 pt-0">
 							<div className="flex items-center gap-2">
 								<Phone className="h-4 w-4 text-green-600" />
 								<span className="font-medium">
 									{workHistory.reference?.name}
 								</span>
-								<span className="text-muted-foreground">
-									- {workHistory.reference?.title}
-								</span>
 							</div>
-							<p className="text-sm text-muted-foreground mt-1">
+							<div className="text-sm text-muted-foreground mt-1">
+								{workHistory.reference?.title}
+							</div>
+							<div className="text-sm text-muted-foreground mt-1">
 								{workHistory.reference?.phone}
-							</p>
+							</div>
 						</CardContent>
 					</Card>
+				</div>
 
-					{/* Call Form or Status */}
-					<Card>
-						<CardHeader>
+				{/* Right column - Call form/status */}
+				<div>
+					<Card className="h-fit">
+						<CardHeader className="p-4 pb-2">
 							<CardTitle className="text-base">
 								{isCallActive
 									? "Call In Progress"
@@ -245,7 +253,7 @@ export default function VerifyWorkHistoryPage({ params }: VerifyPageProps) {
 										: "Review the details and click to start the call"}
 							</CardDescription>
 						</CardHeader>
-						<CardContent>
+						<CardContent className="p-4 pt-0">
 							{isCallActive ? (
 								<div className="flex flex-col items-center gap-4 py-8">
 									<Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -266,32 +274,63 @@ export default function VerifyWorkHistoryPage({ params }: VerifyPageProps) {
 									)}
 								</div>
 							) : isCallEnded ? (
-								<div className="space-y-4">
-									<div className="flex items-center justify-center gap-4">
-										<Button onClick={() => setShowResults(true)}>
-											View Results
-										</Button>
-										<Button variant="outline" onClick={handleCallAgain}>
-											Call Again
-										</Button>
-									</div>
+								<div className="flex items-center justify-center gap-4 py-4">
+									<Button onClick={() => setShowResults(true)}>
+										View Results
+									</Button>
+									<Button variant="outline" onClick={handleCallAgain}>
+										Call Again
+									</Button>
 								</div>
 							) : (
-								<CallForm
-									template={template}
-									defaultValues={defaultContext}
-									phoneNumber={workHistory.reference?.phone || ""}
-									recipientName={workHistory.reference?.name}
-									onSubmit={handleSubmit}
-									onCallInitiated={handleCallInitiated}
-								/>
+								<div className="space-y-4">
+									<div className="space-y-2">
+										<Label htmlFor="phoneNumber">Phone Number</Label>
+										<div className="relative">
+											<Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+											<Input
+												id="phoneNumber"
+												type="tel"
+												value={phoneNumber}
+												onChange={(e) => setPhoneNumber(e.target.value)}
+												placeholder="+44..."
+												className="pl-10"
+											/>
+										</div>
+										<p className="text-xs text-muted-foreground">
+											International format (e.g., +447700900000)
+										</p>
+									</div>
+
+									{error && (
+										<p className="text-sm text-red-600">{error}</p>
+									)}
+
+									<Button
+										onClick={handleInitiateCall}
+										disabled={isSubmitting || !isValidPhone}
+										className="w-full"
+									>
+										{isSubmitting ? (
+											<>
+												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+												Initiating Call...
+											</>
+										) : (
+											<>
+												<Phone className="mr-2 h-4 w-4" />
+												Start Verification Call
+											</>
+										)}
+									</Button>
+								</div>
 							)}
 						</CardContent>
 					</Card>
 				</div>
-			</main>
+			</div>
 
-			{/* Results Sheet - matching voice-ai props */}
+			{/* Results Sheet */}
 			<CallResultsSheet
 				open={showResults}
 				onOpenChange={setShowResults}

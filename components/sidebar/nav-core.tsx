@@ -1,6 +1,13 @@
 "use client";
 
-import { Bell, CheckSquare, Home, MessageSquare, Phone, Search } from "lucide-react";
+import {
+	BarChart3,
+	CheckSquare,
+	Home,
+	MessageSquare,
+	Phone,
+	Users,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -16,20 +23,15 @@ const coreNavItems = [
 		url: "/",
 		icon: Home,
 	},
-	{
-		title: "Search",
-		url: "/search",
-		icon: Search,
-	},
+	// {
+	// 	title: "Search",
+	// 	url: "/search",
+	// 	icon: Search,
+	// },
 	{
 		title: "Chat",
 		url: "/chat",
 		icon: MessageSquare,
-	},
-	{
-		title: "Voice",
-		url: "/voice",
-		icon: Phone,
 	},
 	{
 		title: "Tasks",
@@ -37,10 +39,25 @@ const coreNavItems = [
 		icon: CheckSquare,
 	},
 	{
-		title: "Notifications",
-		url: "/notifications",
-		icon: Bell,
+		title: "Candidates",
+		url: "/candidates",
+		icon: Users,
 	},
+	{
+		title: "Voice",
+		url: "/voice",
+		icon: Phone,
+	},
+	{
+		title: "Reports",
+		url: "/reports",
+		icon: BarChart3,
+	},
+	// {
+	// 	title: "Notifications",
+	// 	url: "/notifications",
+	// 	icon: Bell,
+	// },
 ];
 
 export function NavCore() {

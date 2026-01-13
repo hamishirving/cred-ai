@@ -10,7 +10,7 @@ import {
 import type { User } from "@/lib/types/auth";
 import { NavCore } from "./nav-core";
 import { NavUser } from "./nav-user";
-import { NavWorkspace } from "./nav-workspace";
+// import { NavWorkspace } from "./nav-workspace";
 import { OrgSwitcher } from "./org-switcher";
 
 interface AppSidebarProps {
@@ -25,7 +25,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
 			</SidebarHeader>
 			<SidebarContent>
 				<NavCore />
-				<NavWorkspace />
+				{/* <NavWorkspace /> */}
 			</SidebarContent>
 			<SidebarFooter>
 				<NavUser user={user} />

@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Download } from "lucide-react";
+import { formatMonthYear } from "@/lib/utils";
 
 interface CallArtifact {
 	recordingUrl?: string;
@@ -111,17 +112,13 @@ export function CallResultsSheet({
 	const originalData: Record<string, string> = {
 		job_title: workHistoryJobTitle,
 		company_name: workHistoryCompanyName,
-		start_date: workHistoryStartDate
-			? new Date(workHistoryStartDate).toLocaleDateString("en-CA")
-			: "-",
-		end_date: workHistoryEndDate
-			? new Date(workHistoryEndDate).toLocaleDateString("en-CA")
-			: "-",
+		start_date: formatMonthYear(workHistoryStartDate),
+		end_date: formatMonthYear(workHistoryEndDate),
 		employment_type: workHistoryEmploymentType,
 	};
 
 	// Helper function to format date to YYYY-MM for comparison
-	const formatMonthYear = (dateString: string): string => {
+	const toYearMonth = (dateString: string): string => {
 		const date = new Date(dateString);
 		return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 	};
@@ -143,7 +140,7 @@ export function CallResultsSheet({
 
 	// Helper function to check if dates match (month and year only)
 	const datesMatch = (original: string, confirmed: string): boolean => {
-		return formatMonthYear(original) === formatMonthYear(confirmed);
+		return toYearMonth(original) === toYearMonth(confirmed);
 	};
 
 	// Map confirmed fields to original fields with custom match logic
@@ -164,13 +161,13 @@ export function CallResultsSheet({
 		{
 			field: "Start Date",
 			original: originalData.start_date,
-			confirmed: formatValue(confirmedData.confirmed_startDate),
+			confirmed: formatMonthYear(formatValue(confirmedData.confirmed_startDate)),
 			matchFunction: datesMatch,
 		},
 		{
 			field: "End Date",
 			original: originalData.end_date,
-			confirmed: formatValue(confirmedData.confirmed_endDate),
+			confirmed: formatMonthYear(formatValue(confirmedData.confirmed_endDate)),
 			matchFunction: datesMatch,
 		},
 		{
