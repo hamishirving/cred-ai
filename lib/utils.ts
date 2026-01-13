@@ -123,3 +123,25 @@ export function formatDate(dateString: string): string {
     return dateString;
   }
 }
+
+/**
+ * Format a date string (YYYY-MM or YYYY-MM-DD) to "Month Year" format
+ * e.g., "2023-03" or "2023-03-01" → "March 2023"
+ */
+export function formatMonthYear(dateString: string): string {
+  if (!dateString || dateString === "-") return "-";
+
+  // Extract year and month from YYYY-MM or YYYY-MM-DD format
+  const match = dateString.match(/^(\d{4})-(\d{2})/);
+  if (!match) return dateString;
+
+  const [, year, month] = match;
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const monthIndex = parseInt(month, 10) - 1;
+
+  if (monthIndex < 0 || monthIndex > 11) return dateString;
+  return `${monthNames[monthIndex]} ${year}`;
+}

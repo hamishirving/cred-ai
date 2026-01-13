@@ -376,9 +376,13 @@ export const meridianCandidates: CandidateProfile[] = [
 ];
 
 /**
- * UK Candidates for Oakwood Care (Direct Employer).
+ * UK Candidates for Oakwood Care Group (Domiciliary & Residential Care).
+ *
+ * Mix of domiciliary carers (visiting people in their homes) and
+ * residential carers (working in care homes).
  */
 export const oakwoodCandidates: CandidateProfile[] = [
+	// COMPLIANT - Senior carers, fully onboarded
 	{
 		profile: {
 			email: "karen.mitchell@email.com",
@@ -399,7 +403,7 @@ export const oakwoodCandidates: CandidateProfile[] = [
 		state: {
 			status: "compliant",
 			daysSinceActivity: 7,
-			notes: "Senior carer in Manchester. Fully compliant.",
+			notes: "Senior domiciliary carer in Manchester. 8 years experience. Mentors new starters.",
 		},
 	},
 	{
@@ -422,9 +426,34 @@ export const oakwoodCandidates: CandidateProfile[] = [
 		state: {
 			status: "compliant",
 			daysSinceActivity: 12,
-			notes: "Scotland-based. Has PVG instead of DBS. Fully compliant.",
+			notes: "Scotland-based dom care. Has PVG instead of DBS. Covers Edinburgh city centre rounds.",
 		},
 	},
+	{
+		profile: {
+			email: "mary.clark@email.com",
+			firstName: "Mary",
+			lastName: "Clark",
+			phone: generateUKPhone(),
+			dateOfBirth: new Date("1965-11-11"),
+			status: "active",
+			nationalId: generateNINumber(),
+			address: {
+				line1: "101 High Street",
+				city: "London",
+				postcode: "SE1 7AA",
+				country: "UK",
+			},
+		},
+		roleSlug: "senior-care-worker",
+		state: {
+			status: "compliant",
+			daysSinceActivity: 30,
+			notes: "25 years in care. Team lead at Oakwood Manor residential. Gold standard.",
+		},
+	},
+
+	// NEAR COMPLETE - Almost ready to work
 	{
 		profile: {
 			email: "fiona.macdonald@email.com",
@@ -446,33 +475,36 @@ export const oakwoodCandidates: CandidateProfile[] = [
 			status: "near_complete",
 			missingElements: ["safeguarding-adults"],
 			daysSinceActivity: 2,
-			notes: "Edinburgh senior carer. Missing one training module.",
+			notes: "Edinburgh. Just needs to complete Safeguarding Level 2. Booked on course next week.",
 		},
 	},
 	{
 		profile: {
-			email: "alan.wright@email.com",
-			firstName: "Alan",
-			lastName: "Wright",
+			email: "rashid.hussain@email.com",
+			firstName: "Rashid",
+			lastName: "Hussain",
 			phone: generateUKPhone(),
-			dateOfBirth: new Date("1970-12-08"),
+			dateOfBirth: new Date("1990-06-15"),
 			status: "active",
 			nationalId: generateNINumber(),
 			address: {
-				line1: "89 London Road",
-				city: "Glasgow",
-				postcode: "G1 5PQ",
+				line1: "78 Wilmslow Road",
+				city: "Manchester",
+				postcode: "M14 5UQ",
 				country: "UK",
 			},
 		},
 		roleSlug: "care-worker",
 		state: {
-			status: "expiring",
-			expiringElements: ["pvg-scheme"],
-			daysSinceActivity: 4,
-			notes: "Glasgow care worker. PVG needs renewal.",
+			status: "near_complete",
+			pendingThirdParty: ["enhanced-dbs"],
+			startDateDays: 7,
+			daysSinceActivity: 3,
+			notes: "DBS submitted and processing. Provisionally starting Manchester dom care next Monday.",
 		},
 	},
+
+	// IN PROGRESS - New starters, onboarding
 	{
 		profile: {
 			email: "janet.lewis@email.com",
@@ -483,9 +515,9 @@ export const oakwoodCandidates: CandidateProfile[] = [
 			status: "active",
 			nationalId: generateNINumber(),
 			address: {
-				line1: "34 Bristol Road",
+				line1: "34 Whiteladies Road",
 				city: "Bristol",
-				postcode: "BS1 5TY",
+				postcode: "BS8 2LG",
 				country: "UK",
 			},
 		},
@@ -494,9 +526,62 @@ export const oakwoodCandidates: CandidateProfile[] = [
 			status: "in_progress",
 			missingElements: ["care-certificate", "manual-handling", "infection-control"],
 			daysSinceActivity: 1,
-			notes: "New starter in Bristol. Core training in progress.",
+			notes: "Career changer from retail. Enthusiastic. Working through Care Certificate.",
 		},
 	},
+	{
+		profile: {
+			email: "priya.sharma@email.com",
+			firstName: "Priya",
+			lastName: "Sharma",
+			phone: generateUKPhone(),
+			dateOfBirth: new Date("1995-03-22"),
+			status: "active",
+			nationalId: generateNINumber(),
+			address: {
+				line1: "15 Brick Lane",
+				city: "London",
+				postcode: "E1 6PU",
+				country: "UK",
+			},
+		},
+		roleSlug: "care-worker",
+		state: {
+			status: "in_progress",
+			missingElements: ["enhanced-dbs", "employment-references"],
+			pendingAdminReview: ["right-to-work"],
+			daysSinceActivity: 2,
+			notes: "Returning to care after maternity leave. RTW docs uploaded, awaiting review.",
+		},
+	},
+
+	// EXPIRING - Need renewals
+	{
+		profile: {
+			email: "alan.wright@email.com",
+			firstName: "Alan",
+			lastName: "Wright",
+			phone: generateUKPhone(),
+			dateOfBirth: new Date("1970-12-08"),
+			status: "active",
+			nationalId: generateNINumber(),
+			address: {
+				line1: "89 Byres Road",
+				city: "Glasgow",
+				postcode: "G12 8TT",
+				country: "UK",
+			},
+		},
+		roleSlug: "care-worker",
+		state: {
+			status: "expiring",
+			expiringElements: ["pvg-scheme"],
+			daysSinceActivity: 4,
+			notes: "Glasgow dom care. PVG renewal due in 14 days. Reminder sent.",
+		},
+	},
+
+	// STUCK - Blocked, needs intervention
 	{
 		profile: {
 			email: "peter.jones@email.com",
@@ -508,8 +593,8 @@ export const oakwoodCandidates: CandidateProfile[] = [
 			nationalId: generateNINumber(),
 			address: {
 				line1: "67 Oak Drive",
-				city: "Leeds",
-				postcode: "LS6 2EQ",
+				city: "Liverpool",
+				postcode: "L17 8XZ",
 				country: "UK",
 			},
 		},
@@ -518,32 +603,11 @@ export const oakwoodCandidates: CandidateProfile[] = [
 			status: "stuck",
 			missingElements: ["enhanced-dbs"],
 			daysSinceActivity: 21,
-			notes: "DBS application stalled. No response to multiple chases.",
+			notes: "DBS application stalled - address history issue. Multiple chase attempts failed.",
 		},
 	},
-	{
-		profile: {
-			email: "mary.clark@email.com",
-			firstName: "Mary",
-			lastName: "Clark",
-			phone: generateUKPhone(),
-			dateOfBirth: new Date("1965-11-11"),
-			status: "active",
-			nationalId: generateNINumber(),
-			address: {
-				line1: "101 High Street",
-				city: "London",
-				postcode: "SW1A 1AA",
-				country: "UK",
-			},
-		},
-		roleSlug: "senior-care-worker",
-		state: {
-			status: "compliant",
-			daysSinceActivity: 30,
-			notes: "Very experienced. All documents current. Minimal contact needed.",
-		},
-	},
+
+	// NON-COMPLIANT - Expired, can't work
 	{
 		profile: {
 			email: "chris.davies@email.com",
@@ -556,7 +620,7 @@ export const oakwoodCandidates: CandidateProfile[] = [
 			address: {
 				line1: "22 Park View",
 				city: "London",
-				postcode: "E1 6AN",
+				postcode: "E14 6AN",
 				country: "UK",
 			},
 		},
@@ -565,7 +629,7 @@ export const oakwoodCandidates: CandidateProfile[] = [
 			status: "non_compliant",
 			expiringElements: ["enhanced-dbs", "right-to-work"],
 			daysSinceActivity: 0,
-			notes: "DBS just expired yesterday. Urgent renewal needed.",
+			notes: "DBS expired yesterday. Currently stood down from dom care rounds until renewed.",
 		},
 	},
 ];

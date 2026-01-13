@@ -197,7 +197,7 @@ export function CallForm({
 							</div>
 						) : fieldSchema.type === "date" ? (
 							<Input
-								type="date"
+								type="month"
 								id={fieldSchema.key}
 								{...field}
 								value={(field.value as string) || ""}
