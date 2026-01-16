@@ -52,6 +52,11 @@ export async function auth(): Promise<AuthSession | null> {
 		return null;
 	}
 
+	// Block unverified users
+	if (!authUser.email_confirmed_at) {
+		return null;
+	}
+
 	const email = authUser.email || "";
 
 	// Sync user to our database (creates if doesn't exist)

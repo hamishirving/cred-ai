@@ -31,10 +31,12 @@ export function RegisterForm({
 	action,
 	children,
 	organisations,
+	allowedDomains = [],
 }: {
 	action: (prevState: AuthResult, formData: FormData) => Promise<AuthResult>;
 	children: React.ReactNode;
 	organisations: Organisation[];
+	allowedDomains?: string[];
 }) {
 	const [state, formAction, isPending] = useActionState(action, {});
 	const [selectedOrgId, setSelectedOrgId] = useState<string>("");
@@ -80,6 +82,26 @@ export function RegisterForm({
 
 		fetchRoles();
 	}, [selectedOrgId]);
+
+	// Show success message after registration
+	if (state.success) {
+		return (
+			<div className="flex flex-col gap-4 px-4 sm:px-16">
+				<div className="bg-green-500/10 text-green-700 dark:text-green-400 text-sm p-4 rounded-md text-center">
+					<p className="font-medium mb-1">Check your email</p>
+					<p>{state.message}</p>
+				</div>
+			</div>
+		);
+	}
+
+	// Build domain hint text
+	const domainHint =
+		allowedDomains.length > 0
+			? allowedDomains.length === 1
+				? `Only @${allowedDomains[0]} addresses allowed`
+				: `Only ${allowedDomains.map((d) => `@${d}`).join(", ")} addresses allowed`
+			: null;
 
 	return (
 		<form action={formAction} className="flex flex-col gap-4 px-4 sm:px-16">
@@ -147,6 +169,11 @@ export function RegisterForm({
 					type="email"
 					disabled={isPending}
 				/>
+				{domainHint && (
+					<p className="text-xs text-zinc-500 dark:text-zinc-400">
+						{domainHint}
+					</p>
+				)}
 			</div>
 
 			<div className="flex flex-col gap-2">
