@@ -6,13 +6,20 @@ import { SubmitButton } from "@/components/submit-button";
 import { signInWithEmail } from "@/lib/auth/actions";
 import { auth } from "@/lib/auth";
 
-export default async function LoginPage() {
+export default async function LoginPage({
+	searchParams,
+}: {
+	searchParams: Promise<{ error?: string }>;
+}) {
 	const session = await auth();
 
 	// If user is already logged in, redirect to home
 	if (session) {
 		redirect("/");
 	}
+
+	const { error } = await searchParams;
+	const verificationFailed = error === "verification_failed";
 
 	return (
 		<div className="flex h-dvh w-screen items-start pt-12 md:pt-0 md:items-center justify-center bg-background">
@@ -23,6 +30,13 @@ export default async function LoginPage() {
 						Use your email and password to sign in
 					</p>
 				</div>
+
+				{verificationFailed && (
+					<div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md mx-4 sm:mx-16 text-center">
+						Email verification failed. Please try again or request a new
+						verification link.
+					</div>
+				)}
 
 				<AuthForm action={signInWithEmail}>
 					<SubmitButton>Sign in</SubmitButton>

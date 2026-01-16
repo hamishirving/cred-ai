@@ -6,6 +6,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { signUpWithEmail } from "@/lib/auth/actions";
 import { auth } from "@/lib/auth";
 import { getAllOrganisations } from "@/lib/db/queries";
+import { getAllowedDomains } from "@/lib/auth/domain-whitelist";
 
 export default async function RegisterPage() {
 	const session = await auth();
@@ -17,6 +18,7 @@ export default async function RegisterPage() {
 
 	// Fetch organisations for the dropdown
 	const organisations = await getAllOrganisations();
+	const allowedDomains = getAllowedDomains();
 
 	return (
 		<div className="flex h-dvh w-screen items-start pt-12 md:pt-0 md:items-center justify-center bg-background">
@@ -38,6 +40,7 @@ export default async function RegisterPage() {
 						slug: org.slug,
 						description: org.description,
 					}))}
+					allowedDomains={allowedDomains}
 				>
 					<SubmitButton>Sign up</SubmitButton>
 

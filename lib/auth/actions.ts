@@ -6,9 +6,12 @@ import { getPostHogClient } from "@/lib/posthog-server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { users, orgMemberships, profiles, userRoles } from "@/lib/db/schema";
+import { validateEmailDomain } from "@/lib/auth/domain-whitelist";
 
 export interface AuthResult {
 	error?: string;
+	success?: boolean;
+	message?: string;
 }
 
 export async function signUpWithEmail(
@@ -33,12 +36,26 @@ export async function signUpWithEmail(
 		return { error: "Organisation and role are required" };
 	}
 
+	// Validate email domain against whitelist
+	const domainError = validateEmailDomain(email);
+	if (domainError) {
+		return { error: domainError };
+	}
+
 	const supabase = await createClient();
+
+	// Build callback URL for email verification
+	const siteUrl =
+		process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+	const emailRedirectTo = `${siteUrl}/auth/callback`;
 
 	// 1. Create Supabase auth user
 	const { data, error } = await supabase.auth.signUp({
 		email,
 		password,
+		options: {
+			emailRedirectTo,
+		},
 	});
 
 	if (error) {
@@ -124,7 +141,12 @@ export async function signUpWithEmail(
 
 	await posthog.shutdown();
 
-	redirect("/");
+	// Return success - user must verify email before logging in
+	return {
+		success: true,
+		message:
+			"Account created! Please check your email and click the verification link to continue.",
+	};
 }
 
 export async function signInWithEmail(
