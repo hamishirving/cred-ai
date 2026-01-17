@@ -292,7 +292,7 @@ export async function clearAllData() {
  * - skill-requirements: skillId
  * - stage-transitions: entityId (profileId)
  */
-export async function clearOrgData(orgId: string) {
+export async function clearOrgData(orgId: string): Promise<void> {
 	console.log(`   🗑️  Clearing org data...`);
 
 	// Find seeded users in this org (no auth_user_id)
@@ -382,7 +382,7 @@ export async function clearOrgData(orgId: string) {
 	await db.delete(complianceElements).where(eq(complianceElements.organisationId, orgId));
 
 	// 7. Identity
-	// Delete ALL org memberships for this org (admin assignment will recreate for real users)
+	// Delete all org memberships (will be restored for real users after roles recreated)
 	await db.delete(orgMemberships).where(eq(orgMemberships.organisationId, orgId));
 	await db.delete(profiles).where(eq(profiles.organisationId, orgId));
 

@@ -4,17 +4,10 @@
  * Seeds the database with multi-market demo data.
  * Run with: pnpm db:seed
  */
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNotNull } from "drizzle-orm";
 import { db, closeConnection } from "./db";
 import { clearOrgData } from "./clear";
 
-// ============================================
-// Admin Configuration
-// ============================================
-
-const ADMIN_EMAILS = [
-	"hamish.irving@credentially.io",
-];
 import {
 	organisations,
 	workNodeTypes,
@@ -168,6 +161,7 @@ Sign off as: "The Oakwood Care Team"`,
 			{ name: "Tampa General", type: "Hospital", parent: "Florida", jurisdiction: "florida" },
 			{ name: "Baptist Health Miami", type: "Hospital", parent: "Florida", jurisdiction: "florida" },
 		],
+		terminology: { candidate: "Talent", placement: "Assignment" },
 		candidates: travelNurseCandidates,
 	},
 	{
@@ -191,6 +185,7 @@ Sign off as: "The Oakwood Care Team"`,
 			{ name: "Downtown Clinic", type: "Department", parent: "Lakeside Clinics", jurisdiction: "texas" },
 			{ name: "Suburban Clinic", type: "Department", parent: "Lakeside Clinics", jurisdiction: "texas" },
 		],
+		terminology: { candidate: "Provider", placement: "Assignment" },
 		candidates: lakesideCandidates,
 	},
 ];
@@ -911,27 +906,26 @@ Sign off as: "${config.name} Credentialing Team"`),
 // ============================================
 
 async function assignAdmins() {
-	console.log(`\n👑 Assigning admin roles...`);
+	console.log(`\n👑 Assigning admin roles to real users...`);
 
-	for (const email of ADMIN_EMAILS) {
-		// Find user by email
-		const [user] = await db
-			.select()
-			.from(users)
-			.where(eq(users.email, email))
-			.limit(1);
+	// Find all real users (those with authUserId = signed up via Supabase Auth)
+	const realUsers = await db
+		.select()
+		.from(users)
+		.where(isNotNull(users.authUserId));
 
-		if (!user) {
-			console.log(`   ⚠ User not found: ${email}`);
-			continue;
-		}
+	if (realUsers.length === 0) {
+		console.log(`   ℹ No real users found`);
+		return;
+	}
 
-		// Get all organisations
-		const allOrgs = await db.select().from(organisations);
+	// Get all organisations
+	const allOrgs = await db.select().from(organisations);
 
+	for (const user of realUsers) {
 		for (const org of allOrgs) {
-			// Find or create admin role for this org
-			let [adminRole] = await db
+			// Find admin role for this org (should exist from seeding)
+			const [adminRole] = await db
 				.select()
 				.from(userRoles)
 				.where(and(
@@ -941,17 +935,8 @@ async function assignAdmins() {
 				.limit(1);
 
 			if (!adminRole) {
-				[adminRole] = await db
-					.insert(userRoles)
-					.values({
-						organisationId: org.id,
-						name: "Admin",
-						slug: "admin",
-						description: "Full system access",
-						permissions: ["*"],
-						isDefault: false,
-					})
-					.returning();
+				console.log(`   ⚠ No admin role found for org ${org.name}`);
+				continue;
 			}
 
 			// Check if membership exists
@@ -964,13 +949,7 @@ async function assignAdmins() {
 				))
 				.limit(1);
 
-			if (existingMembership) {
-				// Update to admin role
-				await db
-					.update(orgMemberships)
-					.set({ userRoleId: adminRole.id })
-					.where(eq(orgMemberships.id, existingMembership.id));
-			} else {
+			if (!existingMembership) {
 				// Create membership with admin role
 				await db
 					.insert(orgMemberships)
@@ -984,7 +963,7 @@ async function assignAdmins() {
 			}
 		}
 
-		console.log(`   ✓ ${email} is admin on ${allOrgs.length} orgs`);
+		console.log(`   ✓ ${user.email} is admin on ${allOrgs.length} orgs`);
 	}
 }
 

@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useOrg } from "@/lib/org-context";
+import { useTerminology } from "@/lib/hooks/use-terminology";
 
 // Types from API
 interface PipelineStage {
@@ -97,97 +98,100 @@ function AlertBadge({ alertStatus }: { alertStatus: Candidate["alertStatus"] }) 
 	return null;
 }
 
-// Column definitions
-const columns: ColumnDef<Candidate>[] = [
-	{
-		id: "select",
-		header: ({ table }) => (
-			<Checkbox
-				checked={
-					table.getIsAllPageRowsSelected() ||
-					(table.getIsSomePageRowsSelected() && "indeterminate")
-				}
-				onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-				aria-label="Select all"
-			/>
-		),
-		cell: ({ row }) => (
-			<Checkbox
-				checked={row.getIsSelected()}
-				onCheckedChange={(value) => row.toggleSelected(!!value)}
-				aria-label="Select row"
-			/>
-		),
-		enableSorting: false,
-	},
-	{
-		accessorKey: "name",
-		header: ({ column }) => (
-			<Button
-				variant="ghost"
-				onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-				className="-ml-4"
-			>
-				Candidate
-				<ArrowUpDown className="ml-2 h-4 w-4" />
-			</Button>
-		),
-		cell: ({ row }) => {
-			const candidate = row.original;
-			return (
-				<div className="flex items-center gap-3">
-					<Avatar className="h-9 w-9">
-						<AvatarFallback className={getAvatarColor(candidate.name)}>
-							<span className="text-white text-xs font-medium">
-								{getInitials(candidate.name)}
-							</span>
-						</AvatarFallback>
-					</Avatar>
-					<div>
-						<p className="font-medium">{candidate.name}</p>
-						<p className="text-sm text-muted-foreground">{candidate.email}</p>
-					</div>
-				</div>
-			);
+// Column definitions factory - takes terminology for dynamic labels
+function createColumns(candidateLabel: string): ColumnDef<Candidate>[] {
+	return [
+		{
+			id: "select",
+			header: ({ table }) => (
+				<Checkbox
+					checked={
+						table.getIsAllPageRowsSelected() ||
+						(table.getIsSomePageRowsSelected() && "indeterminate")
+					}
+					onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+					aria-label="Select all"
+				/>
+			),
+			cell: ({ row }) => (
+				<Checkbox
+					checked={row.getIsSelected()}
+					onCheckedChange={(value) => row.toggleSelected(!!value)}
+					aria-label="Select row"
+				/>
+			),
+			enableSorting: false,
 		},
-	},
-	{
-		accessorKey: "alertStatus",
-		header: "Status",
-		cell: ({ row }) => <AlertBadge alertStatus={row.original.alertStatus} />,
-	},
-	{
-		accessorKey: "compliancePercentage",
-		header: "Compliance",
-		cell: ({ row }) => (
-			<div className="text-muted-foreground">
-				{row.original.compliancePercentage}%
-			</div>
-		),
-	},
-	{
-		accessorKey: "enteredStageAt",
-		header: ({ column }) => (
-			<Button
-				variant="ghost"
-				onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-				className="-mr-4 ml-auto"
-			>
-				In Stage
-				<ArrowUpDown className="ml-2 h-4 w-4" />
-			</Button>
-		),
-		cell: ({ row }) => (
-			<div className="text-right text-muted-foreground">
-				{formatDistanceToNow(row.original.enteredStageAt, { addSuffix: false })}
-			</div>
-		),
-	},
-];
+		{
+			accessorKey: "name",
+			header: ({ column }) => (
+				<Button
+					variant="ghost"
+					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+					className="-ml-4"
+				>
+					{candidateLabel}
+					<ArrowUpDown className="ml-2 h-4 w-4" />
+				</Button>
+			),
+			cell: ({ row }) => {
+				const candidate = row.original;
+				return (
+					<div className="flex items-center gap-3">
+						<Avatar className="h-9 w-9">
+							<AvatarFallback className={getAvatarColor(candidate.name)}>
+								<span className="text-white text-xs font-medium">
+									{getInitials(candidate.name)}
+								</span>
+							</AvatarFallback>
+						</Avatar>
+						<div>
+							<p className="font-medium">{candidate.name}</p>
+							<p className="text-sm text-muted-foreground">{candidate.email}</p>
+						</div>
+					</div>
+				);
+			},
+		},
+		{
+			accessorKey: "alertStatus",
+			header: "Status",
+			cell: ({ row }) => <AlertBadge alertStatus={row.original.alertStatus} />,
+		},
+		{
+			accessorKey: "compliancePercentage",
+			header: "Compliance",
+			cell: ({ row }) => (
+				<div className="text-muted-foreground">
+					{row.original.compliancePercentage}%
+				</div>
+			),
+		},
+		{
+			accessorKey: "enteredStageAt",
+			header: ({ column }) => (
+				<Button
+					variant="ghost"
+					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+					className="-mr-4 ml-auto"
+				>
+					In Stage
+					<ArrowUpDown className="ml-2 h-4 w-4" />
+				</Button>
+			),
+			cell: ({ row }) => (
+				<div className="text-right text-muted-foreground">
+					{formatDistanceToNow(row.original.enteredStageAt, { addSuffix: false })}
+				</div>
+			),
+		},
+	];
+}
 
 export default function CandidatesPage() {
 	const router = useRouter();
 	const { selectedOrg, loading: orgLoading } = useOrg();
+	const terminology = useTerminology();
 	const [stages, setStages] = useState<PipelineStage[]>([]);
 	const [candidates, setCandidates] = useState<Candidate[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -274,9 +278,15 @@ export default function CandidatesPage() {
 		});
 	}, [groupedByStage, stages]);
 
+	// Create columns with dynamic terminology
+	const columns = useMemo(
+		() => createColumns(terminology.candidate),
+		[terminology.candidate],
+	);
+
 	const table = useReactTable({
 		data: filteredCandidates,
-		columns,
+		columns: columns,
 		getCoreRowModel: getCoreRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 		onSortingChange: setSorting,
@@ -292,9 +302,9 @@ export default function CandidatesPage() {
 	return (
 		<div className="flex flex-1 flex-col gap-4 p-6">
 			<div>
-				<h1 className="text-2xl font-semibold">Candidates</h1>
+				<h1 className="text-2xl font-semibold">{terminology.candidates}</h1>
 				<p className="text-muted-foreground">
-					Manage candidates through the compliance pipeline
+					Manage {terminology.candidates.toLowerCase()} through the compliance pipeline
 				</p>
 			</div>
 
@@ -311,7 +321,7 @@ export default function CandidatesPage() {
 					)}
 				>
 					<span className="text-lg font-semibold">{candidates.length}</span>
-					<span className="whitespace-nowrap">All candidates</span>
+					<span className="whitespace-nowrap">All {terminology.candidates.toLowerCase()}</span>
 				</button>
 
 				{/* Dynamic stage tabs */}
@@ -424,7 +434,7 @@ export default function CandidatesPage() {
 											colSpan={columns.length}
 											className="h-24 text-center text-muted-foreground"
 										>
-											No candidates found
+											No {terminology.candidates.toLowerCase()} found
 										</TableCell>
 									</TableRow>
 								)
@@ -456,7 +466,7 @@ export default function CandidatesPage() {
 										colSpan={columns.length}
 										className="h-24 text-center text-muted-foreground"
 									>
-										No candidates found
+										No {terminology.candidates.toLowerCase()} found
 									</TableCell>
 								</TableRow>
 							)}
@@ -469,7 +479,7 @@ export default function CandidatesPage() {
 			{Object.keys(rowSelection).length > 0 && (
 				<div className="text-sm text-muted-foreground">
 					{Object.keys(rowSelection).length} of {filteredCandidates.length}{" "}
-					candidate(s) selected
+					{terminology.candidate.toLowerCase()}(s) selected
 				</div>
 			)}
 		</div>
