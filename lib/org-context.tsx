@@ -8,11 +8,13 @@ import {
 	useCallback,
 	type ReactNode,
 } from "react";
+import type { OrgSettings } from "@/lib/db/schema/organisations";
 
 export interface Organisation {
 	id: string;
 	name: string;
 	type: string | null;
+	settings?: OrgSettings | null;
 }
 
 interface OrgContextValue {

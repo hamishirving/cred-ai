@@ -4,6 +4,7 @@ import {
 	BarChart3,
 	CheckSquare,
 	Home,
+	type LucideIcon,
 	MessageSquare,
 	Phone,
 	Users,
@@ -16,52 +17,50 @@ import {
 	SidebarMenuButton,
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useTerminology } from "@/lib/hooks/use-terminology";
 
-const coreNavItems = [
-	{
-		title: "Home",
-		url: "/",
-		icon: Home,
-	},
-	// {
-	// 	title: "Search",
-	// 	url: "/search",
-	// 	icon: Search,
-	// },
-	{
-		title: "Chat",
-		url: "/chat",
-		icon: MessageSquare,
-	},
-	{
-		title: "Tasks",
-		url: "/tasks",
-		icon: CheckSquare,
-	},
-	{
-		title: "Candidates",
-		url: "/candidates",
-		icon: Users,
-	},
-	{
-		title: "Voice",
-		url: "/voice",
-		icon: Phone,
-	},
-	{
-		title: "Reports",
-		url: "/reports",
-		icon: BarChart3,
-	},
-	// {
-	// 	title: "Notifications",
-	// 	url: "/notifications",
-	// 	icon: Bell,
-	// },
-];
+interface NavItem {
+	title: string;
+	url: string;
+	icon: LucideIcon;
+}
 
 export function NavCore() {
 	const pathname = usePathname();
+	const terminology = useTerminology();
+
+	const coreNavItems: NavItem[] = [
+		{
+			title: "Home",
+			url: "/",
+			icon: Home,
+		},
+		{
+			title: "Chat",
+			url: "/chat",
+			icon: MessageSquare,
+		},
+		{
+			title: "Tasks",
+			url: "/tasks",
+			icon: CheckSquare,
+		},
+		{
+			title: terminology.candidates,
+			url: "/candidates",
+			icon: Users,
+		},
+		{
+			title: "Voice",
+			url: "/voice",
+			icon: Phone,
+		},
+		{
+			title: "Reports",
+			url: "/reports",
+			icon: BarChart3,
+		},
+	];
 
 	return (
 		<SidebarGroup>
