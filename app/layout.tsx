@@ -9,10 +9,9 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-	// TODO: Update with your actual domain
-	// metadataBase: new URL("https://yourdomain.com"),
-	title: "AI Chatbot",
-	description: "AI-powered chatbot application",
+	title: "Credentially | AI Onboarding & Compliance",
+	description:
+		"Workforce compliance platform for healthcare organisations. Streamline onboarding, manage credentials and ensure regulatory compliance.",
 };
 
 export const viewport = {
