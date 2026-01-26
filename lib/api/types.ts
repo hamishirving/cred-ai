@@ -270,6 +270,23 @@ export interface CompliancePackageDto {
 	groups: EmployeeComplianceGroupDto[];
 }
 
+// Basic role info for compliance packages (org listing endpoint)
+export interface PackageRoleDto {
+	roleId: number;
+	roleName: string;
+}
+
+// Lightweight compliance package info (from org listing endpoint)
+export interface CompliancePackageBasicDto {
+	id: string;
+	name: string;
+	roles: PackageRoleDto[];
+	totalRequirements: number;
+	compliantAssignmentCount: number;
+	totalAllAssignmentCount: number;
+	updated?: string;
+}
+
 // API Error Response
 export interface ApiError {
 	status: number;
