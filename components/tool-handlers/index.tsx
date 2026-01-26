@@ -11,6 +11,7 @@ import { EmailTool } from "./handlers/email-tool";
 import { FormTool } from "./handlers/form-tool";
 import { ProfileTool } from "./handlers/profile-tool";
 import { KnowledgeTool } from "./handlers/knowledge-tool";
+import { OrgCompliancePackagesTool } from "./handlers/org-compliance-packages-tool";
 import { SuggestionsTool } from "./handlers/suggestions-tool";
 import { TaskTool } from "./handlers/task-tool";
 import type { ToolHandlerProps } from "./types";
@@ -26,6 +27,8 @@ const toolRegistry: Record<string, ToolHandler> = {
 	"tool-getProfile": ProfileTool as ToolHandler,
 	"tool-getDocuments": DocumentsTool as ToolHandler,
 	"tool-getCompliancePackages": CompliancePackagesTool as ToolHandler,
+	"tool-getOrgCompliancePackages": OrgCompliancePackagesTool as ToolHandler,
+	"tool-assignCompliancePackage": CompliancePackagesTool as ToolHandler, // Reuses same UI - shows assigned packages
 	"tool-createForm": FormTool as ToolHandler,
 	"tool-draftEmail": EmailTool as ToolHandler,
 	"tool-createDocument": DocumentCreateTool as ToolHandler,

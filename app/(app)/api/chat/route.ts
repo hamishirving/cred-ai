@@ -19,10 +19,12 @@ import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import type { ChatModel } from "@/lib/ai/models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { myProvider } from "@/lib/ai/providers";
+import { assignCompliancePackage } from "@/lib/ai/tools/assign-compliance-package";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { createForm } from "@/lib/ai/tools/create-form";
 import { draftEmail } from "@/lib/ai/tools/draft-email";
 import { getCompliancePackages } from "@/lib/ai/tools/get-compliance-packages";
+import { getOrgCompliancePackages } from "@/lib/ai/tools/get-org-compliance-packages";
 import { getMetadata } from "@/lib/ai/tools/get-org-metadata";
 import { getProfile } from "@/lib/ai/tools/get-profile";
 import { getDocuments } from "@/lib/ai/tools/get-profile-documents";
@@ -214,6 +216,8 @@ export async function POST(request: Request) {
 									"getProfile",
 									"getDocuments",
 									"getCompliancePackages",
+									"getOrgCompliancePackages",
+									"assignCompliancePackage",
 									"getMetadata",
 									"manageProfile",
 									"createForm",
@@ -230,6 +234,8 @@ export async function POST(request: Request) {
 						getProfile,
 						getDocuments,
 						getCompliancePackages,
+						getOrgCompliancePackages,
+						assignCompliancePackage,
 						getMetadata,
 						manageProfile,
 						createForm,

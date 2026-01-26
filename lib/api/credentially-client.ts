@@ -1,5 +1,6 @@
 import type {
 	ApiError,
+	CompliancePackageBasicDto,
 	CompliancePackageDto,
 	CreateProfileRequestDto,
 	CreateProfileResponseDto,
@@ -163,6 +164,33 @@ export async function getCompliancePackages(
 	const orgId = organisationId ?? ORG_ID;
 	return credentiallyFetch<CompliancePackageDto[]>(
 		`/api/${orgId}/compliance-packages/${encodeURIComponent(profileId)}`,
+	);
+}
+
+/**
+ * Get all compliance packages available in the organisation
+ */
+export async function getOrgCompliancePackages(): Promise<
+	CompliancePackageBasicDto[] | { error: string }
+> {
+	return credentiallyFetch<CompliancePackageBasicDto[]>(
+		`/api/${ORG_ID}/compliance-packages`,
+	);
+}
+
+/**
+ * Assign compliance packages to a profile
+ */
+export async function assignCompliancePackages(
+	profileId: string,
+	packageIds: string[],
+): Promise<CompliancePackageDto[] | { error: string }> {
+	return credentiallyFetch<CompliancePackageDto[]>(
+		`/api/${ORG_ID}/compliance-packages/${encodeURIComponent(profileId)}`,
+		{
+			method: "POST",
+			body: JSON.stringify(packageIds),
+		},
 	);
 }
 
