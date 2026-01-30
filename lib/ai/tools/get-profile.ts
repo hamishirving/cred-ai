@@ -74,7 +74,7 @@ Provide either an email address OR a profile ID OR a name. Email search is most 
 			const page = await loadProfiles({
 				page: 0,
 				size: 10,
-				filter: { nameOrEmail: name },
+				filter: { name },
 			});
 
 			if (isApiError(page)) {

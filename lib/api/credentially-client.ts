@@ -15,7 +15,6 @@ const API_URL =
 	process.env.CREDENTIALLY_API_URL ??
 	"https://dev-eu-london.drfocused.com/gateway";
 const API_KEY = process.env.CREDENTIALLY_API_KEY ?? "";
-const ORG_ID = process.env.CREDENTIALLY_ORG_ID ?? "2372";
 const API_VERSION = "2.0.0";
 
 /**
@@ -46,23 +45,41 @@ async function credentiallyFetch<T>(
 		// Handle non-OK responses
 		if (!res.ok) {
 			const errorText = await res.text();
-			console.error(`[CredentiallyAPI] Error response:`, errorText);
+			const method = options.method || "GET";
+			const detail = errorText || res.statusText || "No details";
 
-			// Return user-friendly error messages
-			if (res.status === 404) {
-				return { error: "Resource not found" };
-			} else if (res.status === 400) {
-				return { error: `Invalid request: ${errorText || res.statusText}` };
-			} else if (res.status === 401 || res.status === 403) {
+			console.error(
+				`[CredentiallyAPI] ${method} ${url} → ${res.status}: ${detail}`,
+			);
+
+			if (res.status === 400) {
 				return {
-					error: "Authentication failed. Please check API credentials.",
+					error: `Bad request to ${method} ${path}: ${detail}`,
+				};
+			} else if (res.status === 401) {
+				return {
+					error: `Authentication failed (401) for ${method} ${path}. The API key may be expired or invalid. Check CREDENTIALLY_API_KEY in .env.local.`,
+				};
+			} else if (res.status === 403) {
+				return {
+					error: `Access denied (403) for ${method} ${path}. The API key may lack permissions for this resource.`,
+				};
+			} else if (res.status === 404) {
+				return {
+					error: `Not found (404): ${method} ${path}. The resource may not exist.`,
+				};
+			} else if (res.status === 429) {
+				return {
+					error: `Rate limited (429) on ${method} ${path}. Try again shortly.`,
 				};
 			} else if (res.status >= 500) {
-				return { error: "Server error. Please try again later." };
+				return {
+					error: `Server error (${res.status}) on ${method} ${path}: ${detail}`,
+				};
 			}
 
 			return {
-				error: `API error (${res.status}): ${res.statusText}`,
+				error: `API error (${res.status}) on ${method} ${path}: ${detail}`,
 			};
 		}
 
@@ -87,7 +104,7 @@ export async function getProfileByEmail(
 	email: string,
 ): Promise<ProfileDto | { error: string }> {
 	return credentiallyFetch<ProfileDto>(
-		`/api/${ORG_ID}/profile/find?email=${encodeURIComponent(email)}`,
+		`/api/profile/find?email=${encodeURIComponent(email)}`,
 	);
 }
 
@@ -98,7 +115,7 @@ export async function getProfileById(
 	profileId: string,
 ): Promise<ProfileDto | { error: string }> {
 	return credentiallyFetch<ProfileDto>(
-		`/api/${ORG_ID}/profile/${encodeURIComponent(profileId)}`,
+		`/api/profile/${encodeURIComponent(profileId)}`,
 	);
 }
 
@@ -114,20 +131,14 @@ export async function loadProfiles({
 	size?: number;
 	filter: ProfileListFilterRequest;
 }): Promise<ProfileListPageDto | { error: string }> {
-	// OpenAPI default serialization for a query param with an object schema is
-	// `style=form` + `explode=true`, which means each property becomes its own
-	// query param (i.e. `?nameOrEmail=...`) rather than `filter=<json>`.
-	//
-	// The Swagger UI "object" editor is confusing here; it still serializes to
-	// separate params unless the spec uses `style=deepObject`.
 	const searchParams = new URLSearchParams();
 	searchParams.set("page", String(page));
 	searchParams.set("size", String(size));
-	if (filter.nameOrEmail) {
-		searchParams.set("nameOrEmail", filter.nameOrEmail);
+	if (filter.name) {
+		searchParams.set("name", filter.name);
 	}
 	return credentiallyFetch<ProfileListPageDto>(
-		`/api/${ORG_ID}/profile?${searchParams.toString()}`,
+		`/api/profile?${searchParams.toString()}`,
 	);
 }
 
@@ -138,7 +149,7 @@ export async function getOrganisationMetadata(): Promise<
 	OrganisationMetadataDto | { error: string }
 > {
 	return credentiallyFetch<OrganisationMetadataDto>(
-		`/api/${ORG_ID}/profile/metadata`,
+		`/api/profile/metadata`,
 	);
 }
 
@@ -149,7 +160,7 @@ export async function getProfileDocuments(
 	profileId: string,
 ): Promise<DocumentDto[] | { error: string }> {
 	return credentiallyFetch<DocumentDto[]>(
-		`/api/${ORG_ID}/documents/${encodeURIComponent(profileId)}`,
+		`/api/documents/${encodeURIComponent(profileId)}`,
 	);
 }
 
@@ -158,11 +169,9 @@ export async function getProfileDocuments(
  */
 export async function getCompliancePackages(
 	profileId: string,
-	organisationId?: string,
 ): Promise<CompliancePackageDto[] | { error: string }> {
-	const orgId = organisationId ?? ORG_ID;
 	return credentiallyFetch<CompliancePackageDto[]>(
-		`/api/${orgId}/compliance-packages/${encodeURIComponent(profileId)}`,
+		`/api/compliance-packages/${encodeURIComponent(profileId)}`,
 	);
 }
 
@@ -172,7 +181,7 @@ export async function getCompliancePackages(
 export async function createProfile(
 	data: CreateProfileRequestDto,
 ): Promise<CreateProfileResponseDto | { error: string }> {
-	return credentiallyFetch<CreateProfileResponseDto>(`/api/${ORG_ID}/profile`, {
+	return credentiallyFetch<CreateProfileResponseDto>(`/api/profile`, {
 		method: "PUT",
 		body: JSON.stringify(data),
 	});
@@ -184,7 +193,7 @@ export async function createProfile(
 export async function updateProfileFields(
 	data: UpdateProfileFieldsRequestDto,
 ): Promise<CreateProfileResponseDto | { error: string }> {
-	return credentiallyFetch<CreateProfileResponseDto>(`/api/${ORG_ID}/profile`, {
+	return credentiallyFetch<CreateProfileResponseDto>(`/api/profile`, {
 		method: "PATCH",
 		body: JSON.stringify(data),
 	});

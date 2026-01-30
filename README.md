@@ -65,7 +65,6 @@ ANTHROPIC_API_KEY="sk-ant-..."
 # Credentially Public API v2.0.0
 CREDENTIALLY_API_URL="https://dev-eu-london.drfocused.com/gateway"
 CREDENTIALLY_API_KEY="your-api-key"
-CREDENTIALLY_ORG_ID="your-org-id"
 ```
 
 See `.env.example` for more details.

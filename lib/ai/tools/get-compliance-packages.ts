@@ -15,32 +15,23 @@ Use this tool when the user asks about:
 - What documents or checks are needed for compliance
 - Progress towards meeting compliance requirements
 
-Requires the profile ID (can be obtained from getProfile tool first).
-Organisation ID is optional - defaults to the configured organisation.`,
+Requires the profile ID (can be obtained from getProfile tool first).`,
 
 	inputSchema: z.object({
 		profileId: z
 			.string()
 			.describe("The ID of the profile to get compliance packages for"),
-		organisationId: z
-			.string()
-			.optional()
-			.describe(
-				"The organisation ID (optional, defaults to configured organisation)",
-			),
 	}),
 
 	execute: async ({
 		profileId,
-		organisationId,
 	}): Promise<{ data: CompliancePackageDto[] } | { error: string }> => {
 		console.log(
 			"[getCompliancePackages] Getting compliance packages for profile:",
 			profileId,
-			organisationId ? `org: ${organisationId}` : "",
 		);
 
-		const result = await fetchCompliancePackages(profileId, organisationId);
+		const result = await fetchCompliancePackages(profileId);
 
 		if (isApiError(result)) {
 			return { error: result.error };

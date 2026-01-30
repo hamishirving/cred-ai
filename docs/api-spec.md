@@ -26,7 +26,7 @@
     }
   ],
   "paths": {
-    "/api/{organisationId}/profile": {
+    "/api/profile": {
       "get": {
         "tags": [
           "Profiles"
@@ -35,15 +35,6 @@
         "description": "Fetches a paginated list of profiles for the organisation.",
         "operationId": "loadProfiles",
         "parameters": [
-          {
-            "name": "organisationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
           {
             "name": "page",
             "in": "query",
@@ -65,11 +56,82 @@
             }
           },
           {
-            "name": "filter",
+            "name": "name",
             "in": "query",
-            "required": true,
+            "description": "Smart search of first name, last name and email",
+            "required": false,
             "schema": {
-              "$ref": "#/components/schemas/ProfileListFilterRequest"
+              "type": "string",
+              "description": "Smart search of first name, last name and email"
+            }
+          },
+          {
+            "name": "complianceStatus",
+            "in": "query",
+            "description": "Compliance status",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Compliance status",
+              "enum": [
+                "COMPLIANT",
+                "NOT_COMPLIANT"
+              ]
+            }
+          },
+          {
+            "name": "complianceTag",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "description": "Compliance tags",
+              "example": [
+                "REFERENCE_AWAITING_APPROVAL",
+                "REFERENCE_BOUNCED",
+                "REFERENCE_NOT_ENOUGH",
+                "DOCUMENTS_DECLINED",
+                "DOCUMENTS_AWAITING_APPROVAL",
+                "DOCUMENTS_MISSING"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "groups",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "description": "Groups",
+              "example": [
+                "group01-public-id",
+                "group02-public-id",
+                "group03-public-id"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "jobPositionStatus",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Job position status",
+                "enum": [
+                  "ACTIVE",
+                  "INVITED",
+                  "IMPORTED",
+                  "ARCHIVED"
+                ]
+              }
             }
           },
           {
@@ -113,15 +175,6 @@
         "description": "Creates a new profile and optionally populates custom fields in a single transaction.",
         "operationId": "createProfile",
         "parameters": [
-          {
-            "name": "organisationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
           {
             "name": "X-API-Version",
             "in": "header",
@@ -177,15 +230,6 @@
         "operationId": "updateProfileFields",
         "parameters": [
           {
-            "name": "organisationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
-          {
             "name": "X-API-Version",
             "in": "header",
             "schema": {
@@ -232,7 +276,7 @@
         ]
       }
     },
-    "/api/{organisationId}/documents/{profileId}": {
+    "/api/documents/{profileId}": {
       "get": {
         "tags": [
           "Documents"
@@ -241,15 +285,6 @@
         "description": "Fetches documents for a profile, enriched with extra OCR fields.",
         "operationId": "getDocuments",
         "parameters": [
-          {
-            "name": "organisationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
           {
             "name": "profileId",
             "in": "path",
@@ -305,15 +340,6 @@
         "description": "Uploads a document for a specific profile and triggers processing.",
         "operationId": "uploadDocument",
         "parameters": [
-          {
-            "name": "organisationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
           {
             "name": "profileId",
             "in": "path",
@@ -379,7 +405,7 @@
         ]
       }
     },
-    "/api/{organisationId}/compliance-packages/{profileId}": {
+    "/api/compliance-packages/{profileId}": {
       "get": {
         "tags": [
           "Compliance-packages"
@@ -388,15 +414,6 @@
         "description": "Fetches a list of all compliance requirements for all assigned packages for the profile.",
         "operationId": "getProfileCompliancePackages",
         "parameters": [
-          {
-            "name": "organisationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
           {
             "name": "profileId",
             "in": "path",
@@ -452,15 +469,6 @@
         "description": "Assign compliance packages (list of their ids) to profile.",
         "operationId": "assign",
         "parameters": [
-          {
-            "name": "organisationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
           {
             "name": "profileId",
             "in": "path",
@@ -522,7 +530,121 @@
         ]
       }
     },
-    "/api/{organisationId}/profile/{profileId}": {
+    "/api/documents/reject": {
+      "patch": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Reject document of file.",
+        "description": "Decline specific document and file.",
+        "operationId": "reject",
+        "parameters": [
+          {
+            "name": "X-API-Version",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "default": "2.0.0",
+              "enum": [
+                "2.0.0"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileRequest"
+              },
+              "encoding": {
+                "note": {
+                  "contentType": "application/json"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Document declined successfully"
+          },
+          "400": {
+            "description": "Bad request, e.g. 'VerifierPublicId not found'"
+          },
+          "404": {
+            "description": "Document or file not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer-key": []
+          }
+        ]
+      }
+    },
+    "/api/documents/approve": {
+      "patch": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Approve document of file.",
+        "description": "Approve specific document and file.",
+        "operationId": "approve",
+        "parameters": [
+          {
+            "name": "X-API-Version",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "default": "2.0.0",
+              "enum": [
+                "2.0.0"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileRequest"
+              },
+              "encoding": {
+                "note": {
+                  "contentType": "application/json"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Document approved successfully"
+          },
+          "400": {
+            "description": "Bad request, e.g. 'VerifierPublicId not found'"
+          },
+          "404": {
+            "description": "Document or file not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer-key": []
+          }
+        ]
+      }
+    },
+    "/api/profile/{profileId}": {
       "get": {
         "tags": [
           "Profiles"
@@ -531,15 +653,6 @@
         "description": "Fetches detailed profile information for a profile by their ID, including enriched custom fields.",
         "operationId": "getProfileById",
         "parameters": [
-          {
-            "name": "organisationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
           {
             "name": "profileId",
             "in": "path",
@@ -585,7 +698,7 @@
         ]
       }
     },
-    "/api/{organisationId}/profile/metadata": {
+    "/api/profile/metadata": {
       "get": {
         "tags": [
           "Profiles"
@@ -594,15 +707,6 @@
         "description": "Fetches and aggregates profile metadata fields (schema) and available roles for the organisation.",
         "operationId": "getProfileMetadata",
         "parameters": [
-          {
-            "name": "organisationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
           {
             "name": "X-API-Version",
             "in": "header",
@@ -637,7 +741,7 @@
         ]
       }
     },
-    "/api/{organisationId}/profile/find": {
+    "/api/profile/find": {
       "get": {
         "tags": [
           "Profiles"
@@ -646,15 +750,6 @@
         "description": "Fetches detailed profile information, including enriched custom fields.",
         "operationId": "getProfileByEmail",
         "parameters": [
-          {
-            "name": "organisationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
           {
             "name": "email",
             "in": "query",
@@ -700,7 +795,152 @@
         ]
       }
     },
-    "/api/{organisationId}/compliance-packages": {
+    "/api/profile/all": {
+      "get": {
+        "tags": [
+          "Profiles"
+        ],
+        "summary": "List All Profiles (Lightweight)",
+        "description": "Fetches a non-paginated list of all profiles for the organisation with lightweight information.",
+        "operationId": "loadAllProfiles",
+        "parameters": [
+          {
+            "name": "X-API-Version",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "default": "2.0.0",
+              "enum": [
+                "2.0.0"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profiles loaded",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProfileLightDto"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer-key": []
+          }
+        ]
+      }
+    },
+    "/api/documents/download": {
+      "get": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Download file by its id",
+        "description": "Download file by its id.",
+        "operationId": "downloadFile",
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "X-API-Version",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "default": "2.0.0",
+              "enum": [
+                "2.0.0"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File downloaded successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "File not found"
+          }
+        },
+        "security": [
+          {
+            "bearer-key": []
+          }
+        ]
+      }
+    },
+    "/api/documents/document-types": {
+      "get": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Get Organisation Document Types",
+        "description": "Fetches document types for an organisation.",
+        "operationId": "getDocumentTypes",
+        "parameters": [
+          {
+            "name": "X-API-Version",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "default": "2.0.0",
+              "enum": [
+                "2.0.0"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document types retrieved successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrganisationDocumentTypeDto"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer-key": []
+          }
+        ]
+      }
+    },
+    "/api/compliance-packages": {
       "get": {
         "tags": [
           "Compliance-packages"
@@ -709,15 +949,6 @@
         "description": "Fetches a list of all organisation's compliance packages.",
         "operationId": "getOrganisationCompliancePackages",
         "parameters": [
-          {
-            "name": "organisationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
-          },
           {
             "name": "X-API-Version",
             "in": "header",
@@ -818,6 +1049,9 @@
             "type": "string"
           },
           "status": {
+            "type": "string"
+          },
+          "type": {
             "type": "string"
           }
         }
@@ -967,6 +1201,9 @@
           "complianceStatus": {
             "type": "string"
           },
+          "email": {
+            "type": "string"
+          },
           "complianceStatusTags": {
             "type": "array",
             "items": {
@@ -1040,12 +1277,14 @@
       },
       "DocumentUploadRequest": {
         "type": "object",
-        "description": "Request body for uploading a document, none of the fields are mandatory.",
+        "description": "Request body for uploading a document.",
         "properties": {
-          "documentTypeKey": {
-            "type": "string"
+          "uploaderId": {
+            "type": "string",
+            "description": "Mandatory profile ID of the uploader",
+            "minLength": 1
           },
-          "statutoryDocumentTypeKey": {
+          "documentTypeKey": {
             "type": "string"
           },
           "otherDocumentTypeName": {
@@ -1054,7 +1293,10 @@
           "skipDuplicates": {
             "type": "boolean"
           }
-        }
+        },
+        "required": [
+          "uploaderId"
+        ]
       },
       "CheckIntegrationDto": {
         "type": "object",
@@ -1241,6 +1483,30 @@
           }
         }
       },
+      "FileRequest": {
+        "type": "object",
+        "description": "Request body for approving/declining a file.\n'documentPublicId', 'fileId' and 'organisationId' are mandatory; 'note' is mandatory only for rejecting.\n",
+        "properties": {
+          "documentPublicId": {
+            "type": "string"
+          },
+          "fileId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "organisationId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "note": {
+            "type": "string"
+          },
+          "verifierPublicId": {
+            "type": "string",
+            "description": "The public Id from the profile that will be marked as the verifier on approval.\nThis field is required when the session token is from a public-api (server-to-server).\nIn other cases this parameter is not required and even ignored to use the id from the user in session.\n"
+          }
+        }
+      },
       "OrganisationMetadataDto": {
         "type": "object",
         "properties": {
@@ -1306,10 +1572,22 @@
           }
         }
       },
-      "ProfileListFilterRequest": {
+      "ProfileLightDto": {
         "type": "object",
         "properties": {
-          "nameOrEmail": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "complianceStatus": {
             "type": "string"
           }
         }
@@ -1449,6 +1727,12 @@
           "shortName": {
             "type": "string"
           },
+          "ocrModelCode": {
+            "type": "string"
+          },
+          "ocrModelName": {
+            "type": "string"
+          },
           "expiryPeriodInMonths": {
             "type": "integer",
             "format": "int32"
@@ -1471,6 +1755,13 @@
           },
           "profileOwnerRestricted": {
             "type": "boolean"
+          },
+          "ocrModel": {
+            "type": "object",
+            "additionalProperties": {
+
+            },
+            "writeOnly": true
           }
         }
       },
@@ -1542,6 +1833,78 @@
           },
           "roleName": {
             "type": "string"
+          }
+        }
+      },
+      "OrganisationDocumentTypeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "shortName": {
+            "type": "string"
+          },
+          "ocrModelCode": {
+            "type": "string"
+          },
+          "ocrModelName": {
+            "type": "string"
+          },
+          "expiryPeriodInMonths": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expireSoonPeriodInDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "category": {
+            "type": "string"
+          },
+          "reminderText": {
+            "type": "string"
+          },
+          "ocrSupported": {
+            "type": "boolean"
+          },
+          "common": {
+            "type": "boolean"
+          },
+          "profileOwnerRestricted": {
+            "type": "boolean"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "restrictAccessRoles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BaseRoleDto"
+            }
+          },
+          "approvalRoles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BaseRoleDto"
+            }
+          },
+          "ocrModel": {
+            "type": "object",
+            "additionalProperties": {
+
+            },
+            "writeOnly": true
           }
         }
       },

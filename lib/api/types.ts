@@ -125,7 +125,7 @@ export interface OrganisationMetadataDto {
 }
 
 export interface ProfileListFilterRequest {
-	nameOrEmail?: string;
+	name?: string;
 }
 
 export interface ProfileListPageDto {
