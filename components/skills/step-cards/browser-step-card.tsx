@@ -1,16 +1,15 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Globe, ExternalLink, Monitor, MousePointer, Type, Navigation, Eye, Loader2 } from "lucide-react";
+import { Globe, MousePointer, Type, Navigation, Eye, Loader2, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import type { SkillStep, BrowserAction } from "@/lib/ai/skills/types";
+import { SessionReplay } from "@/components/skills/session-replay";
 
 function ActionIcon({ type }: { type: string }) {
 	const lower = type.toLowerCase();
 	if (lower === "goto" || lower === "navigate") return <Navigation className="size-3" />;
 	if (lower === "click" || lower === "act") return <MousePointer className="size-3" />;
 	if (lower === "type" || lower === "fillform") return <Type className="size-3" />;
-	if (lower === "screenshot") return <Monitor className="size-3" />;
 	if (lower === "extract" || lower === "observe") return <Eye className="size-3" />;
 	if (lower === "browser-ready") return <Globe className="size-3" />;
 	return <Globe className="size-3" />;
@@ -62,12 +61,13 @@ export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActi
 
 	const verified = output?.data?.verified;
 	const agentResult = output?.data?.result;
+	const fields = output?.data?.fields;
 	const hasError = !!output?.error;
 	const sessionId = output?.data?.browserSessionId;
 	const hasOutput = !!output;
 
 	return (
-		<Card className="border-blue-200 dark:border-blue-900">
+		<Card className="shadow-none border-border/50">
 			<CardContent className="p-3">
 				<div className="flex flex-col gap-1.5">
 					{/* Header row */}
@@ -79,31 +79,16 @@ export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActi
 							Browser Verification
 						</span>
 						{verified !== undefined && (
-							<Badge
-								variant={verified ? "default" : "destructive"}
-								className={
-									verified
-										? "bg-green-600 hover:bg-green-700 ml-auto"
-										: "ml-auto"
-								}
-							>
-								{verified ? "Verified" : "Not Verified"}
-							</Badge>
+							verified
+								? <CheckCircle2 className="size-3 text-green-500 ml-auto" />
+								: <XCircle className="size-3 text-destructive ml-auto" />
 						)}
 						{hasError && (
-							<Badge variant="destructive" className="ml-auto">
-								Error
-							</Badge>
+							<AlertCircle className="size-3 text-destructive ml-auto" />
 						)}
 						{!hasOutput && isActive && (
-							<Badge variant="secondary" className="ml-auto gap-1">
-								<Loader2 className="size-3 animate-spin" />
-								Running
-							</Badge>
+							<Loader2 className="size-3 animate-spin text-muted-foreground ml-auto" />
 						)}
-						<Badge variant="outline" className="text-xs">
-							Step {step.index}
-						</Badge>
 					</div>
 
 					{/* Body — all aligned to ml-7 */}
@@ -133,31 +118,39 @@ export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActi
 							</div>
 						)}
 
-						{/* Agent result message */}
-						{agentResult?.message && (
-							<p className="text-xs text-muted-foreground leading-relaxed">
-								{agentResult.message}
-							</p>
-						)}
-
-						{/* Browserbase session link */}
-						{sessionId && (
-							<a
-								href={`https://www.browserbase.com/sessions/${sessionId}`}
-								target="_blank"
-								rel="noopener noreferrer"
-								className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
-							>
-								<ExternalLink className="size-3" />
-								View session replay
-							</a>
-						)}
-
 						{/* Error */}
 						{hasError && (
 							<p className="text-xs text-destructive">{output.error}</p>
 						)}
 					</div>
+
+					{/* Results section — separated from actions */}
+					{hasOutput && !hasError && (fields || agentResult?.message || sessionId) && (
+						<div className="ml-7 flex flex-col gap-2 mt-1 pt-2 border-t border-border/50">
+							{/* Structured fields */}
+							{fields && Object.keys(fields).length > 0 && (
+								<div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
+									{Object.entries(fields).map(([key, value]) => (
+										<div key={key} className="col-span-2 grid grid-cols-subgrid">
+											<span className="text-muted-foreground">{key}</span>
+											<span className="font-medium">{value}</span>
+										</div>
+									))}
+								</div>
+							)}
+							{/* Fallback raw message (only if no fields) */}
+							{agentResult?.message && (!fields || Object.keys(fields).length === 0) && (
+								<p className="text-xs text-muted-foreground leading-relaxed">
+									{agentResult.message}
+								</p>
+							)}
+
+							{/* Session replay */}
+							{sessionId && (
+								<SessionReplay sessionId={sessionId} />
+							)}
+						</div>
+					)}
 				</div>
 			</CardContent>
 		</Card>

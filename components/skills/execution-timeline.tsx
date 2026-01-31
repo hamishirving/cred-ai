@@ -76,16 +76,46 @@ function PreviewActionIcon({ type }: { type: string }) {
 	return <Globe className="size-3" />;
 }
 
+/**
+ * Reorder steps so text steps appear before tool-call steps
+ * within the same step index. The AI SDK emits tool calls first,
+ * then the text — but the text explains what's about to happen.
+ */
+function reorderSteps(steps: SkillStep[]): SkillStep[] {
+	const result: SkillStep[] = [];
+	let i = 0;
+
+	while (i < steps.length) {
+		const currentIndex = steps[i].index;
+
+		// Collect all steps with the same index
+		const group: SkillStep[] = [];
+		while (i < steps.length && steps[i].index === currentIndex) {
+			group.push(steps[i]);
+			i++;
+		}
+
+		// Text first, then tool calls
+		const text = group.filter((s) => s.type === "text");
+		const tools = group.filter((s) => s.type === "tool-call");
+		result.push(...text, ...tools);
+	}
+
+	return result;
+}
+
 export function ExecutionTimeline({
 	steps,
 	status,
 	liveViewUrl,
 	browserActions = [],
 }: ExecutionTimelineProps) {
+	const orderedSteps = reorderSteps(steps);
+
 	return (
-		<div className="flex flex-col gap-2">
-			{steps.map((step, i) => (
-				<div key={`${step.index}-${i}`}>
+		<div className="flex flex-col gap-3">
+			{orderedSteps.map((step, i) => (
+				<div key={`${step.index}-${step.type}-${i}`}>
 					<StepCard
 						step={step}
 						liveViewUrl={liveViewUrl}
@@ -94,7 +124,7 @@ export function ExecutionTimeline({
 								? browserActions
 								: undefined
 						}
-						isLastStep={i === steps.length - 1}
+						isLastStep={i === orderedSteps.length - 1}
 						isRunning={status === "running"}
 					/>
 				</div>

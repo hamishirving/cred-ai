@@ -21,7 +21,7 @@ interface UseSkillExecutionReturn {
 	result: SkillExecutionResult | null;
 	/** Browserbase live view URL (if browser step active) */
 	liveViewUrl: string | null;
-	/** Real-time browser actions from Stagehand agent */
+	/** Real-time browser actions from Playwright automation */
 	browserActions: BrowserAction[];
 	/** Start a skill execution */
 	execute: (skillId: string, input: Record<string, unknown>) => void;
@@ -99,24 +99,33 @@ export function useSkillExecution(): UseSkillExecutionReturn {
 
 						buffer += decoder.decode(value, { stream: true });
 
-						// Parse SSE events from buffer
-						const lines = buffer.split("\n");
-						buffer = lines.pop() || "";
+						// Parse complete SSE events (terminated by \n\n)
+						let boundary = buffer.indexOf("\n\n");
+						while (boundary !== -1) {
+							const eventBlock = buffer.slice(0, boundary);
+							buffer = buffer.slice(boundary + 2);
 
-						let currentEvent = "";
+							let eventName = "";
+							let dataLine = "";
 
-						for (const line of lines) {
-							if (line.startsWith("event: ")) {
-								currentEvent = line.slice(7).trim();
-							} else if (line.startsWith("data: ") && currentEvent) {
-								try {
-									const data = JSON.parse(line.slice(6));
-									handleEvent(currentEvent, data);
-								} catch {
-									// Ignore parse errors
+							for (const line of eventBlock.split("\n")) {
+								if (line.startsWith("event: ")) {
+									eventName = line.slice(7).trim();
+								} else if (line.startsWith("data: ")) {
+									dataLine = line.slice(6);
 								}
-								currentEvent = "";
 							}
+
+							if (eventName && dataLine) {
+								try {
+									const data = JSON.parse(dataLine);
+									handleEvent(eventName, data);
+								} catch {
+									console.warn("[SSE] Failed to parse event:", eventName, dataLine.slice(0, 100));
+								}
+							}
+
+							boundary = buffer.indexOf("\n\n");
 						}
 					}
 				} catch (error) {

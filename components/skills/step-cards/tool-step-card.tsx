@@ -1,6 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Wrench, CheckCircle2 } from "lucide-react";
 import type { SkillStep } from "@/lib/ai/skills/types";
@@ -30,7 +29,7 @@ export function ToolStepCard({ step }: ToolStepCardProps) {
 	if (step.type !== "tool-call") return null;
 
 	return (
-		<Card>
+		<Card className="shadow-none border-border/50">
 			<CardContent className="p-3">
 				<div className="flex flex-col gap-1.5">
 					<div className="flex items-center gap-2">
@@ -39,9 +38,6 @@ export function ToolStepCard({ step }: ToolStepCardProps) {
 						</div>
 						<span className="text-xs font-medium">{step.toolName}</span>
 						<CheckCircle2 className="size-3 text-green-500 ml-auto" />
-						<Badge variant="outline" className="text-xs">
-							Step {step.index}
-						</Badge>
 					</div>
 					<div className="ml-7 flex flex-col gap-1">
 						<ToolData label="Input" data={step.toolInput} />

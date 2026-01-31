@@ -40,7 +40,7 @@ export default function SkillExecutionPage() {
 	}, [steps, browserActions]);
 
 	return (
-		<div className="flex flex-col gap-4 p-4 max-w-2xl mx-auto">
+		<div className="flex flex-col gap-4 p-4 w-full max-w-2xl mx-auto">
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-2">

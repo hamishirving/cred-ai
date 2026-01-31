@@ -1,18 +1,65 @@
 /**
  * browse-and-verify Tool
  *
- * Browser automation tool using Stagehand CUA agent + Browserbase.
- * Gives the agent a single instruction to navigate, fill forms, and extract results.
- * Returns structured verification data + live view URL for real-time observation.
- *
- * Supports an onAction callback for streaming browser actions in real-time.
+ * Browser automation tool using Playwright + Browserbase.
+ * Hardcoded XPath steps for AHA certificate verification.
+ * Streams action events per step via onAction callback.
  */
 
 import { tool } from "ai";
 import { z } from "zod";
-import { Stagehand } from "@browserbasehq/stagehand";
+import { chromium } from "playwright-core";
 import Browserbase from "@browserbasehq/sdk";
 import type { BrowserAction } from "@/lib/ai/skills/types";
+
+/** XPath selectors for the AHA verification page */
+const SELECTORS = {
+	input:
+		"xpath=/html/body/app-root/app-verify-certificate/div[2]/div/div/div[1]/div[2]/form/div[1]/input",
+	submit:
+		"xpath=/html/body/app-root/app-verify-certificate/div[2]/div/div/div[1]/div[2]/form/div[2]/button",
+	results:
+		"xpath=/html/body/app-root/app-verify-certificate/div[2]/div/div/div[1]/div[2]/div",
+};
+
+/** Known fields from the AHA verification results page */
+const FIELD_PATTERNS = [
+	"Program Name",
+	"Certificate Name",
+	"Issued to",
+	"Claimed By",
+	"eCard Valid Until",
+	"RQI eCredential Valid Until",
+] as const;
+
+/** Parse raw text from the AHA results div into structured fields */
+function parseResultFields(raw: string): Record<string, string> {
+	const fields: Record<string, string> = {};
+	if (!raw) return fields;
+
+	// Check validity status (appears before first field label)
+	const validityMatch = raw.match(/^(.+?)(?=Program Name\s*:)/);
+	if (validityMatch) {
+		const status = validityMatch[1].trim();
+		if (status) fields["Status"] = status;
+	}
+
+	for (let i = 0; i < FIELD_PATTERNS.length; i++) {
+		const label = FIELD_PATTERNS[i];
+		const nextLabel = FIELD_PATTERNS[i + 1];
+		// Match "Label : Value" up to the next label or end of useful content
+		const endPattern = nextLabel
+			? `(?=${nextLabel}\\s*:)`
+			: "(?=Your personal data|Please see more|$)";
+		const regex = new RegExp(`${label}\\s*:\\s*(.+?)\\s*${endPattern}`, "s");
+		const match = raw.match(regex);
+		if (match?.[1]) {
+			fields[label] = match[1].trim();
+		}
+	}
+
+	return fields;
+}
 
 /** Callback for streaming browser actions as they happen */
 export type BrowserActionCallback = (action: BrowserAction) => void;
@@ -39,8 +86,12 @@ When to use:
 				.string()
 				.url()
 				.optional()
-				.default("https://certificates.rqi1stop.com/certificates/us/verify_certificate")
-				.describe("URL of the verification portal (defaults to AHA portal)"),
+				.default(
+					"https://certificates.rqi1stop.com/certificates/us/verify_certificate",
+				)
+				.describe(
+					"URL of the verification portal (defaults to AHA portal)",
+				),
 		}),
 
 		execute: async ({
@@ -52,8 +103,13 @@ When to use:
 						result: {
 							success: boolean;
 							message: string;
-							actions: Array<{ type: string; reasoning?: string; action?: string }>;
+							actions: Array<{
+								type: string;
+								reasoning?: string;
+								action?: string;
+							}>;
 						};
+						fields: Record<string, string>;
 						liveViewUrl: string;
 						browserSessionId: string;
 						verified: boolean;
@@ -68,110 +124,136 @@ When to use:
 
 			if (!apiKey || !projectId) {
 				return {
-					error:
-						"Browserbase credentials not configured. Set BROWSERBASE_API_KEY and BROWSERBASE_PROJECT_ID.",
+					error: "Browserbase credentials not configured. Set BROWSERBASE_API_KEY and BROWSERBASE_PROJECT_ID.",
 				};
 			}
 
-			let stagehand: Stagehand | null = null;
+			let browser: Awaited<
+				ReturnType<typeof chromium.connectOverCDP>
+			> | null = null;
 			let actionIndex = 0;
 
+			const emit = (
+				type: string,
+				reasoning: string,
+				action?: string,
+			) => {
+				if (!onAction) return;
+				onAction({
+					index: actionIndex++,
+					type,
+					reasoning,
+					action,
+					timestamp: new Date().toISOString(),
+				});
+			};
+
 			try {
-				// 1. Init Stagehand — it creates the Browserbase session internally
-				stagehand = new Stagehand({
-					env: "BROWSERBASE",
-					apiKey,
+				// 1. Create Browserbase session
+				const bb = new Browserbase({ apiKey });
+				const session = await bb.sessions.create({
 					projectId,
-					experimental: true,
-					model: {
-						modelName: "claude-3-7-sonnet-latest",
-						apiKey: process.env.ANTHROPIC_API_KEY,
+					browserSettings: {
+						recordSession: true,
 					},
 				});
-				await stagehand.init();
+				const sessionId = session.id;
 
-				// 2. Get session ID and live view URL
-				const sessionId = stagehand.browserbaseSessionID;
-				let liveViewUrl = "";
-				if (sessionId) {
-					const bb = new Browserbase({ apiKey });
-					const debugInfo = await bb.sessions.debug(sessionId);
-					liveViewUrl = debugInfo.debuggerFullscreenUrl;
-					console.log("[browseAndVerify] Live view URL:", liveViewUrl);
-				}
+				// 2. Get debug URL for live view
+				const debugInfo = await bb.sessions.debug(sessionId);
+				const liveViewUrl = debugInfo.debuggerFullscreenUrl;
+				console.log("[browseAndVerify] Live view URL:", liveViewUrl);
 
-				// Emit live view as first action
-				if (onAction && liveViewUrl) {
-					onAction({
-						index: actionIndex++,
-						type: "browser-ready",
-						reasoning: "Browser session initialised",
-						action: liveViewUrl,
-						timestamp: new Date().toISOString(),
-					});
-				}
+				await emit(
+					"browser-ready",
+					"Browser session initialised",
+					liveViewUrl,
+				);
 
-				// 3. Run CUA agent with a single instruction
-				const verifyUrl = url || "https://certificates.rqi1stop.com/certificates/us/verify_certificate";
+				// 3. Connect Playwright via CDP
+				browser = await chromium.connectOverCDP(session.connectUrl);
+				const defaultContext = browser.contexts()[0];
+				const page = defaultContext.pages()[0] || (await defaultContext.newPage());
 
-				const agent = stagehand.agent({
-					model: {
-						modelName: "anthropic/claude-sonnet-4-5-20250929",
-						apiKey: process.env.ANTHROPIC_API_KEY,
-					},
-				});
+				// 4. Navigate to verification URL
+				const verifyUrl =
+					url ||
+					"https://certificates.rqi1stop.com/certificates/us/verify_certificate";
+				await page.goto(verifyUrl, { waitUntil: "networkidle" });
+				emit("navigate", "Navigated to verification portal", verifyUrl);
 
-				const result = await agent.execute({
-					instruction: `Go to ${verifyUrl}. Find the certificate verification input field, type the eCard code "${ecardCode}", and click the verify/submit button. Wait for the results to load, then tell me what the verification result says — including validity status, certificate holder name, program name, expiry dates, and any error messages.`,
-					maxSteps: 10,
-					callbacks: {
-						onStepFinish: async (event) => {
-							if (!onAction) return;
-							// Emit each tool call from this step as a browser action
-							if (event.toolCalls) {
-								for (const tc of event.toolCalls) {
-									onAction({
-										index: actionIndex++,
-										type: tc.toolName || "action",
-										reasoning: `Step finished: ${event.finishReason || "unknown"}`,
-										action: typeof tc.input === "string"
-											? tc.input
-											: JSON.stringify(tc.input),
-										timestamp: new Date().toISOString(),
-									});
-								}
-							}
-						},
-					},
-				});
+				// 5. Fill eCard input
+				const input = page.locator(SELECTORS.input);
+				await input.waitFor({ state: "visible", timeout: 15000 });
+				await input.fill(ecardCode);
+				emit("type", `Entered eCard code: ${ecardCode}`, ecardCode);
 
-				console.log("[browseAndVerify] Agent result:", result.message);
+				// 6. Click submit and wait for results
+				const submitBtn = page.locator(SELECTORS.submit);
+				await submitBtn.click();
 
-				// Determine if verified — check for negative signals first
-				const messageLower = result.message.toLowerCase();
+				// Wait for results div to appear
+				const resultsDiv = page.locator(SELECTORS.results);
+				await resultsDiv.waitFor({ state: "visible", timeout: 15000 });
+				await page.waitForTimeout(1000);
+				emit("click", "Clicked submit and waiting for results", "submit");
+
+				// 7. Extract result text
+				const resultText = await resultsDiv.textContent();
+				emit("extract", "Extracted verification results", resultText || "No results found");
+
+				console.log(
+					"[browseAndVerify] Result text:",
+					resultText,
+				);
+
+				// 8. Parse into structured fields
+				const fields = parseResultFields(resultText || "");
+				console.log("[browseAndVerify] Parsed fields:", fields);
+
+				// 9. Determine verified/not verified
+				const messageLower = (resultText || "").toLowerCase();
 				const negativeSignals = [
-					"invalid", "not found", "not valid", "not verified",
-					"error occurred", "verification failed", "expired",
-					"no results", "could not", "unable to verify",
+					"invalid",
+					"not found",
+					"not valid",
+					"not verified",
+					"error occurred",
+					"verification failed",
+					"expired",
+					"no results",
+					"could not",
+					"unable to verify",
 				];
-				const hasNegative = negativeSignals.some((s) => messageLower.includes(s));
-				const positiveSignals = ["valid", "verified", "successfully", "active"];
-				const hasPositive = positiveSignals.some((s) => messageLower.includes(s));
-				const verified = result.success && hasPositive && !hasNegative;
+				const positiveSignals = [
+					"valid",
+					"verified",
+					"successfully",
+					"active",
+				];
+				const hasNegative = negativeSignals.some((s) =>
+					messageLower.includes(s),
+				);
+				const hasPositive = positiveSignals.some((s) =>
+					messageLower.includes(s),
+				);
+				const verified = hasPositive && !hasNegative;
+
+				// Build a readable summary from parsed fields
+				const summary = Object.entries(fields)
+					.map(([k, v]) => `${k}: ${v}`)
+					.join("\n");
 
 				return {
 					data: {
 						result: {
-							success: result.success,
-							message: result.message,
-							actions: (result.actions || []).map((a) => ({
-								type: a.type,
-								reasoning: a.reasoning,
-								action: a.action,
-							})),
+							success: true,
+							message: summary || resultText || "No results text found",
+							actions: [],
 						},
+						fields,
 						liveViewUrl,
-						browserSessionId: sessionId || "",
+						browserSessionId: sessionId,
 						verified,
 					},
 				};
@@ -181,9 +263,9 @@ When to use:
 					error: `Browser verification failed: ${error instanceof Error ? error.message : "Unknown error"}`,
 				};
 			} finally {
-				if (stagehand) {
+				if (browser) {
 					try {
-						await stagehand.close();
+						await browser.close();
 					} catch {
 						// Ignore cleanup errors
 					}
