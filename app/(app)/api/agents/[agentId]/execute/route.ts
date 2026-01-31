@@ -72,7 +72,7 @@ export async function POST(
 				controller.enqueue(encoder.encode(payload));
 			}
 
-			// Signal execution started
+			// Signal execution started (executionId will be sent once the runner creates it)
 			sendEvent("agent-status", { status: "running", agentId: agent.id });
 
 			try {
@@ -85,6 +85,9 @@ export async function POST(
 						userId: session.user.id,
 					},
 					{
+						onExecutionCreated: (executionId: string) => {
+							sendEvent("agent-execution-id", { executionId });
+						},
 						onStep: (step: AgentStep) => {
 							sendEvent("agent-step", step);
 						},

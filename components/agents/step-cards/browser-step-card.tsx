@@ -72,22 +72,22 @@ export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActi
 				<div className="flex flex-col gap-1.5">
 					{/* Header row */}
 					<div className="flex items-center gap-2">
-						<div className="flex items-center justify-center size-5 rounded-full bg-blue-100 dark:bg-blue-900/30 shrink-0">
-							<Globe className="size-3 text-blue-600 dark:text-blue-400" />
+						<div className="flex items-center justify-center size-5 rounded-full bg-[#eeedf8] shrink-0">
+							<Globe className="size-3 text-[#4444cf]" />
 						</div>
 						<span className="text-xs font-medium">
 							Browser Verification
 						</span>
 						{verified !== undefined && (
 							verified
-								? <CheckCircle2 className="size-3 text-green-500 ml-auto" />
+								? <CheckCircle2 className="size-3 text-[#3a9960] ml-auto" />
 								: <XCircle className="size-3 text-destructive ml-auto" />
 						)}
 						{hasError && (
 							<AlertCircle className="size-3 text-destructive ml-auto" />
 						)}
 						{!hasOutput && isActive && (
-							<Loader2 className="size-3 animate-spin text-muted-foreground ml-auto" />
+							<Loader2 className="size-3 animate-spin text-[#8a857d] ml-auto" />
 						)}
 					</div>
 
@@ -99,9 +99,9 @@ export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActi
 								{browserActions.map((action) => (
 									<div
 										key={action.index}
-										className="flex items-start gap-1.5 text-xs text-muted-foreground"
+										className="flex items-start gap-1.5 text-xs text-[#8a857d]"
 									>
-										<div className="flex items-center justify-center size-4 rounded bg-blue-50 dark:bg-blue-900/20 shrink-0 mt-0.5">
+										<div className="flex items-center justify-center size-4 rounded bg-[#eeedf8] shrink-0 mt-0.5">
 											<ActionIcon type={action.type} />
 										</div>
 										<span className="leading-relaxed">
@@ -110,7 +110,7 @@ export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActi
 									</div>
 								))}
 								{isActive && !hasOutput && (
-									<div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+									<div className="flex items-center gap-1.5 text-xs text-[#8a857d]">
 										<Loader2 className="size-3 animate-spin" />
 										<span>Working...</span>
 									</div>
@@ -132,7 +132,7 @@ export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActi
 								<div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
 									{Object.entries(fields).map(([key, value]) => (
 										<div key={key} className="col-span-2 grid grid-cols-subgrid">
-											<span className="text-muted-foreground">{key}</span>
+											<span className="text-[#8a857d]">{key}</span>
 											<span className="font-medium">{value}</span>
 										</div>
 									))}
@@ -140,7 +140,7 @@ export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActi
 							)}
 							{/* Fallback raw message (only if no fields) */}
 							{agentResult?.message && (!fields || Object.keys(fields).length === 0) && (
-								<p className="text-xs text-muted-foreground leading-relaxed">
+								<p className="text-xs text-[#8a857d] leading-relaxed">
 									{agentResult.message}
 								</p>
 							)}

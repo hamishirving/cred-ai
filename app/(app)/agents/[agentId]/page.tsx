@@ -1,12 +1,13 @@
 /**
- * Agent Detail Page
+ * Agent Overview Page
  *
- * Shows agent definition + input form generated from inputSchema.
+ * Split layout: agent details left, runs table right.
+ * Test button opens input dialog, creates execution, navigates to execution page.
  */
 
 import { notFound } from "next/navigation";
 import { getAgentDefinition, serializeAgent } from "@/lib/ai/agents/registry";
-import { AgentDetail } from "./agent-detail";
+import { AgentPage } from "./agent-page";
 
 export default async function AgentDetailPage(props: {
 	params: Promise<{ agentId: string }>;
@@ -18,9 +19,5 @@ export default async function AgentDetailPage(props: {
 		notFound();
 	}
 
-	return (
-		<div className="flex flex-col gap-4 p-4 max-w-2xl mx-auto">
-			<AgentDetail agent={serializeAgent(agent)} />
-		</div>
-	);
+	return <AgentPage agent={serializeAgent(agent)} />;
 }

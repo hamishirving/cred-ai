@@ -2,10 +2,16 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { formatDistanceToNow } from "date-fns";
-import Link from "next/link";
+import {
+	type ColumnDef,
+	flexRender,
+	getCoreRowModel,
+	useReactTable,
+	getSortedRowModel,
+	type SortingState,
+} from "@tanstack/react-table";
 import {
 	Bot,
-	Play,
 	Clock,
 	DollarSign,
 	PoundSterling,
@@ -15,15 +21,14 @@ import {
 	X,
 	AlertTriangle,
 	Loader2,
-	Pencil,
-	ChevronRight,
 	Wrench,
-	Shield,
 	Zap,
+	ArrowUpDown,
+	ChevronRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	Table,
 	TableBody,
@@ -35,6 +40,10 @@ import {
 import { cn } from "@/lib/utils";
 import { useOrg } from "@/lib/org-context";
 import type { SerializedAgentDefinition } from "@/lib/ai/agents/types";
+
+// =============================================================================
+// TYPES
+// =============================================================================
 
 interface AgentExecution {
 	id: string;
@@ -51,16 +60,25 @@ interface AgentExecution {
 	createdAt: string;
 }
 
+// =============================================================================
+// CONFIG
+// =============================================================================
+
 const statusConfig = {
-	running: { label: "Running", icon: Loader2, color: "text-blue-600", iconClass: "animate-spin" },
-	completed: { label: "Completed", icon: Check, color: "text-green-600", iconClass: "" },
-	failed: { label: "Failed", icon: X, color: "text-red-600", iconClass: "" },
-	escalated: { label: "Escalated", icon: AlertTriangle, color: "text-amber-600", iconClass: "" },
+	running: { label: "Running", icon: Loader2, color: "text-[#4444cf]", iconClass: "animate-spin" },
+	completed: { label: "Completed", icon: Check, color: "text-[#3a9960]", iconClass: "" },
+	failed: { label: "Failed", icon: X, color: "text-[#c93d4e]", iconClass: "" },
+	escalated: { label: "Escalated", icon: AlertTriangle, color: "text-[#c49332]", iconClass: "" },
 };
 
-/** Estimate hours saved per successful run (mock: 1.5h average) */
+const statusOrder: Record<string, number> = {
+	running: 0,
+	escalated: 1,
+	failed: 2,
+	completed: 3,
+};
+
 const HOURS_PER_RUN = 1.5;
-/** Estimated hourly cost of manual compliance work */
 const HOURLY_RATE_GBP = 35;
 const HOURLY_RATE_USD = 45;
 
@@ -73,17 +91,149 @@ function detectCurrency(orgName: string | undefined): { symbol: string; rate: nu
 	return { symbol: "£", rate: HOURLY_RATE_GBP };
 }
 
+// =============================================================================
+// COLUMN HEADER HELPER
+// =============================================================================
+
+function SortableHeader({ column, children }: { column: { toggleSorting: (desc: boolean) => void; getIsSorted: () => false | "asc" | "desc" }; children: React.ReactNode }) {
+	return (
+		<Button
+			variant="ghost"
+			onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+			className="-ml-2 h-8 px-2 text-xs font-medium text-[#6b6760] hover:text-[#3d3a32] hover:bg-[#f0ede7] cursor-pointer"
+		>
+			{children}
+			<ArrowUpDown className="ml-2 h-3 w-3" />
+		</Button>
+	);
+}
+
+// =============================================================================
+// AGENTS TABLE COLUMNS
+// =============================================================================
+
+const agentColumns: ColumnDef<SerializedAgentDefinition>[] = [
+	{
+		accessorKey: "name",
+		header: ({ column }) => <SortableHeader column={column}>Name</SortableHeader>,
+		cell: ({ row }) => {
+			const agent = row.original;
+			return (
+				<div className="min-w-0">
+					<div className="font-medium text-sm text-[#1c1a15] truncate">
+						{agent.name}
+					</div>
+					<div className="text-xs text-[#8a857d] truncate max-w-[200px]">
+						{agent.description}
+					</div>
+				</div>
+			);
+		},
+	},
+	{
+		accessorFn: (row) => row.trigger.type,
+		id: "trigger",
+		header: ({ column }) => <SortableHeader column={column}>Trigger</SortableHeader>,
+		cell: ({ row }) => (
+			<Badge variant="outline" className="text-xs gap-1">
+				<Zap className="size-2.5" />
+				{row.original.trigger.type}
+			</Badge>
+		),
+	},
+	{
+		accessorFn: (row) => row.tools.length,
+		id: "tools",
+		header: ({ column }) => <SortableHeader column={column}>Tools</SortableHeader>,
+		cell: ({ row }) => (
+			<Badge variant="outline" className="text-xs gap-1">
+				<Wrench className="size-2.5" />
+				{row.original.tools.length}
+			</Badge>
+		),
+	},
+	{
+		id: "chevron",
+		enableSorting: false,
+		cell: () => <ChevronRight className="h-4 w-4 text-[#a8a49c]" />,
+	},
+];
+
+// =============================================================================
+// RUNS TABLE COLUMNS
+// =============================================================================
+
+function createRunColumns(agentNameMap: Record<string, string>): ColumnDef<AgentExecution>[] {
+	return [
+		{
+			accessorFn: (row) => agentNameMap[row.agentId] || row.agentId,
+			id: "agent",
+			header: ({ column }) => <SortableHeader column={column}>Agent</SortableHeader>,
+			cell: ({ row }) => (
+				<span className="text-sm font-medium text-[#1c1a15] truncate block max-w-[160px]">
+					{agentNameMap[row.original.agentId] || row.original.agentId}
+				</span>
+			),
+		},
+		{
+			accessorKey: "status",
+			header: ({ column }) => <SortableHeader column={column}>Status</SortableHeader>,
+			cell: ({ row }) => {
+				const config = statusConfig[row.original.status];
+				const StatusIcon = config.icon;
+				return (
+					<div className="flex items-center gap-1.5">
+						<StatusIcon className={cn("h-4 w-4", config.color, config.iconClass)} />
+						<span className={cn("text-sm", config.color)}>{config.label}</span>
+					</div>
+				);
+			},
+			sortingFn: (rowA, rowB) =>
+				(statusOrder[rowA.original.status] ?? 99) - (statusOrder[rowB.original.status] ?? 99),
+		},
+		{
+			accessorKey: "durationMs",
+			header: ({ column }) => <SortableHeader column={column}>Duration</SortableHeader>,
+			cell: ({ row }) => (
+				<span className="text-sm text-[#8a857d] tabular-nums">
+					{row.original.durationMs
+						? `${(row.original.durationMs / 1000).toFixed(1)}s`
+						: "—"}
+				</span>
+			),
+		},
+		{
+			accessorKey: "createdAt",
+			header: ({ column }) => <SortableHeader column={column}>When</SortableHeader>,
+			cell: ({ row }) => (
+				<span className="text-sm text-[#8a857d] whitespace-nowrap">
+					{formatDistanceToNow(new Date(row.original.createdAt), { addSuffix: true })}
+				</span>
+			),
+		},
+		{
+			id: "chevron",
+			enableSorting: false,
+			cell: () => <ChevronRight className="h-4 w-4 text-[#a8a49c]" />,
+		},
+	];
+}
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }) {
 	const { selectedOrg } = useOrg();
 	const [executions, setExecutions] = useState<AgentExecution[]>([]);
 	const [loadingExecs, setLoadingExecs] = useState(true);
+	const [agentSorting, setAgentSorting] = useState<SortingState>([]);
+	const [runSorting, setRunSorting] = useState<SortingState>([]);
 
-	// Fetch recent executions across all agents
 	useEffect(() => {
 		async function fetchExecutions() {
 			setLoadingExecs(true);
 			try {
-				// Fetch executions for all agents
 				const allExecs: AgentExecution[] = [];
 				for (const agent of agents) {
 					try {
@@ -98,7 +248,6 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 						// Skip individual agent fetch failures
 					}
 				}
-				// Sort by most recent first
 				allExecs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 				setExecutions(allExecs);
 			} catch {
@@ -117,13 +266,7 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 		const totalRuns = executions.length;
 		const hoursSaved = Math.round(completedRuns * HOURS_PER_RUN * 10) / 10;
 		const moneySaved = Math.round(hoursSaved * currency.rate);
-
-		return {
-			totalAgents: agents.length,
-			totalRuns,
-			hoursSaved,
-			moneySaved,
-		};
+		return { totalAgents: agents.length, totalRuns, hoursSaved, moneySaved };
 	}, [executions, agents.length, currency.rate]);
 
 	const agentNameMap = useMemo(() => {
@@ -132,56 +275,78 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 		return map;
 	}, [agents]);
 
+	const runColumns = useMemo(() => createRunColumns(agentNameMap), [agentNameMap]);
+
+	const agentTable = useReactTable({
+		data: agents,
+		columns: agentColumns,
+		getCoreRowModel: getCoreRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+		onSortingChange: setAgentSorting,
+		state: { sorting: agentSorting },
+	});
+
+	const recentExecs = useMemo(() => executions.slice(0, 10), [executions]);
+
+	const runTable = useReactTable({
+		data: recentExecs,
+		columns: runColumns,
+		getCoreRowModel: getCoreRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+		onSortingChange: setRunSorting,
+		state: { sorting: runSorting },
+	});
+
 	return (
-		<div className="flex flex-col gap-4">
+		<div className="flex flex-col gap-6">
 			{/* Stats */}
-			<div className="grid gap-3 md:grid-cols-4">
-				<Card className="border-l-4 border-l-blue-500">
+			<div className="grid gap-4 md:grid-cols-4">
+				<Card className="shadow-none! bg-white border-l-4 border-l-[#4444cf]">
 					<CardContent className="p-3">
 						<div className="flex items-center justify-between">
 							<div>
-								<p className="text-xs text-muted-foreground">Active Agents</p>
-								<p className="text-xl font-bold">{stats.totalAgents}</p>
+								<p className="text-xs text-[#8a857d]">Active Agents</p>
+								<p className="text-xl font-semibold text-[#1c1a15]">{stats.totalAgents}</p>
 							</div>
-							<Bot className="h-6 w-6 text-blue-500 opacity-50" />
+							<Bot className="h-6 w-6 text-[#a8a49c]" />
 						</div>
 					</CardContent>
 				</Card>
-				<Card className="border-l-4 border-l-purple-500">
+				<Card className="shadow-none! bg-white border-l-4 border-l-[#8a7e6b]">
 					<CardContent className="p-3">
 						<div className="flex items-center justify-between">
 							<div>
-								<p className="text-xs text-muted-foreground">Total Runs</p>
-								<p className="text-xl font-bold">{stats.totalRuns}</p>
+								<p className="text-xs text-[#8a857d]">Total Runs</p>
+								<p className="text-xl font-semibold text-[#1c1a15]">{stats.totalRuns}</p>
 							</div>
-							<Activity className="h-6 w-6 text-purple-500 opacity-50" />
+							<Activity className="h-6 w-6 text-[#a8a49c]" />
 						</div>
 					</CardContent>
 				</Card>
-				<Card className="border-l-4 border-l-amber-500">
+				<Card className="shadow-none! bg-white border-l-4 border-l-[#c49332]">
 					<CardContent className="p-3">
 						<div className="flex items-center justify-between">
 							<div>
-								<p className="text-xs text-muted-foreground">Hours Saved</p>
-								<p className="text-xl font-bold">{stats.hoursSaved}</p>
+								<p className="text-xs text-[#8a857d]">Hours Saved</p>
+								<p className="text-xl font-semibold text-[#1c1a15]">{stats.hoursSaved}</p>
 							</div>
-							<Timer className="h-6 w-6 text-amber-500 opacity-50" />
+							<Timer className="h-6 w-6 text-[#a8a49c]" />
 						</div>
 					</CardContent>
 				</Card>
-				<Card className="border-l-4 border-l-green-500">
+				<Card className="shadow-none! bg-white border-l-4 border-l-[#3a9960]">
 					<CardContent className="p-3">
 						<div className="flex items-center justify-between">
 							<div>
-								<p className="text-xs text-muted-foreground">Money Saved</p>
-								<p className="text-xl font-bold">
+								<p className="text-xs text-[#8a857d]">Money Saved</p>
+								<p className="text-xl font-semibold text-[#1c1a15]">
 									{currency.symbol}{stats.moneySaved.toLocaleString()}
 								</p>
 							</div>
 							{currency.symbol === "$" ? (
-								<DollarSign className="h-6 w-6 text-green-500 opacity-50" />
+								<DollarSign className="h-6 w-6 text-[#a8a49c]" />
 							) : (
-								<PoundSterling className="h-6 w-6 text-green-500 opacity-50" />
+								<PoundSterling className="h-6 w-6 text-[#a8a49c]" />
 							)}
 						</div>
 					</CardContent>
@@ -191,178 +356,141 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 			{/* Split layout: Agents table + Runs table */}
 			<div className="grid gap-4 lg:grid-cols-2">
 				{/* Agents table */}
-				<Card>
-					<CardHeader className="pb-2">
-						<div className="flex items-center justify-between">
-							<CardTitle className="text-sm font-medium flex items-center gap-2">
-								<Bot className="h-4 w-4" />
-								Agents
-							</CardTitle>
-							<Badge variant="secondary" className="text-xs">
-								{agents.length}
-							</Badge>
-						</div>
-					</CardHeader>
-					<CardContent className="p-0">
+				<div>
+					<div className="flex items-center justify-between mb-2 px-1">
+						<h2 className="text-sm font-semibold text-[#1c1a15] flex items-center gap-2">
+							<Bot className="h-4 w-4" />
+							Agents
+						</h2>
+						<Badge variant="secondary" className="text-xs">
+							{agents.length}
+						</Badge>
+					</div>
+					<Card className="shadow-none! bg-white">
 						<Table>
 							<TableHeader>
-								<TableRow>
-									<TableHead>Name</TableHead>
-									<TableHead className="w-[80px]">Trigger</TableHead>
-									<TableHead className="w-[80px]">Tools</TableHead>
-									<TableHead className="w-[100px]"></TableHead>
-								</TableRow>
+								{agentTable.getHeaderGroups().map((headerGroup) => (
+									<TableRow key={headerGroup.id} className="bg-[#faf9f7] hover:bg-[#faf9f7]">
+										{headerGroup.headers.map((header) => (
+											<TableHead
+												key={header.id}
+												className={cn(
+													"text-xs font-medium text-[#6b6760]",
+													header.id === "trigger" && "w-[90px]",
+													header.id === "tools" && "w-[80px]",
+													header.id === "chevron" && "w-[40px]",
+													)}
+											>
+												{header.isPlaceholder
+													? null
+													: flexRender(header.column.columnDef.header, header.getContext())}
+											</TableHead>
+										))}
+									</TableRow>
+								))}
 							</TableHeader>
 							<TableBody>
-								{agents.length > 0 ? (
-									agents.map((agent) => (
-										<TableRow key={agent.id}>
-											<TableCell>
-												<div className="min-w-0">
-													<div className="font-medium text-sm truncate">
-														{agent.name}
-													</div>
-													<div className="text-xs text-muted-foreground truncate max-w-[200px]">
-														{agent.description}
-													</div>
-												</div>
-											</TableCell>
-											<TableCell>
-												<Badge variant="outline" className="text-xs gap-1">
-													<Zap className="size-2.5" />
-													{agent.trigger.type}
-												</Badge>
-											</TableCell>
-											<TableCell>
-												<Badge variant="outline" className="text-xs gap-1">
-													<Wrench className="size-2.5" />
-													{agent.tools.length}
-												</Badge>
-											</TableCell>
-											<TableCell>
-												<div className="flex items-center gap-1 justify-end">
-													<Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
-														<Link href={`/agents/${agent.id}/edit`}>
-															<Pencil className="size-3" />
-														</Link>
-													</Button>
-													<Button size="sm" className="h-7" asChild>
-														<Link href={`/agents/${agent.id}`}>
-															<Play className="size-3 mr-1" />
-															Run
-														</Link>
-													</Button>
-												</div>
-											</TableCell>
+								{agentTable.getRowModel().rows.length > 0 ? (
+									agentTable.getRowModel().rows.map((row) => (
+										<TableRow
+											key={row.id}
+											className="bg-white cursor-pointer hover:bg-[#f7f5f0]"
+											onClick={() => window.location.href = `/agents/${row.original.id}`}
+										>
+											{row.getVisibleCells().map((cell) => (
+												<TableCell key={cell.id}>
+													{flexRender(cell.column.columnDef.cell, cell.getContext())}
+												</TableCell>
+											))}
 										</TableRow>
 									))
 								) : (
-									<TableRow>
-										<TableCell colSpan={4} className="h-24 text-center">
+									<TableRow className="bg-white">
+										<TableCell colSpan={agentColumns.length} className="h-24 text-center">
 											<div className="flex flex-col items-center">
-												<Bot className="h-8 w-8 text-muted-foreground mb-2" />
-												<p className="text-sm text-muted-foreground">
-													No agents registered
-												</p>
+												<Bot className="h-8 w-8 text-[#a8a49c] mb-2" />
+												<p className="text-sm text-[#8a857d]">No agents registered</p>
 											</div>
 										</TableCell>
 									</TableRow>
 								)}
 							</TableBody>
-						</Table>
-					</CardContent>
-				</Card>
+							</Table>
+					</Card>
+				</div>
 
 				{/* Recent runs table */}
-				<Card>
-					<CardHeader className="pb-2">
-						<div className="flex items-center justify-between">
-							<CardTitle className="text-sm font-medium flex items-center gap-2">
-								<Activity className="h-4 w-4" />
-								Recent Runs
-							</CardTitle>
-							<Badge variant="secondary" className="text-xs">
-								{executions.length}
-							</Badge>
-						</div>
-					</CardHeader>
-					<CardContent className="p-0">
+				<div>
+					<div className="flex items-center justify-between mb-2 px-1">
+						<h2 className="text-sm font-semibold text-[#1c1a15] flex items-center gap-2">
+							<Activity className="h-4 w-4" />
+							Recent Runs
+						</h2>
+						<Badge variant="secondary" className="text-xs">
+							{executions.length}
+						</Badge>
+					</div>
+					<Card className="shadow-none! bg-white">
 						{loadingExecs ? (
 							<div className="flex items-center justify-center py-12">
-								<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+								<Loader2 className="h-6 w-6 animate-spin text-[#a8a49c]" />
 							</div>
 						) : (
 							<Table>
 								<TableHeader>
-									<TableRow>
-										<TableHead className="w-[35%]">Agent</TableHead>
-										<TableHead className="w-[20%]">Status</TableHead>
-										<TableHead className="w-[20%]">Duration</TableHead>
-										<TableHead className="w-[25%]">When</TableHead>
-									</TableRow>
+									{runTable.getHeaderGroups().map((headerGroup) => (
+										<TableRow key={headerGroup.id} className="bg-[#faf9f7] hover:bg-[#faf9f7]">
+											{headerGroup.headers.map((header) => (
+												<TableHead
+													key={header.id}
+													className={cn(
+														"text-xs font-medium text-[#6b6760]",
+														header.id === "agent" && "w-[35%]",
+														header.id === "status" && "w-[20%]",
+														header.id === "durationMs" && "w-[18%]",
+														header.id === "createdAt" && "w-[22%]",
+														header.id === "chevron" && "w-[40px]",
+													)}
+												>
+													{header.isPlaceholder
+														? null
+														: flexRender(header.column.columnDef.header, header.getContext())}
+												</TableHead>
+											))}
+										</TableRow>
+									))}
 								</TableHeader>
 								<TableBody>
-									{executions.length > 0 ? (
-										executions.slice(0, 10).map((exec) => {
-											const config = statusConfig[exec.status];
-											const StatusIcon = config.icon;
-											return (
-												<TableRow key={exec.id}>
-													<TableCell>
-														<Link
-															href={`/agents/${exec.agentId}/executions`}
-															className="text-sm font-medium hover:underline truncate block max-w-[160px]"
-														>
-															{agentNameMap[exec.agentId] || exec.agentId}
-														</Link>
+									{runTable.getRowModel().rows.length > 0 ? (
+										runTable.getRowModel().rows.map((row) => (
+											<TableRow
+												key={row.id}
+												className="bg-white cursor-pointer hover:bg-[#f7f5f0]"
+												onClick={() => window.location.href = `/agents/${row.original.agentId}/executions/${row.original.id}`}
+											>
+												{row.getVisibleCells().map((cell) => (
+													<TableCell key={cell.id}>
+														{flexRender(cell.column.columnDef.cell, cell.getContext())}
 													</TableCell>
-													<TableCell>
-														<div className="flex items-center gap-1.5">
-															<StatusIcon
-																className={cn("h-3.5 w-3.5", config.color, config.iconClass)}
-															/>
-															<span className={cn("text-xs", config.color)}>
-																{config.label}
-															</span>
-														</div>
-													</TableCell>
-													<TableCell>
-														<span className="text-xs text-muted-foreground">
-															{exec.durationMs
-																? `${(exec.durationMs / 1000).toFixed(1)}s`
-																: "-"}
-														</span>
-													</TableCell>
-													<TableCell>
-														<span className="text-xs text-muted-foreground whitespace-nowrap">
-															{formatDistanceToNow(new Date(exec.createdAt), {
-																addSuffix: true,
-															})}
-														</span>
-													</TableCell>
-												</TableRow>
-											);
-										})
+												))}
+											</TableRow>
+										))
 									) : (
-										<TableRow>
-											<TableCell colSpan={4} className="h-24 text-center">
+										<TableRow className="bg-white">
+											<TableCell colSpan={runColumns.length} className="h-24 text-center">
 												<div className="flex flex-col items-center">
-													<Clock className="h-8 w-8 text-muted-foreground mb-2" />
-													<p className="text-sm text-muted-foreground">
-														No runs yet
-													</p>
-													<p className="text-xs text-muted-foreground">
-														Run an agent to see results here
-													</p>
+													<Clock className="h-8 w-8 text-[#a8a49c] mb-2" />
+													<p className="text-sm text-[#8a857d]">No runs yet</p>
+													<p className="text-xs text-[#8a857d]">Run an agent to see results here</p>
 												</div>
 											</TableCell>
 										</TableRow>
 									)}
 								</TableBody>
-							</Table>
+								</Table>
 						)}
-					</CardContent>
-				</Card>
+					</Card>
+				</div>
 			</div>
 		</div>
 	);

@@ -92,6 +92,8 @@ export interface AgentStreamCallbacks {
 		durationMs: number;
 		executionId: string;
 	}) => void;
+	/** Called when the execution record is created (provides executionId) */
+	onExecutionCreated?: (executionId: string) => void;
 	/** Called on error */
 	onError: (error: Error) => void;
 }
@@ -124,6 +126,7 @@ export async function executeAgent(
 			model: "claude-sonnet-4-5",
 		});
 		executionId = execution.id;
+		callbacks.onExecutionCreated?.(executionId);
 
 		// Assemble dynamic context if the agent provides a resolver
 		const dynamicContext = agent.dynamicContext

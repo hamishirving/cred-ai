@@ -132,8 +132,8 @@ export function ExecutionTimeline({
 
 			{/* Browser actions preview before the tool step has completed */}
 			{status === "running" && browserActions.length > 0 && !steps.some((s) => s.type === "tool-call" && s.toolName === "browseAndVerify") && (
-				<div className="flex flex-col gap-1 p-3 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20">
-					<div className="flex items-center gap-2 text-xs font-medium text-blue-700 dark:text-blue-300">
+				<div className="flex flex-col gap-1 p-3 rounded-lg border border-[#4444cf]/20 bg-[#eeedf8]/50">
+					<div className="flex items-center gap-2 text-xs font-medium text-[#4444cf]">
 						<Loader2 className="size-3 animate-spin" />
 						Browser working...
 					</div>
@@ -141,9 +141,9 @@ export function ExecutionTimeline({
 						{browserActions.map((action) => (
 							<div
 								key={action.index}
-								className="flex items-start gap-1.5 text-xs text-muted-foreground"
+								className="flex items-start gap-1.5 text-xs text-[#8a857d]"
 							>
-								<div className="flex items-center justify-center size-4 rounded bg-blue-50 dark:bg-blue-900/20 shrink-0 mt-0.5">
+								<div className="flex items-center justify-center size-4 rounded bg-[#eeedf8] shrink-0 mt-0.5">
 									<PreviewActionIcon type={action.type} />
 								</div>
 								<span className="leading-relaxed">
@@ -156,7 +156,7 @@ export function ExecutionTimeline({
 			)}
 
 			{status === "running" && (
-				<div className="flex items-center gap-2 text-xs text-muted-foreground p-2">
+				<div className="flex items-center gap-2 text-xs text-[#8a857d] p-2">
 					<Loader2 className="size-3 animate-spin" />
 					<span>Thinking...</span>
 				</div>

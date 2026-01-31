@@ -10,7 +10,7 @@ export async function GET(
 	try {
 		const executions = await getAgentExecutionsByAgentId({
 			agentId,
-			limit: 20,
+			limit: 100,
 		});
 
 		return NextResponse.json({ executions });

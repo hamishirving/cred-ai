@@ -130,7 +130,7 @@ export function SessionReplay({ sessionId }: SessionReplayProps) {
 				<button
 					type="button"
 					onClick={loadReplay}
-					className="flex items-center gap-1 text-xs text-blue-600 hover:underline cursor-pointer ml-1"
+					className="flex items-center gap-1 text-xs text-[#4444cf] hover:underline cursor-pointer ml-1"
 				>
 					<RefreshCw className="size-3" />
 					Retry
@@ -150,10 +150,10 @@ export function SessionReplay({ sessionId }: SessionReplayProps) {
 					style={{ aspectRatio: "16 / 10" }}
 				>
 					<div className="flex flex-col items-center gap-2">
-						<div className="flex items-center justify-center size-10 rounded-full bg-blue-600 text-white shadow-sm">
+						<div className="flex items-center justify-center size-10 rounded-full bg-[#4444cf] text-white">
 							<Play className="size-4 ml-0.5" />
 						</div>
-						<span className="text-xs text-muted-foreground">Watch session replay</span>
+						<span className="text-xs text-[#8a857d]">Watch session replay</span>
 					</div>
 				</button>
 			)}

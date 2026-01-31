@@ -19,17 +19,17 @@ interface AgentCardProps {
 
 export function AgentCard({ agent }: AgentCardProps) {
 	return (
-		<Card className="flex flex-col">
+		<Card className="flex flex-col shadow-none! bg-white">
 			<CardHeader className="pb-2">
 				<div className="flex items-start justify-between gap-2">
-					<CardTitle className="text-sm font-medium">
+					<CardTitle className="text-sm font-semibold text-[#1c1a15]">
 						{agent.name}
 					</CardTitle>
 					<Badge variant="secondary" className="text-xs shrink-0">
 						v{agent.version}
 					</Badge>
 				</div>
-				<CardDescription className="text-xs line-clamp-2">
+				<CardDescription className="text-xs text-[#8a857d] line-clamp-2">
 					{agent.description}
 				</CardDescription>
 			</CardHeader>

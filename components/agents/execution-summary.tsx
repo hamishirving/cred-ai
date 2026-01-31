@@ -26,12 +26,12 @@ export function ExecutionSummary({ result }: ExecutionSummaryProps) {
 	const toolSteps = result.steps.filter((s) => s.type === "tool-call").length;
 
 	return (
-		<div className="flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t">
+		<div className="flex items-center gap-3 text-xs text-[#8a857d] pt-2 border-t border-[#e5e2db]">
 			<span className="flex items-center gap-1">
 				{isCompleted ? (
-					<CheckCircle2 className="size-3 text-green-600" />
+					<CheckCircle2 className="size-3 text-[#3a9960]" />
 				) : (
-					<XCircle className="size-3 text-red-600" />
+					<XCircle className="size-3 text-[#c93d4e]" />
 				)}
 				{isCompleted ? "Completed" : "Failed"}
 			</span>
@@ -64,7 +64,7 @@ export function StatusBadge({ status }: { status: string }) {
 			return (
 				<Badge
 					variant="default"
-					className="gap-1 bg-green-600 hover:bg-green-700"
+					className="gap-1 bg-[#3a9960] hover:bg-[#2e7a4d]"
 				>
 					<CheckCircle2 className="size-3" />
 					Completed

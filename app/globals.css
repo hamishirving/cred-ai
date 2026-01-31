@@ -63,7 +63,7 @@
 	--chart-3: #fdbb00;
 	--chart-4: #f32e65;
 	--chart-5: #3030bc;
-	--sidebar-background: #f8f9ff;
+	--sidebar-background: #ffffff;
 	--sidebar-foreground: #282b31;
 	--sidebar-primary: #4444cf;
 	--sidebar-primary-foreground: #ffffff;
@@ -73,7 +73,7 @@
 	--sidebar-ring: #4444cf;
 	/* border radius unit - tight for compact feel */
 	--radius: 0.375rem;
-	--sidebar: #f8f9ff;
+	--sidebar: #ffffff;
 }
 
 /* define design tokens (dark mode) */
