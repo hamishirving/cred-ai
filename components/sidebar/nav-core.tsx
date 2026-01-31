@@ -8,6 +8,7 @@ import {
 	MessageSquare,
 	Phone,
 	Users,
+	Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -49,6 +50,11 @@ export function NavCore() {
 			title: terminology.candidates,
 			url: "/candidates",
 			icon: Users,
+		},
+		{
+			title: "Skills",
+			url: "/skills",
+			icon: Zap,
 		},
 		{
 			title: "Voice",

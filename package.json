@@ -19,6 +19,8 @@
 		"@ai-sdk/anthropic": "^3.0.1",
 		"@ai-sdk/provider": "3.0.0",
 		"@ai-sdk/react": "3.0.3",
+		"@browserbasehq/sdk": "^2.6.0",
+		"@browserbasehq/stagehand": "^3.0.8",
 		"@codemirror/lang-javascript": "^6.2.2",
 		"@codemirror/lang-python": "^6.1.6",
 		"@codemirror/state": "^6.5.0",

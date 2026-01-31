@@ -52,6 +52,9 @@ import {
 	type NewTask,
 	activities,
 	type Activity,
+	skillExecutions,
+	type SkillExecution,
+	type NewSkillExecution,
 } from "./schema";
 import type {
 	TranscriptMessage,
@@ -1182,4 +1185,97 @@ export async function getProfileTimeline({
 		startDate,
 		endDate,
 	};
+}
+
+// ============================================
+// Skill Execution Queries
+// ============================================
+
+export async function createSkillExecution({
+	skillId,
+	orgId,
+	userId,
+	triggerType,
+	input,
+	model,
+}: {
+	skillId: string;
+	orgId?: string;
+	userId?: string;
+	triggerType?: "manual" | "schedule" | "event";
+	input?: Record<string, unknown>;
+	model?: string;
+}): Promise<SkillExecution> {
+	const [result] = await db
+		.insert(skillExecutions)
+		.values({
+			skillId,
+			orgId: orgId || undefined,
+			userId: userId || undefined,
+			triggerType: triggerType || "manual",
+			status: "running",
+			input,
+			steps: [],
+			model,
+		})
+		.returning();
+	return result;
+}
+
+export async function updateSkillExecution({
+	id,
+	status,
+	steps,
+	output,
+	tokensUsed,
+	durationMs,
+}: {
+	id: string;
+	status?: "running" | "completed" | "failed" | "escalated";
+	steps?: import("@/lib/ai/skills/types").SkillStep[];
+	output?: Record<string, unknown>;
+	tokensUsed?: { inputTokens: number; outputTokens: number; totalTokens: number };
+	durationMs?: number;
+}): Promise<void> {
+	const updates: Partial<NewSkillExecution> = {};
+	if (status) updates.status = status;
+	if (steps) updates.steps = steps;
+	if (output) updates.output = output;
+	if (tokensUsed) updates.tokensUsed = tokensUsed;
+	if (durationMs !== undefined) updates.durationMs = durationMs;
+	if (status === "completed" || status === "failed" || status === "escalated") {
+		updates.completedAt = new Date();
+	}
+
+	await db
+		.update(skillExecutions)
+		.set(updates)
+		.where(eq(skillExecutions.id, id));
+}
+
+export async function getSkillExecution({
+	id,
+}: {
+	id: string;
+}): Promise<SkillExecution | null> {
+	const [result] = await db
+		.select()
+		.from(skillExecutions)
+		.where(eq(skillExecutions.id, id));
+	return result || null;
+}
+
+export async function getSkillExecutionsBySkillId({
+	skillId,
+	limit = 20,
+}: {
+	skillId: string;
+	limit?: number;
+}): Promise<SkillExecution[]> {
+	return db
+		.select()
+		.from(skillExecutions)
+		.where(eq(skillExecutions.skillId, skillId))
+		.orderBy(desc(skillExecutions.createdAt))
+		.limit(limit);
 }

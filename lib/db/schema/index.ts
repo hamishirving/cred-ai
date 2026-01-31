@@ -62,3 +62,6 @@ export * from "./activities";
 export * from "./escalations";
 export * from "./escalation-options";
 export * from "./tasks";
+
+// AI Skills Domain
+export * from "./skill-executions";
