@@ -36,6 +36,13 @@
       "when": 1769800632124,
       "tag": "0004_gorgeous_terrax",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1769854187024,
+      "tag": "0005_shallow_lethal_legion",
+      "breakpoints": true
     }
   ]
 }

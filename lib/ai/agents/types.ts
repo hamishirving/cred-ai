@@ -1,11 +1,170 @@
 /**
  * AI Agent Type Definitions
  *
- * Core abstractions for the AI Agent Platform.
- * Agents analyze context and produce insights that are routed to audiences via channels.
+ * Core type definitions for both:
+ * - The agent execution system (AgentDefinition, AgentStep, etc.)
+ * - The AI Agent Platform (Agent, AgentContext, AgentInsight, etc.)
  *
  * @see docs/PRD-AI-AGENTS.md for architecture details
  */
+
+import type { z } from "zod";
+
+// ============================================
+// Agent Execution System Types
+// ============================================
+
+/**
+ * An agent definition — static config that describes what an agent can do.
+ */
+export interface AgentDefinition {
+	/** Unique identifier (e.g. "verify-bls-certificate") */
+	id: string;
+	/** Human-readable name */
+	name: string;
+	/** What this agent does */
+	description: string;
+	/** Agent version for tracking */
+	version: string;
+
+	/** Layer 3 prompt — agent-specific instructions */
+	systemPrompt: string;
+
+	/** Tool names this agent can access (subset of all available tools) */
+	tools: string[];
+
+	/** Input schema — what the user provides to invoke the agent */
+	inputSchema: z.ZodObject<z.ZodRawShape>;
+
+	/** Execution constraints */
+	constraints: {
+		/** Max agent steps (maps to AI SDK stopWhen) */
+		maxSteps: number;
+		/** Timeout in ms */
+		maxExecutionTime: number;
+	};
+
+	/** Trigger config (for display; playground is manual only) */
+	trigger: {
+		type: "schedule" | "event" | "manual";
+		description: string;
+	};
+
+	/** Oversight config */
+	oversight: {
+		mode: "auto" | "review-before" | "notify-after";
+	};
+
+	/** Optional function to assemble dynamic context (Layer 4) */
+	dynamicContext?: (ctx: AgentExecutionContext) => Promise<string>;
+}
+
+/**
+ * Context provided when executing an agent.
+ */
+export interface AgentExecutionContext {
+	/** Input values from the user (matches inputSchema) */
+	input: Record<string, unknown>;
+	/** Organisation ID */
+	orgId: string;
+	/** Organisation-level AI prompt (Layer 2) */
+	orgPrompt?: string;
+	/** User who triggered the execution */
+	userId: string;
+}
+
+/**
+ * A captured step from the agent's execution.
+ */
+export interface AgentStep {
+	/** Step index (1-based) */
+	index: number;
+	/** Step type */
+	type: "tool-call" | "reasoning" | "text";
+	/** Tool name (if tool-call) */
+	toolName?: string;
+	/** Tool input (if tool-call) */
+	toolInput?: Record<string, unknown>;
+	/** Tool output (if tool-call) */
+	toolOutput?: unknown;
+	/** Text content (if reasoning/text) */
+	content?: string;
+	/** Step duration in ms */
+	durationMs?: number;
+	/** When this step occurred */
+	timestamp: string;
+}
+
+/**
+ * Serialisable agent data for passing from server to client components.
+ * Strips Zod schema and functions, replaces with plain field metadata.
+ */
+export interface SerializedAgentDefinition {
+	id: string;
+	name: string;
+	description: string;
+	version: string;
+	systemPrompt: string;
+	tools: string[];
+	/** Input field metadata extracted from the Zod schema */
+	inputFields: Array<{
+		key: string;
+		label: string;
+		description: string;
+		required: boolean;
+	}>;
+	constraints: {
+		maxSteps: number;
+		maxExecutionTime: number;
+	};
+	trigger: {
+		type: "schedule" | "event" | "manual";
+		description: string;
+	};
+	oversight: {
+		mode: "auto" | "review-before" | "notify-after";
+	};
+}
+
+/**
+ * A browser action emitted in real-time during a browseAndVerify step.
+ */
+export interface BrowserAction {
+	/** Action index within the browser step */
+	index: number;
+	/** What the agent did */
+	type: string;
+	/** Agent's reasoning for this action */
+	reasoning?: string;
+	/** Specific action taken (e.g. "click", "type", "goto") */
+	action?: string;
+	/** When this action occurred */
+	timestamp: string;
+}
+
+/**
+ * Final result from an agent execution.
+ */
+export interface AgentExecutionResult {
+	/** Execution status */
+	status: "completed" | "failed" | "escalated";
+	/** Summary text from the agent */
+	summary: string;
+	/** All steps taken */
+	steps: AgentStep[];
+	/** Token usage */
+	usage: {
+		inputTokens: number;
+		outputTokens: number;
+		totalTokens: number;
+	};
+	/** Total duration in ms */
+	durationMs: number;
+}
+
+// ============================================
+// AI Agent Platform Types (Compliance Companion)
+// ============================================
 
 // ============================================
 // Audience Types

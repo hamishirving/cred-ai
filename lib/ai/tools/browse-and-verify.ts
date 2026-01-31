@@ -10,7 +10,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { chromium } from "playwright-core";
 import Browserbase from "@browserbasehq/sdk";
-import type { BrowserAction } from "@/lib/ai/skills/types";
+import type { BrowserAction } from "@/lib/ai/agents/types";
 
 /** XPath selectors for the AHA verification page */
 const SELECTORS = {

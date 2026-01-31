@@ -52,9 +52,12 @@ import {
 	type NewTask,
 	activities,
 	type Activity,
-	skillExecutions,
-	type SkillExecution,
-	type NewSkillExecution,
+	agents,
+	type Agent,
+	type NewAgent,
+	agentExecutions,
+	type AgentExecution,
+	type NewAgentExecution,
 } from "./schema";
 import type {
 	TranscriptMessage,
@@ -1188,28 +1191,28 @@ export async function getProfileTimeline({
 }
 
 // ============================================
-// Skill Execution Queries
+// Agent Execution Queries
 // ============================================
 
-export async function createSkillExecution({
-	skillId,
+export async function createAgentExecution({
+	agentId,
 	orgId,
 	userId,
 	triggerType,
 	input,
 	model,
 }: {
-	skillId: string;
+	agentId: string;
 	orgId?: string;
 	userId?: string;
 	triggerType?: "manual" | "schedule" | "event";
 	input?: Record<string, unknown>;
 	model?: string;
-}): Promise<SkillExecution> {
+}): Promise<AgentExecution> {
 	const [result] = await db
-		.insert(skillExecutions)
+		.insert(agentExecutions)
 		.values({
-			skillId,
+			agentId,
 			orgId: orgId || undefined,
 			userId: userId || undefined,
 			triggerType: triggerType || "manual",
@@ -1222,7 +1225,7 @@ export async function createSkillExecution({
 	return result;
 }
 
-export async function updateSkillExecution({
+export async function updateAgentExecution({
 	id,
 	status,
 	steps,
@@ -1232,12 +1235,12 @@ export async function updateSkillExecution({
 }: {
 	id: string;
 	status?: "running" | "completed" | "failed" | "escalated";
-	steps?: import("@/lib/ai/skills/types").SkillStep[];
+	steps?: import("@/lib/ai/agents/types").AgentStep[];
 	output?: Record<string, unknown>;
 	tokensUsed?: { inputTokens: number; outputTokens: number; totalTokens: number };
 	durationMs?: number;
 }): Promise<void> {
-	const updates: Partial<NewSkillExecution> = {};
+	const updates: Partial<NewAgentExecution> = {};
 	if (status) updates.status = status;
 	if (steps) updates.steps = steps;
 	if (output) updates.output = output;
@@ -1248,34 +1251,103 @@ export async function updateSkillExecution({
 	}
 
 	await db
-		.update(skillExecutions)
+		.update(agentExecutions)
 		.set(updates)
-		.where(eq(skillExecutions.id, id));
+		.where(eq(agentExecutions.id, id));
 }
 
-export async function getSkillExecution({
+export async function getAgentExecution({
 	id,
 }: {
 	id: string;
-}): Promise<SkillExecution | null> {
+}): Promise<AgentExecution | null> {
 	const [result] = await db
 		.select()
-		.from(skillExecutions)
-		.where(eq(skillExecutions.id, id));
+		.from(agentExecutions)
+		.where(eq(agentExecutions.id, id));
 	return result || null;
 }
 
-export async function getSkillExecutionsBySkillId({
-	skillId,
+export async function getAgentExecutionsByAgentId({
+	agentId,
 	limit = 20,
 }: {
-	skillId: string;
+	agentId: string;
 	limit?: number;
-}): Promise<SkillExecution[]> {
+}): Promise<AgentExecution[]> {
 	return db
 		.select()
-		.from(skillExecutions)
-		.where(eq(skillExecutions.skillId, skillId))
-		.orderBy(desc(skillExecutions.createdAt))
+		.from(agentExecutions)
+		.where(eq(agentExecutions.agentId, agentId))
+		.orderBy(desc(agentExecutions.createdAt))
 		.limit(limit);
+}
+
+// ============================================
+// Agent Definition Queries
+// ============================================
+
+export async function getAgentById({
+	id,
+}: {
+	id: string;
+}): Promise<Agent | null> {
+	const [result] = await db
+		.select()
+		.from(agents)
+		.where(eq(agents.id, id));
+	return result || null;
+}
+
+export async function getAgentByCode({
+	code,
+}: {
+	code: string;
+}): Promise<Agent | null> {
+	const [result] = await db
+		.select()
+		.from(agents)
+		.where(eq(agents.code, code));
+	return result || null;
+}
+
+export async function getAllAgents({
+	orgId,
+}: {
+	orgId?: string;
+} = {}): Promise<Agent[]> {
+	if (orgId) {
+		return db
+			.select()
+			.from(agents)
+			.where(eq(agents.isActive, true))
+			.orderBy(asc(agents.name));
+	}
+	return db
+		.select()
+		.from(agents)
+		.where(eq(agents.isActive, true))
+		.orderBy(asc(agents.name));
+}
+
+export async function createAgentDefinition(
+	data: NewAgent,
+): Promise<Agent> {
+	const [result] = await db
+		.insert(agents)
+		.values(data)
+		.returning();
+	return result;
+}
+
+export async function updateAgentDefinition({
+	id,
+	...data
+}: Partial<NewAgent> & { id: string }): Promise<Agent | null> {
+	const [result] = await db
+		.update(agents)
+		.set({ ...data, updatedAt: new Date() })
+		.where(eq(agents.id, id))
+		.returning();
+	return result || null;
 }
