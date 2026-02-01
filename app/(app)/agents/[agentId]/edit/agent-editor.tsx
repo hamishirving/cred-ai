@@ -3,9 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
 	Select,
@@ -83,23 +81,30 @@ export function AgentEditor({ agent, availableTools }: AgentEditorProps) {
 	}
 
 	return (
-		<div className="flex flex-col h-full">
+		<div className="flex flex-col h-full bg-[#f7f5f0]">
 			{/* Header */}
-			<div className="flex items-center justify-between p-4 border-b">
-				<div className="flex items-center gap-2">
-					<Button variant="ghost" size="sm" asChild>
+			<div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e2db] bg-white">
+				<div className="flex items-center gap-3">
+					<Button variant="ghost" size="sm" className="text-[#6b6760] hover:text-[#1c1a15]" asChild>
 						<Link href={`/agents/${agent.code}`}>
 							<ArrowLeft className="size-3 mr-1" />
 							Back
 						</Link>
 					</Button>
-					<h1 className="text-sm font-semibold">Edit Agent</h1>
+					<h1 className="text-2xl font-semibold text-[#1c1a15]" style={{ textWrap: "balance" }}>
+						Edit Agent
+					</h1>
 				</div>
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-3">
 					{error && (
 						<span className="text-xs text-destructive">{error}</span>
 					)}
-					<Button size="sm" onClick={handleSave} disabled={saving}>
+					<Button
+						size="sm"
+						onClick={handleSave}
+						disabled={saving}
+						className="bg-blue-600 hover:bg-blue-700 text-white"
+					>
 						{saving ? (
 							<Loader2 className="size-3 mr-1 animate-spin" />
 						) : (
@@ -111,142 +116,125 @@ export function AgentEditor({ agent, availableTools }: AgentEditorProps) {
 			</div>
 
 			{/* Split layout */}
-			<div className="flex flex-1 min-h-0">
+			<div className="flex flex-1 min-h-0 px-6 py-6 gap-6">
 				{/* Left panel — settings */}
-				<div className="w-1/2 border-r overflow-y-auto p-4 flex flex-col gap-4">
-					{/* Basic info */}
-					<div className="flex flex-col gap-2">
-						<div className="flex flex-col gap-1">
-							<Label className="text-xs">Name</Label>
+				<div className="w-1/2 overflow-y-auto flex flex-col gap-4">
+					{/* Basic info card */}
+					<div className="bg-white border border-[#e5e2db] rounded-lg p-5 space-y-4">
+						<h2 className="text-base font-medium text-[#1c1a15]">Basic Info</h2>
+						<div className="flex flex-col gap-1.5">
+							<label className="text-xs font-medium text-[#6b6760]">Name</label>
 							<Input
-								className="h-8 text-sm"
+								className="h-8 text-sm border-[#ccc8c0]"
 								value={name}
 								onChange={(e) => setName(e.target.value)}
 							/>
 						</div>
-						<div className="flex flex-col gap-1">
-							<Label className="text-xs">Description</Label>
+						<div className="flex flex-col gap-1.5">
+							<label className="text-xs font-medium text-[#6b6760]">Description</label>
 							<Textarea
-								className="text-xs min-h-[60px] resize-none"
+								className="text-sm min-h-[60px] resize-none border-[#ccc8c0]"
 								value={description}
 								onChange={(e) => setDescription(e.target.value)}
 							/>
 						</div>
-						<div className="flex flex-col gap-1">
-							<Label className="text-xs">Version</Label>
+						<div className="flex flex-col gap-1.5">
+							<label className="text-xs font-medium text-[#6b6760]">Version</label>
 							<Input
-								className="h-8 text-xs w-24"
+								className="h-8 text-sm w-24 border-[#ccc8c0]"
 								value={version}
 								onChange={(e) => setVersion(e.target.value)}
 							/>
 						</div>
 					</div>
 
-					{/* Trigger */}
-					<Card>
-						<CardHeader className="pb-2">
-							<CardTitle className="text-xs">Trigger</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<TriggerConfig trigger={trigger} onChange={setTrigger} />
-						</CardContent>
-					</Card>
+					{/* Trigger card */}
+					<div className="bg-white border border-[#e5e2db] rounded-lg p-5 space-y-4">
+						<h2 className="text-base font-medium text-[#1c1a15]">Trigger</h2>
+						<TriggerConfig trigger={trigger} onChange={setTrigger} />
+					</div>
 
-					{/* Conditions */}
-					<Card>
-						<CardHeader className="pb-2">
-							<CardTitle className="text-xs">Conditions</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<ConditionBuilder groups={conditions} onChange={setConditions} />
-						</CardContent>
-					</Card>
+					{/* Conditions card */}
+					<div className="bg-white border border-[#e5e2db] rounded-lg p-5 space-y-4">
+						<h2 className="text-base font-medium text-[#1c1a15]">Conditions</h2>
+						<ConditionBuilder groups={conditions} onChange={setConditions} />
+					</div>
 
-					{/* Oversight */}
-					<Card>
-						<CardHeader className="pb-2">
-							<CardTitle className="text-xs">Oversight</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<div className="flex flex-col gap-1">
-								<Label className="text-xs">Mode</Label>
-								<Select
-									value={oversight.mode}
-									onValueChange={(v) =>
-										setOversight({ mode: v as AgentOversight["mode"] })
+					{/* Oversight card */}
+					<div className="bg-white border border-[#e5e2db] rounded-lg p-5 space-y-4">
+						<h2 className="text-base font-medium text-[#1c1a15]">Oversight</h2>
+						<div className="flex flex-col gap-1.5">
+							<label className="text-xs font-medium text-[#6b6760]">Mode</label>
+							<Select
+								value={oversight.mode}
+								onValueChange={(v) =>
+									setOversight({ mode: v as AgentOversight["mode"] })
+								}
+							>
+								<SelectTrigger className="h-8 text-sm border-[#ccc8c0]">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="auto" className="text-sm">Auto</SelectItem>
+									<SelectItem value="review-before" className="text-sm">Review before</SelectItem>
+									<SelectItem value="notify-after" className="text-sm">Notify after</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+					</div>
+
+					{/* Tools card */}
+					<div className="bg-white border border-[#e5e2db] rounded-lg p-5 space-y-4">
+						<h2 className="text-base font-medium text-[#1c1a15]">Tools</h2>
+						<ToolSelector selected={tools} onChange={setTools} availableTools={availableTools} />
+					</div>
+
+					{/* Constraints card */}
+					<div className="bg-white border border-[#e5e2db] rounded-lg p-5 space-y-4">
+						<h2 className="text-base font-medium text-[#1c1a15]">Constraints</h2>
+						<div className="flex gap-3">
+							<div className="flex flex-col gap-1.5">
+								<label className="text-xs font-medium text-[#6b6760]">Max steps</label>
+								<Input
+									type="number"
+									className="h-8 text-sm w-20 border-[#ccc8c0]"
+									value={constraints.maxSteps}
+									onChange={(e) =>
+										setConstraints({
+											...constraints,
+											maxSteps: Number.parseInt(e.target.value) || 10,
+										})
 									}
-								>
-									<SelectTrigger className="h-8 text-xs">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="auto" className="text-xs">Auto</SelectItem>
-										<SelectItem value="review-before" className="text-xs">Review before</SelectItem>
-										<SelectItem value="notify-after" className="text-xs">Notify after</SelectItem>
-									</SelectContent>
-								</Select>
+								/>
 							</div>
-						</CardContent>
-					</Card>
-
-					{/* Tools */}
-					<Card>
-						<CardHeader className="pb-2">
-							<CardTitle className="text-xs">Tools</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<ToolSelector selected={tools} onChange={setTools} availableTools={availableTools} />
-						</CardContent>
-					</Card>
-
-					{/* Constraints */}
-					<Card>
-						<CardHeader className="pb-2">
-							<CardTitle className="text-xs">Constraints</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<div className="flex gap-3">
-								<div className="flex flex-col gap-1">
-									<Label className="text-xs">Max steps</Label>
-									<Input
-										type="number"
-										className="h-8 text-xs w-20"
-										value={constraints.maxSteps}
-										onChange={(e) =>
-											setConstraints({
-												...constraints,
-												maxSteps: Number.parseInt(e.target.value) || 10,
-											})
-										}
-									/>
-								</div>
-								<div className="flex flex-col gap-1">
-									<Label className="text-xs">Timeout (ms)</Label>
-									<Input
-										type="number"
-										className="h-8 text-xs w-28"
-										value={constraints.maxExecutionTime}
-										onChange={(e) =>
-											setConstraints({
-												...constraints,
-												maxExecutionTime: Number.parseInt(e.target.value) || 60000,
-											})
-										}
-									/>
-								</div>
+							<div className="flex flex-col gap-1.5">
+								<label className="text-xs font-medium text-[#6b6760]">Timeout (ms)</label>
+								<Input
+									type="number"
+									className="h-8 text-sm w-28 border-[#ccc8c0]"
+									value={constraints.maxExecutionTime}
+									onChange={(e) =>
+										setConstraints({
+											...constraints,
+											maxExecutionTime: Number.parseInt(e.target.value) || 60000,
+										})
+									}
+								/>
 							</div>
-						</CardContent>
-					</Card>
+						</div>
+					</div>
 				</div>
 
 				{/* Right panel — system prompt */}
-				<div className="w-1/2 overflow-y-auto p-4 flex flex-col gap-2">
-					<Label className="text-xs">System Prompt</Label>
-					<Textarea
-						className="flex-1 font-mono text-xs min-h-[500px] resize-none"
-						value={systemPrompt}
-						onChange={(e) => setSystemPrompt(e.target.value)}
-					/>
+				<div className="w-1/2 flex flex-col min-h-0">
+					<div className="bg-white border border-[#e5e2db] rounded-lg p-5 flex flex-col flex-1 min-h-0 gap-4">
+						<h2 className="text-base font-medium text-[#1c1a15]">System Prompt</h2>
+						<Textarea
+							className="flex-1 font-mono text-sm min-h-[500px] resize-none border-[#ccc8c0]"
+							value={systemPrompt}
+							onChange={(e) => setSystemPrompt(e.target.value)}
+						/>
+					</div>
 				</div>
 			</div>
 		</div>

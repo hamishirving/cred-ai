@@ -409,7 +409,7 @@ function PureMultimodalInput({
 			/>
 
 			<PromptInput
-				className="rounded-xl border border-border bg-background p-3 shadow-xs transition-all duration-200 focus-within:border-border hover:border-muted-foreground/50"
+				className="rounded-xl border border-[#ccc8c0] bg-white p-1 shadow-none transition-all duration-200 focus-within:border-[#4444cf] focus-within:ring-1 focus-within:ring-[#4444cf]/20 hover:border-[#8a857d]"
 				onSubmit={(event) => {
 					event.preventDefault();
 					if (status !== "ready") {

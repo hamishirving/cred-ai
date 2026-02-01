@@ -77,6 +77,8 @@ export interface AgentExecutionContext {
 		runCount: number;
 		lastRunAt: Date | null;
 	};
+	/** How this execution was triggered */
+	triggerType?: "manual" | "schedule" | "event";
 }
 
 /**

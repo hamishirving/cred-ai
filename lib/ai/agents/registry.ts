@@ -9,12 +9,14 @@ import type { AgentDefinition, SerializedAgentDefinition } from "./types";
 import { blsVerificationAgent } from "./definitions/bls-verification";
 import { onboardingCompanionAgent } from "./definitions/onboarding-companion";
 import { referenceCheckAgent } from "./definitions/reference-check";
+import { inboundEmailResponderAgent } from "./definitions/inbound-email-responder";
 
 /** All registered agents */
 const agents: Record<string, AgentDefinition> = {
 	[blsVerificationAgent.id]: blsVerificationAgent,
 	[onboardingCompanionAgent.id]: onboardingCompanionAgent,
 	[referenceCheckAgent.id]: referenceCheckAgent,
+	[inboundEmailResponderAgent.id]: inboundEmailResponderAgent,
 };
 
 /**

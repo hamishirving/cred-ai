@@ -27,6 +27,7 @@ import { updateReferenceStatusTool } from "@/lib/ai/tools/update-reference-statu
 import { getLocalProfile } from "@/lib/ai/tools/get-local-profile";
 import { getLocalCompliance } from "@/lib/ai/tools/get-local-compliance";
 import { searchLocalCandidates } from "@/lib/ai/tools/search-local-candidates";
+import { searchKnowledge } from "@/lib/ai/tools/search-knowledge";
 
 /**
  * Registry of all tools available to agents, keyed by name.
@@ -51,6 +52,7 @@ const toolRegistry: Record<string, Tool> = {
 	getLocalProfile: getLocalProfile as Tool,
 	getLocalCompliance: getLocalCompliance as Tool,
 	searchLocalCandidates: searchLocalCandidates as Tool,
+	searchKnowledge: searchKnowledge as Tool,
 };
 
 /** Optional callbacks for context-aware tool resolution */

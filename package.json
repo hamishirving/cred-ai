@@ -76,6 +76,7 @@
 		"postgres": "^3.4.4",
 		"posthog-js": "^1.310.1",
 		"posthog-node": "^5.18.0",
+		"postmark": "^4.0.5",
 		"prosemirror-example-setup": "^1.2.3",
 		"prosemirror-inputrules": "^1.4.0",
 		"prosemirror-markdown": "^1.13.1",

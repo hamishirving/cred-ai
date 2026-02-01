@@ -16,12 +16,14 @@ interface ExecutionTimelineProps {
 
 function StepCard({
 	step,
+	allSteps,
 	liveViewUrl,
 	browserActions,
 	isLastStep,
 	isRunning,
 }: {
 	step: AgentStep;
+	allSteps: AgentStep[];
 	liveViewUrl?: string | null;
 	browserActions?: BrowserAction[];
 	isLastStep: boolean;
@@ -42,7 +44,7 @@ function StepCard({
 		if (step.toolName === "updateDocumentStatus") {
 			return <DecisionStepCard step={step} />;
 		}
-		return <ToolStepCard step={step} />;
+		return <ToolStepCard step={step} allSteps={allSteps} />;
 	}
 
 	return <ReasoningStepCard step={step} />;
@@ -118,6 +120,7 @@ export function ExecutionTimeline({
 				<div key={`${step.index}-${step.type}-${i}`}>
 					<StepCard
 						step={step}
+						allSteps={orderedSteps}
 						liveViewUrl={liveViewUrl}
 						browserActions={
 							step.type === "tool-call" && step.toolName === "browseAndVerify"

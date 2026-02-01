@@ -51,8 +51,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { TableLoader } from "@/components/elements/table-loader";
 import { useOrg } from "@/lib/org-context";
 
 interface Task {
@@ -152,38 +152,6 @@ const statusTabs = [
 	{ value: "completed", label: "Completed" },
 	{ value: "dismissed", label: "Dismissed" },
 ] as const;
-
-/* ---------- Skeleton loading rows ---------- */
-function TaskTableSkeleton() {
-	return (
-		<>
-			{Array.from({ length: 5 }).map((_, i) => (
-				<TableRow key={i} className="bg-white">
-					<TableCell>
-						<div className="flex items-center gap-3">
-							<Skeleton className="w-1 h-8 rounded-full" />
-							<div className="space-y-1.5">
-								<Skeleton className="h-4 w-[220px]" />
-								<Skeleton className="h-3 w-[160px]" />
-							</div>
-						</div>
-					</TableCell>
-					<TableCell>
-						<div className="flex items-center gap-2">
-							<Skeleton className="h-6 w-6 rounded-full" />
-							<Skeleton className="h-3 w-[80px]" />
-						</div>
-					</TableCell>
-					<TableCell><Skeleton className="h-5 w-[60px] rounded-full" /></TableCell>
-					<TableCell><Skeleton className="h-4 w-[80px]" /></TableCell>
-					<TableCell><Skeleton className="h-4 w-[50px]" /></TableCell>
-					<TableCell><Skeleton className="h-4 w-[70px]" /></TableCell>
-					<TableCell><Skeleton className="h-8 w-8 rounded" /></TableCell>
-				</TableRow>
-			))}
-		</>
-	);
-}
 
 /* ---------- Column definitions ---------- */
 function createColumns(
@@ -544,7 +512,7 @@ export default function TasksPage() {
 		onSortingChange: setSorting,
 		state: { sorting },
 		initialState: {
-			pagination: { pageSize: 20 },
+			pagination: { pageSize: 10 },
 		},
 	});
 
@@ -641,6 +609,9 @@ export default function TasksPage() {
 
 			{/* Tasks table */}
 			<Card className="shadow-none! bg-white">
+				{isLoading ? (
+					<TableLoader cols={7} rows={10} />
+				) : (
 				<Table>
 					<TableHeader>
 						{table.getHeaderGroups().map((headerGroup) => (
@@ -668,9 +639,7 @@ export default function TasksPage() {
 						))}
 					</TableHeader>
 					<TableBody>
-						{isLoading ? (
-							<TaskTableSkeleton />
-						) : table.getRowModel().rows.length > 0 ? (
+						{table.getRowModel().rows.length > 0 ? (
 							table.getRowModel().rows.map((row) => (
 								<TableRow
 									key={row.id}
@@ -704,33 +673,32 @@ export default function TasksPage() {
 						)}
 					</TableBody>
 				</Table>
+				)}
 
 				{/* Pagination */}
 				{!isLoading && table.getPageCount() > 1 && (
-					<div className="flex items-center justify-between border-t border-[#eeeae4] px-4 py-3">
-						<p className="text-xs text-[#8a857d]">
-							{filteredTasks.length} task{filteredTasks.length !== 1 ? "s" : ""} · page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-						</p>
+					<div className="flex items-center justify-between px-4 py-2 border-t border-[#e5e2db] text-xs text-[#8a857d]">
+						<span>
+							{table.getState().pagination.pageIndex * 10 + 1}–{Math.min((table.getState().pagination.pageIndex + 1) * 10, filteredTasks.length)} of {filteredTasks.length}
+						</span>
 						<div className="flex items-center gap-1">
 							<Button
 								variant="ghost"
 								size="sm"
-								onClick={() => table.previousPage()}
+								className="h-7 w-7 p-0"
 								disabled={!table.getCanPreviousPage()}
-								className="h-7 px-2 text-xs text-[#6b6760]"
+								onClick={() => table.previousPage()}
 							>
-								<ChevronLeft className="h-3.5 w-3.5 mr-1" />
-								Previous
+								<ChevronLeft className="size-3.5" />
 							</Button>
 							<Button
 								variant="ghost"
 								size="sm"
-								onClick={() => table.nextPage()}
+								className="h-7 w-7 p-0"
 								disabled={!table.getCanNextPage()}
-								className="h-7 px-2 text-xs text-[#6b6760]"
+								onClick={() => table.nextPage()}
 							>
-								Next
-								<ChevronRight className="h-3.5 w-3.5 ml-1" />
+								<ChevronRight className="size-3.5" />
 							</Button>
 						</div>
 					</div>

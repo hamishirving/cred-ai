@@ -8,6 +8,7 @@ import {
 	getCoreRowModel,
 	useReactTable,
 	getSortedRowModel,
+	getPaginationRowModel,
 	type SortingState,
 } from "@tanstack/react-table";
 import {
@@ -24,6 +25,7 @@ import {
 	Wrench,
 	Zap,
 	ArrowUpDown,
+	ChevronLeft,
 	ChevronRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +42,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useOrg } from "@/lib/org-context";
 import type { SerializedAgentDefinition } from "@/lib/ai/agents/types";
+import { TableLoader } from "@/components/elements/table-loader";
 
 // =============================================================================
 // TYPES
@@ -286,16 +289,24 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 		state: { sorting: agentSorting },
 	});
 
-	const recentExecs = useMemo(() => executions.slice(0, 10), [executions]);
-
 	const runTable = useReactTable({
-		data: recentExecs,
+		data: executions,
 		columns: runColumns,
 		getCoreRowModel: getCoreRowModel(),
 		getSortedRowModel: getSortedRowModel(),
+		getPaginationRowModel: getPaginationRowModel(),
 		onSortingChange: setRunSorting,
 		state: { sorting: runSorting },
+		initialState: {
+			pagination: { pageSize: 10 },
+		},
 	});
+
+	const runPageIndex = runTable.getState().pagination.pageIndex;
+	const runPageCount = runTable.getPageCount();
+	const runTotalRows = executions.length;
+	const runStartRow = runPageIndex * 10 + 1;
+	const runEndRow = Math.min((runPageIndex + 1) * 10, runTotalRows);
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -358,11 +369,11 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 				{/* Agents table */}
 				<div>
 					<div className="flex items-center justify-between mb-2 px-1">
-						<h2 className="text-sm font-semibold text-[#1c1a15] flex items-center gap-2">
-							<Bot className="h-4 w-4" />
+						<h2 className="text-base font-semibold tracking-tight text-[#1c1a15] flex items-center gap-2">
+							<Bot className="h-4 w-4 text-[#6b6760]" />
 							Agents
 						</h2>
-						<Badge variant="secondary" className="text-xs">
+						<Badge variant="secondary" className="text-xs tabular-nums">
 							{agents.length}
 						</Badge>
 					</div>
@@ -422,19 +433,17 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 				{/* Recent runs table */}
 				<div>
 					<div className="flex items-center justify-between mb-2 px-1">
-						<h2 className="text-sm font-semibold text-[#1c1a15] flex items-center gap-2">
-							<Activity className="h-4 w-4" />
+						<h2 className="text-base font-semibold tracking-tight text-[#1c1a15] flex items-center gap-2">
+							<Activity className="h-4 w-4 text-[#6b6760]" />
 							Recent Runs
 						</h2>
-						<Badge variant="secondary" className="text-xs">
+						<Badge variant="secondary" className="text-xs tabular-nums">
 							{executions.length}
 						</Badge>
 					</div>
 					<Card className="shadow-none! bg-white">
 						{loadingExecs ? (
-							<div className="flex items-center justify-center py-12">
-								<Loader2 className="h-6 w-6 animate-spin text-[#a8a49c]" />
-							</div>
+							<TableLoader cols={5} rows={10} />
 						) : (
 							<Table>
 								<TableHeader>
@@ -488,6 +497,33 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 									)}
 								</TableBody>
 								</Table>
+						)}
+						{runPageCount > 1 && (
+							<div className="flex items-center justify-between px-4 py-2 border-t border-[#e5e2db] text-xs text-[#8a857d]">
+								<span>
+									{runStartRow}–{runEndRow} of {runTotalRows}
+								</span>
+								<div className="flex items-center gap-1">
+									<Button
+										variant="ghost"
+										size="sm"
+										className="h-7 w-7 p-0"
+										disabled={!runTable.getCanPreviousPage()}
+										onClick={() => runTable.previousPage()}
+									>
+										<ChevronLeft className="size-3.5" />
+									</Button>
+									<Button
+										variant="ghost"
+										size="sm"
+										className="h-7 w-7 p-0"
+										disabled={!runTable.getCanNextPage()}
+										onClick={() => runTable.nextPage()}
+									>
+										<ChevronRight className="size-3.5" />
+									</Button>
+								</div>
+							</div>
 						)}
 					</Card>
 				</div>

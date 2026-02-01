@@ -90,7 +90,7 @@ export function TaskTool({
 	const { title, description, priority, dueAt, assignee } = output.data;
 
 	return (
-		<div className="w-[400px] max-w-full rounded-lg border bg-card p-3 shadow-sm">
+		<div className="w-[400px] max-w-full rounded-lg border bg-white p-3 dark:bg-card">
 			<div className="flex items-start gap-3">
 				<div className="mt-0.5 rounded-full bg-primary/10 p-1.5">
 					<CheckCircle2 className="h-4 w-4 text-primary" />

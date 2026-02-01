@@ -75,6 +75,11 @@ Extract the assignee's first name from the @ mention (e.g., "@Sarah" → "Sarah"
 			.string()
 			.optional()
 			.describe("ID of the related entity (profile, placement, etc.)"),
+		organisationId: z
+			.string()
+			.uuid()
+			.optional()
+			.describe("Organisation ID (required when called outside browser context, e.g. from webhooks)"),
 	}),
 
 	execute: async ({
@@ -86,6 +91,7 @@ Extract the assignee's first name from the @ mention (e.g., "@Sarah" → "Sarah"
 		dueAt,
 		subjectType,
 		subjectId,
+		organisationId: inputOrgId,
 	}) => {
 		console.log("[createTask] Creating task:", { title, assigneeFirstName });
 
@@ -132,9 +138,16 @@ Extract the assignee's first name from the @ mention (e.g., "@Sarah" → "Sarah"
 				}
 			}
 
-			// Get org ID from cookie (set by org-context)
-			const cookieStore = await cookies();
-			const organisationId = cookieStore.get("selectedOrgId")?.value;
+			// Resolve org ID: prefer explicit param, fall back to cookie
+			let organisationId = inputOrgId;
+			if (!organisationId) {
+				try {
+					const cookieStore = await cookies();
+					organisationId = cookieStore.get("selectedOrgId")?.value;
+				} catch {
+					// No cookie access (e.g. webhook context)
+				}
+			}
 			if (!organisationId) {
 				return {
 					error: "No organisation selected. Please select an organisation first.",

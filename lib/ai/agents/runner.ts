@@ -121,7 +121,7 @@ export async function executeAgent(
 			agentId: agent.id,
 			orgId: ctx.orgId || undefined,
 			userId: ctx.userId,
-			triggerType: "manual",
+			triggerType: ctx.triggerType || "manual",
 			input: ctx.input,
 			model: "claude-sonnet-4-5",
 		});

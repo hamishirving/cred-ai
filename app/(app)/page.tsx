@@ -16,18 +16,11 @@ import {
 	Zap,
 	AlertTriangle,
 	ChevronRight,
-	ChevronDown,
 	Mail,
 	FileText,
 	Shield,
 	Phone,
 	Sparkles,
-	Clock,
-	User,
-	ArrowUpRight,
-	Check,
-	X,
-	Bell,
 	TrendingUp,
 	TrendingDown,
 	Minus,
@@ -38,16 +31,17 @@ import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
-	CardDescription,
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 // =============================================================================
@@ -573,88 +567,6 @@ function UrgentAlertsBanner({ alerts }: { alerts: UrgentAlert[] }) {
 	);
 }
 
-function ActivityFeedItem({ item, isNew }: { item: ActivityItem; isNew?: boolean }) {
-	const [isOpen, setIsOpen] = useState(false);
-	const Icon = getActivityIcon(item.type);
-	const colors = getActivityColor(item.type);
-
-	return (
-		<motion.div
-			initial={isNew ? { opacity: 0, y: -20, height: 0 } : false}
-			animate={{ opacity: 1, y: 0, height: "auto" }}
-			transition={{ duration: 0.3 }}
-		>
-			<Collapsible open={isOpen} onOpenChange={setIsOpen}>
-				<div
-					className={cn(
-						"flex items-start gap-3 rounded-lg border border-[#e5e2db] p-3 transition-colors",
-						isNew && "bg-[#eeedf8] border-[#4444cf]/20"
-					)}
-				>
-					<div className={cn("mt-0.5 rounded-full p-1.5", colors.bg)}>
-						<Icon className="h-3.5 w-3.5 text-white" />
-					</div>
-					<div className="flex-1 min-w-0">
-						<div className="flex items-start justify-between gap-2">
-							<div className="flex-1">
-								<div className="flex items-center gap-2">
-									<Badge variant="outline" className="text-[10px] gap-1 px-1.5 border-[#4444cf]/30 text-[#4444cf]">
-										<Sparkles className="h-2.5 w-2.5" />
-									</Badge>
-									<span className="text-xs text-[#8a857d]">
-										{formatDistanceToNow(item.timestamp, { addSuffix: true })}
-									</span>
-								</div>
-								<p className="text-sm mt-1">{item.summary}</p>
-								{item.details && (
-									<p className="text-xs text-[#8a857d] mt-0.5">
-										{item.details}
-									</p>
-								)}
-							</div>
-							{item.subject && (
-								<CollapsibleTrigger asChild>
-									<Button variant="ghost" size="sm" className="h-7 px-2 shrink-0">
-										{isOpen ? (
-											<ChevronDown className="h-4 w-4" />
-										) : (
-											<ChevronRight className="h-4 w-4" />
-										)}
-									</Button>
-								</CollapsibleTrigger>
-							)}
-						</div>
-						<CollapsibleContent>
-							{item.subject && (
-								<div className="mt-2 pt-2 border-t flex items-center justify-between">
-									<div className="flex items-center gap-2">
-										<Avatar className="h-6 w-6">
-											<AvatarFallback
-												className={cn(
-													getAvatarColor(item.subject.name),
-													"text-[10px] text-white"
-												)}
-											>
-												{getInitials(item.subject.name)}
-											</AvatarFallback>
-										</Avatar>
-										<span className="text-sm">{item.subject.name}</span>
-									</div>
-									<Button variant="outline" size="sm" asChild>
-										<Link href={`/candidates/${item.subject.id}`}>
-											View Candidate
-										</Link>
-									</Button>
-								</div>
-							)}
-						</CollapsibleContent>
-					</div>
-				</div>
-			</Collapsible>
-		</motion.div>
-	);
-}
-
 function ActivityFeed({
 	activities,
 	newActivityIds,
@@ -663,39 +575,98 @@ function ActivityFeed({
 	newActivityIds: Set<string>;
 }) {
 	return (
-		<Card className="flex flex-col h-full shadow-none! bg-white">
-			<CardHeader className="pb-3">
-				<div className="flex items-center justify-between">
-					<div>
-						<CardTitle className="text-xl font-semibold text-[#1c1a15] flex items-center gap-2">
-							<Zap className="h-5 w-5" />
-							Agent Activity
-						</CardTitle>
-						<CardDescription className="text-[#8a857d]">Real-time updates from AI</CardDescription>
-					</div>
-					<div className="flex items-center gap-1">
-						<span className="relative flex h-2 w-2">
-							<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3a9960] opacity-75"></span>
-							<span className="relative inline-flex rounded-full h-2 w-2 bg-[#3a9960]"></span>
-						</span>
-						<span className="text-xs text-[#8a857d]">Live</span>
-					</div>
+		<div className="flex flex-col h-full">
+			<div className="flex items-center justify-between mb-2 px-1">
+				<h2 className="text-base font-semibold tracking-tight text-[#1c1a15] flex items-center gap-2">
+					<Zap className="h-4 w-4 text-[#6b6760]" />
+					Agent Activity
+				</h2>
+				<div className="flex items-center gap-1">
+					<span className="relative flex h-2 w-2">
+						<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3a9960] opacity-75"></span>
+						<span className="relative inline-flex rounded-full h-2 w-2 bg-[#3a9960]"></span>
+					</span>
+					<span className="text-xs text-[#8a857d]">Live</span>
 				</div>
-			</CardHeader>
-			<CardContent className="flex-1 overflow-hidden">
-				<div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-					<AnimatePresence mode="popLayout">
-						{activities.map((activity) => (
-							<ActivityFeedItem
-								key={activity.id}
-								item={activity}
-								isNew={newActivityIds.has(activity.id)}
-							/>
-						))}
-					</AnimatePresence>
-				</div>
-			</CardContent>
-		</Card>
+			</div>
+			<Card className="shadow-none! bg-white">
+				<Table>
+					<TableHeader>
+						<TableRow className="bg-[#faf9f7] hover:bg-[#faf9f7]">
+							<TableHead className="text-xs font-medium text-[#6b6760]">Activity</TableHead>
+							<TableHead className="text-xs font-medium text-[#6b6760] w-[140px]">Subject</TableHead>
+							<TableHead className="text-xs font-medium text-[#6b6760] w-[100px]">Time</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						<AnimatePresence mode="popLayout">
+							{activities.map((activity) => {
+								const Icon = getActivityIcon(activity.type);
+								const colors = getActivityColor(activity.type);
+								const isNew = newActivityIds.has(activity.id);
+
+								return (
+									<motion.tr
+										key={activity.id}
+										initial={isNew ? { opacity: 0, y: -20 } : false}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ duration: 0.3 }}
+										className={cn(
+											"bg-white hover:bg-[#f7f5f0] border-b border-[#e5e2db] last:border-b-0",
+											isNew && "bg-[#eeedf8]"
+										)}
+									>
+										<TableCell className="py-2">
+											<div className="flex items-center gap-2">
+												<div className={cn("rounded-full p-1.5 shrink-0", colors.bg)}>
+													<Icon className="h-3 w-3 text-white" />
+												</div>
+												<div className="min-w-0">
+													<div className="flex items-center gap-1.5">
+														<span className="text-sm font-medium truncate">{activity.summary}</span>
+														<Sparkles className="h-3 w-3 text-[#4444cf]/50 shrink-0" />
+													</div>
+													{activity.details && (
+														<p className="text-xs text-[#8a857d] truncate">{activity.details}</p>
+													)}
+												</div>
+											</div>
+										</TableCell>
+										<TableCell className="py-2">
+											{activity.subject ? (
+												<Link
+													href={`/candidates/${activity.subject.id}`}
+													className="flex items-center gap-1.5 hover:underline"
+												>
+													<Avatar className="h-5 w-5">
+														<AvatarFallback
+															className={cn(
+																getAvatarColor(activity.subject.name),
+																"text-[8px] text-white"
+															)}
+														>
+															{getInitials(activity.subject.name)}
+														</AvatarFallback>
+													</Avatar>
+													<span className="text-sm truncate">{activity.subject.name}</span>
+												</Link>
+											) : (
+												<span className="text-sm text-[#8a857d]">—</span>
+											)}
+										</TableCell>
+										<TableCell className="py-2">
+											<span className="text-xs text-[#8a857d] whitespace-nowrap">
+												{formatDistanceToNow(activity.timestamp, { addSuffix: true })}
+											</span>
+										</TableCell>
+									</motion.tr>
+								);
+							})}
+						</AnimatePresence>
+					</TableBody>
+				</Table>
+			</Card>
+		</div>
 	);
 }
 
@@ -726,99 +697,93 @@ const priorityConfig = {
 	},
 };
 
-const statusConfig = {
-	pending: { label: "Pending", icon: Clock, color: "text-[#c49332]" },
-	in_progress: { label: "In Progress", icon: ArrowUpRight, color: "text-[#4444cf]" },
-	completed: { label: "Completed", icon: Check, color: "text-[#3a9960]" },
-	dismissed: { label: "Dismissed", icon: X, color: "text-[#8a857d]" },
-	snoozed: { label: "Snoozed", icon: Bell, color: "text-[#8a7e6b]" },
-};
-
-function TaskPreviewCard({ task }: { task: TaskPreview }) {
-	const StatusIcon = statusConfig[task.status].icon;
-
-	return (
-		<div className="flex items-start gap-3 p-3 rounded-lg border border-[#e5e2db] hover:bg-[#f0ede7]/50 transition-colors">
-			<div
-				className={cn(
-					"w-1 h-10 rounded-full shrink-0",
-					priorityConfig[task.priority].color
-				)}
-			/>
-			<div className="flex-1 min-w-0">
-				<div className="flex items-center gap-2 mb-1">
-					<Badge
-						variant="outline"
-						className={cn(
-							"text-[10px]",
-							priorityConfig[task.priority].bgColor,
-							priorityConfig[task.priority].textColor
-						)}
-					>
-						{priorityConfig[task.priority].label}
-					</Badge>
-					{task.source === "ai_agent" && (
-						<Badge variant="outline" className="text-[10px] gap-0.5 px-1 border-[#4444cf]/30 text-[#4444cf]">
-							<Sparkles className="h-2.5 w-2.5" />
-						</Badge>
-					)}
-					<StatusIcon
-						className={cn("h-3.5 w-3.5", statusConfig[task.status].color)}
-					/>
-				</div>
-				<p className="text-sm line-clamp-1">{task.title}</p>
-				{task.subject && (
-					<div className="flex items-center gap-1.5 mt-1">
-						<Avatar className="h-4 w-4">
-							<AvatarFallback
-								className={cn(
-									getAvatarColor(task.subject.name),
-									"text-[8px] text-white"
-								)}
-							>
-								{getInitials(task.subject.name)}
-							</AvatarFallback>
-						</Avatar>
-						<span className="text-xs text-[#8a857d] truncate">
-							{task.subject.name}
-						</span>
-					</div>
-				)}
-			</div>
-			<Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
-				<Link href={`/tasks`}>
-					<ChevronRight className="h-4 w-4" />
-				</Link>
-			</Button>
-		</div>
-	);
-}
-
 function TasksPreview({ tasks }: { tasks: TaskPreview[] }) {
 	return (
-		<Card className="flex flex-col h-full shadow-none! bg-white">
-			<CardHeader className="pb-3">
-				<div className="flex items-center justify-between">
-					<div>
-						<CardTitle className="text-xl font-semibold text-[#1c1a15] flex items-center gap-2">
-							<ClipboardList className="h-5 w-5" />
-							Needs Attention
-						</CardTitle>
-						<CardDescription className="text-[#8a857d]">Tasks requiring your input</CardDescription>
-					</div>
-					<Button variant="outline" size="sm" asChild>
-						<Link href="/tasks">View All</Link>
-					</Button>
-				</div>
-			</CardHeader>
-			<CardContent className="flex-1 overflow-hidden">
-				<div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-					{tasks.map((task) => (
-						<TaskPreviewCard key={task.id} task={task} />
-					))}
-				</div>
-			</CardContent>
-		</Card>
+		<div className="flex flex-col h-full">
+			<div className="flex items-center justify-between mb-2 px-1">
+				<h2 className="text-base font-semibold tracking-tight text-[#1c1a15] flex items-center gap-2">
+					<ClipboardList className="h-4 w-4 text-[#6b6760]" />
+					Needs Attention
+				</h2>
+				<Button variant="outline" size="sm" asChild>
+					<Link href="/tasks">View All</Link>
+				</Button>
+			</div>
+			<Card className="shadow-none! bg-white">
+				<Table>
+					<TableHeader>
+						<TableRow className="bg-[#faf9f7] hover:bg-[#faf9f7]">
+							<TableHead className="text-xs font-medium text-[#6b6760]">Task</TableHead>
+							<TableHead className="text-xs font-medium text-[#6b6760] w-[140px]">Subject</TableHead>
+							<TableHead className="text-xs font-medium text-[#6b6760] w-[90px]">Priority</TableHead>
+							<TableHead className="text-xs font-medium text-[#6b6760] w-[40px]"></TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{tasks.map((task) => (
+							<TableRow
+								key={task.id}
+								className="bg-white cursor-pointer hover:bg-[#f7f5f0]"
+								onClick={() => window.location.href = "/tasks"}
+							>
+								<TableCell className="py-2">
+									<div className="flex items-center gap-2">
+										<div
+											className={cn(
+												"w-1 h-8 rounded-full shrink-0",
+												priorityConfig[task.priority].color
+											)}
+										/>
+										<div className="min-w-0">
+											<div className="flex items-center gap-1.5">
+												<span className="text-sm font-medium truncate">{task.title}</span>
+												{task.source === "ai_agent" && (
+													<Sparkles className="h-3 w-3 text-[#4444cf]/50 shrink-0" />
+												)}
+											</div>
+										</div>
+									</div>
+								</TableCell>
+								<TableCell className="py-2">
+									{task.subject ? (
+										<div className="flex items-center gap-1.5">
+											<Avatar className="h-5 w-5">
+												<AvatarFallback
+													className={cn(
+														getAvatarColor(task.subject.name),
+														"text-[8px] text-white"
+													)}
+												>
+													{getInitials(task.subject.name)}
+												</AvatarFallback>
+											</Avatar>
+											<span className="text-sm truncate">{task.subject.name}</span>
+										</div>
+									) : (
+										<span className="text-sm text-[#8a857d]">—</span>
+									)}
+								</TableCell>
+								<TableCell className="py-2">
+									<Badge
+										variant="outline"
+										className={cn(
+											"text-xs font-medium border-0",
+											priorityConfig[task.priority].bgColor,
+											priorityConfig[task.priority].textColor
+										)}
+									>
+										{priorityConfig[task.priority].label}
+									</Badge>
+								</TableCell>
+								<TableCell className="py-2">
+									<ChevronRight className="h-4 w-4 text-[#a8a49c]" />
+								</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
+			</Card>
+		</div>
 	);
 }
 
@@ -835,7 +800,7 @@ function PipelineFunnel() {
 	return (
 		<Card className="shadow-none! bg-white">
 			<CardHeader className="pb-2">
-				<CardTitle className="text-sm font-semibold text-[#1c1a15]">Onboarding Pipeline</CardTitle>
+				<CardTitle className="text-base font-semibold tracking-tight text-[#1c1a15]">Onboarding Pipeline</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<div className="space-y-2">

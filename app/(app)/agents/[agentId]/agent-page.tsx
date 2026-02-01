@@ -53,6 +53,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAgentExecution } from "@/hooks/use-agent-execution";
 import type { SerializedAgentDefinition } from "@/lib/ai/agents/types";
+import { TableLoader } from "@/components/elements/table-loader";
 
 // =============================================================================
 // TYPES & CONFIG
@@ -74,10 +75,10 @@ interface AgentExecution {
 }
 
 const statusConfig = {
-	running: { label: "Running", icon: Loader2, color: "text-[#4444cf]", iconClass: "animate-spin" },
-	completed: { label: "Completed", icon: Check, color: "text-[#3a9960]", iconClass: "" },
-	failed: { label: "Failed", icon: X, color: "text-[#c93d4e]", iconClass: "" },
-	escalated: { label: "Escalated", icon: AlertTriangle, color: "text-[#c49332]", iconClass: "" },
+	running: { label: "Running", icon: Loader2, color: "text-[#4444cf]", bg: "bg-[#eeedf8]", iconClass: "animate-spin" },
+	completed: { label: "Completed", icon: Check, color: "text-[#3a9960]", bg: "bg-[#eef6f1]", iconClass: "" },
+	failed: { label: "Failed", icon: X, color: "text-[#c93d4e]", bg: "bg-[#fdf0f1]", iconClass: "" },
+	escalated: { label: "Escalated", icon: AlertTriangle, color: "text-[#c49332]", bg: "bg-[#faf5eb]", iconClass: "" },
 };
 
 const statusOrder: Record<string, number> = {
@@ -117,10 +118,10 @@ function createRunColumns(agentId: string): ColumnDef<AgentExecution>[] {
 				const config = statusConfig[row.original.status];
 				const StatusIcon = config.icon;
 				return (
-					<div className="flex items-center gap-1.5">
-						<StatusIcon className={cn("h-4 w-4", config.color, config.iconClass)} />
-						<span className={cn("text-sm", config.color)}>{config.label}</span>
-					</div>
+					<span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium", config.color, config.bg)}>
+						<StatusIcon className={cn("h-3 w-3", config.iconClass)} />
+						{config.label}
+					</span>
 				);
 			},
 			sortingFn: (rowA, rowB) =>
@@ -277,26 +278,35 @@ export function AgentPage({ agent }: AgentPageProps) {
 	const endRow = Math.min((pageIndex + 1) * PAGE_SIZE, totalRows);
 
 	return (
-		<div className="flex h-[calc(100dvh-theme(spacing.12))] bg-[#faf9f7]">
-			{/* Left panel — agent details (fixed) */}
-			<div className="w-1/2 border-r border-[#e5e2db] p-4 shrink-0">
-				<div className="flex items-center justify-between mb-3">
-					<Button variant="ghost" size="sm" className="h-7 -ml-2" asChild>
-						<Link href="/agents">
-							<ArrowLeft className="size-3 mr-1" />
-							Agents
-						</Link>
-					</Button>
-					<div className="flex items-center gap-1">
-						<Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
+		<div className="min-h-0 bg-[#f7f5f0]">
+			<div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+				{/* Back link */}
+				<Button variant="ghost" size="sm" className="h-7 -ml-2 text-[#6b6760] hover:text-[#1c1a15]" asChild>
+					<Link href="/agents">
+						<ArrowLeft className="size-3 mr-1" />
+						Agents
+					</Link>
+				</Button>
+
+				{/* Header */}
+				<div className="flex items-start justify-between gap-4">
+					<div>
+						<h1 className="text-2xl font-semibold text-[#1c1a15]" style={{ textWrap: "balance" }}>{agent.name}</h1>
+						<p className="text-sm text-[#6b6760] mt-1 max-w-[65ch]">
+							{agent.description}
+						</p>
+					</div>
+					<div className="flex items-center gap-2 shrink-0">
+						<Button variant="outline" size="sm" className="h-8" asChild>
 							<Link href={`/agents/${agent.id}/edit`}>
-								<Pencil className="size-3" />
+								<Pencil className="size-3 mr-1.5" />
+								Edit
 							</Link>
 						</Button>
 						<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
 							<DialogTrigger asChild>
-								<Button size="sm" className="h-7">
-									<Play className="size-3 mr-1" />
+								<Button size="sm" className="h-8">
+									<Play className="size-3 mr-1.5" />
 									Test
 								</Button>
 							</DialogTrigger>
@@ -320,7 +330,7 @@ export function AgentPage({ agent }: AgentPageProps) {
 												{isUrl ? (
 													<div className="flex flex-col gap-2">
 														<div
-															className="flex items-center gap-2 p-3 border border-dashed rounded-md cursor-pointer hover:bg-[#f7f5f0] transition-colors"
+															className="flex items-center gap-2 p-3 border border-dashed border-[#ccc8c0] rounded-md cursor-pointer hover:bg-[#f7f5f0] transition-colors duration-150"
 															onClick={() => fileInputRef.current?.click()}
 															onKeyDown={(e) => {
 																if (e.key === "Enter" || e.key === " ") {
@@ -341,7 +351,7 @@ export function AgentPage({ agent }: AgentPageProps) {
 																<>
 																	<Loader2 className="size-4 animate-spin text-[#8a857d]" />
 																	<span className="text-xs text-[#8a857d]">
-																		Uploading {uploadedFileName}...
+																		Uploading {uploadedFileName}…
 																	</span>
 																</>
 															) : uploadState === "done" ? (
@@ -368,11 +378,11 @@ export function AgentPage({ agent }: AgentPageProps) {
 														)}
 
 														<div className="flex items-center gap-2">
-															<div className="h-px flex-1 bg-border" />
+															<div className="h-px flex-1 bg-[#e5e2db]" />
 															<span className="text-xs text-[#8a857d]">
 																or paste URL
 															</span>
-															<div className="h-px flex-1 bg-border" />
+															<div className="h-px flex-1 bg-[#e5e2db]" />
 														</div>
 
 														<Input
@@ -416,7 +426,7 @@ export function AgentPage({ agent }: AgentPageProps) {
 										) : (
 											<Play className="size-3 mr-1" />
 										)}
-										{isSubmitting ? "Starting..." : "Run"}
+										{isSubmitting ? "Starting…" : "Run"}
 									</Button>
 								</form>
 							</DialogContent>
@@ -424,44 +434,41 @@ export function AgentPage({ agent }: AgentPageProps) {
 					</div>
 				</div>
 
-				<div className="mb-3">
-					<h1 className="text-lg font-semibold text-[#1c1a15]">{agent.name}</h1>
-					<p className="text-sm text-[#8a857d] mt-0.5">
-						{agent.description}
-					</p>
-				</div>
-
-				{/* Details */}
-				<div className="mb-3">
-					<h3 className="text-xs font-medium text-[#1c1a15] mb-1.5">Details</h3>
-					<div className="flex flex-col gap-1 text-xs">
-						<div className="flex items-center gap-1.5">
-							<Zap className="size-3 text-[#8a857d]" />
-							<span className="text-[#8a857d]">Trigger:</span>
-							<span>{agent.trigger.type}</span>
+				{/* Details card */}
+				<div className="bg-white border border-[#e5e2db] rounded-lg p-5">
+					<div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+						<div className="flex flex-col gap-1">
+							<span className="text-xs font-medium text-[#6b6760] flex items-center gap-1.5">
+								<Zap className="size-3" />
+								Trigger
+							</span>
+							<span className="text-sm text-[#1c1a15] capitalize">{agent.trigger.type}</span>
 						</div>
-						<div className="flex items-center gap-1.5">
-							<Shield className="size-3 text-[#8a857d]" />
-							<span className="text-[#8a857d]">Oversight:</span>
-							<span>{agent.oversight.mode}</span>
+						<div className="flex flex-col gap-1">
+							<span className="text-xs font-medium text-[#6b6760] flex items-center gap-1.5">
+								<Shield className="size-3" />
+								Oversight
+							</span>
+							<span className="text-sm text-[#1c1a15] capitalize">{agent.oversight.mode}</span>
 						</div>
-						<div className="flex items-center gap-1.5">
-							<Wrench className="size-3 text-[#8a857d]" />
-							<span className="text-[#8a857d]">Tools:</span>
-							<span>{agent.tools.length}</span>
+						<div className="flex flex-col gap-1">
+							<span className="text-xs font-medium text-[#6b6760] flex items-center gap-1.5">
+								<Wrench className="size-3" />
+								Tools
+							</span>
+							<span className="text-sm text-[#1c1a15]">{agent.tools.length}</span>
 						</div>
-						<div className="flex items-center gap-1.5">
-							<Badge variant="secondary" className="text-xs h-4 px-1">
-								v{agent.version}
-							</Badge>
+						<div className="flex flex-col gap-1">
+							<span className="text-xs font-medium text-[#6b6760]">Version</span>
+							<span className="text-sm text-[#1c1a15]">v{agent.version}</span>
 						</div>
 					</div>
 				</div>
 
 				{/* Tools */}
 				<div>
-					<h3 className="text-xs font-medium text-[#1c1a15] mb-1.5">Tools</h3>
-					<div className="flex flex-wrap gap-1">
+					<h2 className="text-base font-medium text-[#1c1a15] mb-3">Tools</h2>
+					<div className="flex flex-wrap gap-2">
 						{agent.tools.map((tool) => (
 							<Badge key={tool} variant="secondary" className="text-xs">
 								{tool}
@@ -469,97 +476,93 @@ export function AgentPage({ agent }: AgentPageProps) {
 						))}
 					</div>
 				</div>
-			</div>
 
-			{/* Right panel — runs table */}
-			<div className="w-1/2 flex flex-col overflow-hidden">
-				<div className="p-4 pb-2 flex items-center justify-between">
-					<h2 className="text-sm font-semibold text-[#1c1a15]">Runs</h2>
-					<Badge variant="secondary" className="text-xs">
-						{totalRows}
-					</Badge>
-				</div>
+				{/* Runs */}
+				<div>
+					<div className="flex items-center justify-between mb-3">
+						<h2 className="text-base font-medium text-[#1c1a15]">Runs</h2>
+						<span className="text-xs text-[#8a857d]">{totalRows} total</span>
+					</div>
 
-				<div className="flex-1 overflow-y-auto">
-					{loadingExecs ? (
-						<div className="flex items-center justify-center py-12">
-							<Loader2 className="h-6 w-6 animate-spin text-[#a8a49c]" />
+					<div className="bg-white border border-[#e5e2db] rounded-lg overflow-hidden">
+						{loadingExecs ? (
+							<TableLoader cols={4} rows={5} />
+						) : totalRows === 0 ? (
+							<div className="flex flex-col items-center justify-center py-16">
+								<Clock className="h-8 w-8 text-[#a8a49c] mb-3" />
+								<p className="text-base font-medium text-[#1c1a15]">No runs yet</p>
+								<p className="text-sm text-[#8a857d] mt-1">
+									Click Test to run this agent
+								</p>
+							</div>
+						) : (
+							<Table>
+								<TableHeader>
+									{table.getHeaderGroups().map((headerGroup) => (
+										<TableRow key={headerGroup.id} className="bg-[#f0ede7] hover:bg-[#f0ede7]">
+											{headerGroup.headers.map((header) => (
+												<TableHead
+													key={header.id}
+													className="text-xs font-medium text-[#6b6760]"
+												>
+													{header.isPlaceholder
+														? null
+														: flexRender(header.column.columnDef.header, header.getContext())}
+												</TableHead>
+											))}
+										</TableRow>
+									))}
+								</TableHeader>
+								<TableBody>
+									{table.getRowModel().rows.map((row) => (
+										<TableRow
+											key={row.id}
+											className="bg-white cursor-pointer hover:bg-[#f7f5f0] border-b border-[#e5e2db]"
+											onClick={() =>
+												router.push(`/agents/${agent.id}/executions/${row.original.id}`)
+											}
+										>
+											{row.getVisibleCells().map((cell) => (
+												<TableCell key={cell.id}>
+													{flexRender(cell.column.columnDef.cell, cell.getContext())}
+												</TableCell>
+											))}
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
+						)}
+					</div>
+
+					{/* Pagination */}
+					{pageCount > 1 && (
+						<div className="flex items-center justify-between mt-3 text-xs text-[#8a857d]">
+							<span>
+								{startRow}–{endRow} of {totalRows}
+							</span>
+							<div className="flex items-center gap-1">
+								<Button
+									variant="ghost"
+									size="sm"
+									className="h-7 w-7 p-0"
+									disabled={!table.getCanPreviousPage()}
+									onClick={() => table.previousPage()}
+								>
+									<ChevronLeft className="size-3.5" />
+								</Button>
+								<Button
+									variant="ghost"
+									size="sm"
+									className="h-7 w-7 p-0"
+									disabled={!table.getCanNextPage()}
+									onClick={() => table.nextPage()}
+								>
+									<ChevronRight className="size-3.5" />
+								</Button>
+							</div>
 						</div>
-					) : totalRows === 0 ? (
-						<div className="flex flex-col items-center justify-center py-12">
-							<Clock className="h-8 w-8 text-[#a8a49c] mb-2" />
-							<p className="text-sm text-[#8a857d]">No runs yet</p>
-							<p className="text-xs text-[#8a857d]">
-								Click Test to run this agent
-							</p>
-						</div>
-					) : (
-						<Table>
-							<TableHeader>
-								{table.getHeaderGroups().map((headerGroup) => (
-									<TableRow key={headerGroup.id} className="bg-[#faf9f7] hover:bg-[#faf9f7]">
-										{headerGroup.headers.map((header) => (
-											<TableHead
-												key={header.id}
-												className="text-xs font-medium text-[#6b6760]"
-											>
-												{header.isPlaceholder
-													? null
-													: flexRender(header.column.columnDef.header, header.getContext())}
-											</TableHead>
-										))}
-									</TableRow>
-								))}
-							</TableHeader>
-							<TableBody>
-								{table.getRowModel().rows.map((row) => (
-									<TableRow
-										key={row.id}
-										className="bg-white cursor-pointer hover:bg-[#f7f5f0]"
-										onClick={() =>
-											router.push(`/agents/${agent.id}/executions/${row.original.id}`)
-										}
-									>
-										{row.getVisibleCells().map((cell) => (
-											<TableCell key={cell.id}>
-												{flexRender(cell.column.columnDef.cell, cell.getContext())}
-											</TableCell>
-										))}
-									</TableRow>
-								))}
-							</TableBody>
-						</Table>
 					)}
 				</div>
-
-				{/* Pagination */}
-				{pageCount > 1 && (
-					<div className="flex items-center justify-between px-4 py-2 border-t border-[#e5e2db] text-xs text-[#8a857d]">
-						<span>
-							{startRow}–{endRow} of {totalRows}
-						</span>
-						<div className="flex items-center gap-1">
-							<Button
-								variant="ghost"
-								size="sm"
-								className="h-7 w-7 p-0"
-								disabled={!table.getCanPreviousPage()}
-								onClick={() => table.previousPage()}
-							>
-								<ChevronLeft className="size-3.5" />
-							</Button>
-							<Button
-								variant="ghost"
-								size="sm"
-								className="h-7 w-7 p-0"
-								disabled={!table.getCanNextPage()}
-								onClick={() => table.nextPage()}
-							>
-								<ChevronRight className="size-3.5" />
-							</Button>
-						</div>
-					</div>
-				)}
 			</div>
 		</div>
 	);

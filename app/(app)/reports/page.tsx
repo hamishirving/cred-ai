@@ -352,7 +352,7 @@ function PipelineChart({ stages }: { stages: PipelineStage[] }) {
 		>
 			<Card className="shadow-none! bg-white">
 				<CardHeader className="pb-2">
-					<CardTitle className="text-sm font-semibold text-[#1c1a15]">Pipeline Overview</CardTitle>
+					<CardTitle className="text-base font-semibold tracking-tight text-[#1c1a15]">Pipeline Overview</CardTitle>
 				</CardHeader>
 				<CardContent>
 					{/* Metric cards row */}
@@ -429,7 +429,7 @@ function CohortTable({ data }: { data: CohortRow[] }) {
 		>
 			<Card className="shadow-none! bg-white">
 				<CardHeader className="pb-2">
-					<CardTitle className="text-sm font-semibold text-[#1c1a15]">
+					<CardTitle className="text-base font-semibold tracking-tight text-[#1c1a15]">
 						Cohort Analysis: Time to Compliance
 					</CardTitle>
 					<CardDescription className="text-[#8a857d]">

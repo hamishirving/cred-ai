@@ -30,7 +30,8 @@ If no search term is provided, returns all candidates for the organisation.`,
 		organisationId: z
 			.string()
 			.uuid()
-			.describe("The organisation ID to search within"),
+			.optional()
+			.describe("Organisation ID to search within. Omit to search across all organisations."),
 		search: z
 			.string()
 			.optional()
@@ -53,7 +54,10 @@ If no search term is provided, returns all candidates for the organisation.`,
 	> => {
 		console.log("[searchLocalCandidates] Searching:", { organisationId, search });
 
-		const conditions = [eq(profiles.organisationId, organisationId)];
+		const conditions = [];
+		if (organisationId) {
+			conditions.push(eq(profiles.organisationId, organisationId));
+		}
 
 		if (search) {
 			const pattern = `%${search}%`;
@@ -66,16 +70,20 @@ If no search term is provided, returns all candidates for the organisation.`,
 			);
 		}
 
-		const results = await db
+		const query = db
 			.select({
 				id: profiles.id,
 				firstName: profiles.firstName,
 				lastName: profiles.lastName,
 				email: profiles.email,
+				organisationId: profiles.organisationId,
 			})
-			.from(profiles)
-			.where(and(...conditions))
-			.limit(20);
+			.from(profiles);
+
+		const results = await (conditions.length > 0
+			? query.where(and(...conditions))
+			: query
+		).limit(20);
 
 		return {
 			data: results.map((r) => ({
@@ -83,6 +91,7 @@ If no search term is provided, returns all candidates for the organisation.`,
 				firstName: r.firstName,
 				lastName: r.lastName,
 				email: r.email,
+				organisationId: r.organisationId,
 			})),
 		};
 	},

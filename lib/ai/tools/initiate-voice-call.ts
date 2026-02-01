@@ -2,7 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { isValidPhoneNumber, initiateCall } from "@/lib/voice/vapi-client";
 import { getTemplate } from "@/lib/voice/templates";
-import { createVoiceCall } from "@/lib/db/queries";
+import { createVoiceCall, updateVoiceCall } from "@/lib/db/queries";
 import { auth } from "@/lib/auth";
 
 /**
@@ -66,6 +66,13 @@ The call will be recorded and transcribed. Captured data will be available via g
 				assistantId: template.vapiAssistantId,
 				phoneNumber,
 				variables: context,
+			});
+
+			// Update DB record with VAPI call ID and queued status
+			await updateVoiceCall({
+				id: voiceCall.id,
+				vapiCallId: result.vapiCallId,
+				status: "queued",
 			});
 
 			return {
