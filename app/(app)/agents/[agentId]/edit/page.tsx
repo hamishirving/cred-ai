@@ -8,6 +8,7 @@
 import { notFound } from "next/navigation";
 import { getAgentByCode, createAgentDefinition } from "@/lib/db/queries";
 import { getAgentDefinition, serializeAgent } from "@/lib/ai/agents/registry";
+import { getToolMetadata } from "@/lib/ai/agents/tool-resolver";
 import { AgentEditor } from "./agent-editor";
 
 export default async function EditAgentPage(props: {
@@ -43,5 +44,7 @@ export default async function EditAgentPage(props: {
 		});
 	}
 
-	return <AgentEditor agent={agent} />;
+	const availableTools = getToolMetadata();
+
+	return <AgentEditor agent={agent} availableTools={availableTools} />;
 }

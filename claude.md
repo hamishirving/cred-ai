@@ -53,3 +53,4 @@ See `docs/DESIGN-PRINCIPLES.md` for full guidelines. Key points:
 - Do NOT add Co-Authored-By or Claude attribution
 - Keep commit messages short (1 line, ~50 chars)
 - Stage all changes with `git add .` - don't cherry-pick files
+- **Skip `git diff`** when committing - just `git status` to confirm changes, then commit. Write the message based on what you just worked on, not by reading the diff.

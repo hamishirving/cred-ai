@@ -11,6 +11,7 @@ import {
 	inArray,
 	lt,
 	lte,
+	sql,
 	type SQL,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -58,6 +59,10 @@ import {
 	agentExecutions,
 	type AgentExecution,
 	type NewAgentExecution,
+	agentMemory,
+	type AgentMemory,
+	referenceContacts,
+	type ReferenceContact,
 } from "./schema";
 import type {
 	TranscriptMessage,
@@ -1350,4 +1355,168 @@ export async function updateAgentDefinition({
 		.where(eq(agents.id, id))
 		.returning();
 	return result || null;
+}
+
+// ============================================
+// Agent Memory
+// ============================================
+
+/**
+ * Get agent memory by composite key (agentId + subjectId + orgId).
+ */
+export async function getAgentMemory({
+	agentId,
+	subjectId,
+	orgId,
+}: {
+	agentId: string;
+	subjectId: string;
+	orgId: string;
+}): Promise<AgentMemory | null> {
+	const [result] = await db
+		.select()
+		.from(agentMemory)
+		.where(
+			and(
+				eq(agentMemory.agentId, agentId),
+				eq(agentMemory.subjectId, subjectId),
+				eq(agentMemory.orgId, orgId),
+			),
+		);
+	return result || null;
+}
+
+/**
+ * Upsert agent memory — insert or update on conflict.
+ * Increments runCount and updates lastRunAt on each call.
+ */
+export async function upsertAgentMemory({
+	agentId,
+	subjectId,
+	orgId,
+	memory,
+}: {
+	agentId: string;
+	subjectId: string;
+	orgId: string;
+	memory: Record<string, unknown>;
+}): Promise<AgentMemory> {
+	const now = new Date();
+	const [result] = await db
+		.insert(agentMemory)
+		.values({
+			agentId,
+			subjectId,
+			orgId,
+			memory,
+			lastRunAt: now,
+			runCount: 1,
+			createdAt: now,
+			updatedAt: now,
+		})
+		.onConflictDoUpdate({
+			target: [agentMemory.agentId, agentMemory.subjectId, agentMemory.orgId],
+			set: {
+				memory,
+				lastRunAt: now,
+				runCount: sql`${agentMemory.runCount} + 1`,
+				updatedAt: now,
+			},
+		})
+		.returning();
+	return result;
+}
+
+// ============================================
+// Email Activity Logging
+// ============================================
+
+/**
+ * Log a drafted email as an activity for audit trail.
+ */
+export async function logEmailActivity({
+	organisationId,
+	profileId,
+	subject,
+	body,
+	recipientEmail,
+	recipientName,
+	reasoning,
+}: {
+	organisationId: string;
+	profileId: string;
+	subject: string;
+	body: string;
+	recipientEmail: string;
+	recipientName: string;
+	reasoning?: string;
+}): Promise<void> {
+	await db.insert(activities).values({
+		organisationId,
+		profileId,
+		activityType: "message_sent",
+		actor: "ai",
+		channel: "email",
+		summary: `Email drafted: ${subject}`,
+		details: {
+			recipientEmail,
+			recipientName,
+			subject,
+			body,
+			status: "drafted",
+		},
+		aiReasoning: reasoning,
+		visibleToCandidate: "true",
+	});
+}
+
+// ============================================
+// Reference Contacts
+// ============================================
+
+/**
+ * Get all reference contacts for a profile within an organisation.
+ */
+export async function getReferenceContactsForProfile({
+	profileId,
+	organisationId,
+}: {
+	profileId: string;
+	organisationId: string;
+}): Promise<ReferenceContact[]> {
+	return db
+		.select()
+		.from(referenceContacts)
+		.where(
+			and(
+				eq(referenceContacts.profileId, profileId),
+				eq(referenceContacts.organisationId, organisationId),
+			),
+		);
+}
+
+/**
+ * Update a reference contact's status and captured data.
+ */
+export async function updateReferenceContact({
+	id,
+	status,
+	capturedData,
+}: {
+	id: string;
+	status?: "pending" | "contacted" | "completed" | "failed";
+	capturedData?: Record<string, unknown>;
+}): Promise<ReferenceContact> {
+	const updates: Record<string, unknown> = {
+		updatedAt: new Date(),
+	};
+	if (status) updates.status = status;
+	if (capturedData) updates.capturedData = capturedData;
+
+	const [result] = await db
+		.update(referenceContacts)
+		.set(updates as Partial<typeof referenceContacts.$inferInsert>)
+		.where(eq(referenceContacts.id, id))
+		.returning();
+	return result;
 }

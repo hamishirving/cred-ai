@@ -134,17 +134,17 @@ export function CandidateCommunications({
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
-					<h3 className="text-lg font-semibold">Communications</h3>
-					<p className="text-sm text-muted-foreground">
+					<h3 className="text-lg font-semibold text-[#1c1a15]">Communications</h3>
+					<p className="text-sm text-[#8a857d]">
 						AI-generated emails and communication history for {candidateName}
 					</p>
 				</div>
 				<div className="flex gap-2">
-					<Button variant="outline" size="sm" onClick={fetchHistory} disabled={loading}>
+					<Button variant="outline" size="sm" onClick={fetchHistory} disabled={loading} className="border-[#e0dcd4] text-[#3d3a32]">
 						<RefreshCw className={`mr-2 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
 						Refresh
 					</Button>
-					<Button size="sm" onClick={generatePreview} disabled={generating}>
+					<Button size="sm" onClick={generatePreview} disabled={generating} className="bg-[#4444cf] hover:bg-[#3636b8] text-white">
 						<Sparkles className={`mr-2 h-3.5 w-3.5 ${generating ? "animate-pulse" : ""}`} />
 						{generating ? "Generating..." : "Preview Next Email"}
 					</Button>
@@ -153,53 +153,53 @@ export function CandidateCommunications({
 
 			{/* Error State */}
 			{error && (
-				<Card className="border-destructive">
+				<Card className="shadow-none! bg-white border-[#c93d4e]/20">
 					<CardContent className="py-4">
-						<p className="text-sm text-destructive">{error}</p>
+						<p className="text-sm text-[#c93d4e]">{error}</p>
 					</CardContent>
 				</Card>
 			)}
 
 			{/* Generated Email Preview */}
 			{generatedEmail && (
-				<Card className="border-primary">
+				<Card className="shadow-none! bg-white border-[#4444cf]/30">
 					<CardHeader className="pb-3">
 						<div className="flex items-center justify-between">
 							<div className="flex items-center gap-2">
-								<Sparkles className="h-5 w-5 text-primary" />
-								<CardTitle className="text-base">Generated Email Preview</CardTitle>
+								<Sparkles className="h-5 w-5 text-[#4444cf]" />
+								<CardTitle className="text-base text-[#1c1a15]">Generated Email Preview</CardTitle>
 							</div>
-							<Badge variant="outline">{generatedEmail.insight.priority} priority</Badge>
+							<Badge variant="outline" className="border-[#e5e2db] text-[#6b6760]">{generatedEmail.insight.priority} priority</Badge>
 						</div>
-						<CardDescription>{generatedEmail.insight.summary}</CardDescription>
+						<CardDescription className="text-[#8a857d]">{generatedEmail.insight.summary}</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-4">
 						{/* Email Header */}
-						<div className="rounded-md bg-muted p-3 text-sm">
-							<p><span className="font-medium">To:</span> {generatedEmail.email.to}</p>
+						<div className="rounded-md bg-[#faf9f7] p-3 text-sm">
+							<p><span className="font-medium text-[#3d3a32]">To:</span> <span className="text-[#6b6760]">{generatedEmail.email.to}</span></p>
 							{generatedEmail.email.cc && (
-								<p><span className="font-medium">CC:</span> {generatedEmail.email.cc}</p>
+								<p><span className="font-medium text-[#3d3a32]">CC:</span> <span className="text-[#6b6760]">{generatedEmail.email.cc}</span></p>
 							)}
-							<p><span className="font-medium">Subject:</span> {generatedEmail.email.subject}</p>
+							<p><span className="font-medium text-[#3d3a32]">Subject:</span> <span className="text-[#6b6760]">{generatedEmail.email.subject}</span></p>
 						</div>
 
 						{/* Email Body */}
-						<div className="rounded-md border p-6 prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-ul:my-2 prose-li:my-0">
+						<div className="rounded-md border border-[#e5e2db] p-6 prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-ul:my-2 prose-li:my-0">
 							<Response>{generatedEmail.email.body}</Response>
 						</div>
 
 						{/* AI Reasoning */}
 						<Collapsible>
 							<CollapsibleTrigger asChild>
-								<Button variant="ghost" size="sm" className="w-full justify-start">
+								<Button variant="ghost" size="sm" className="w-full justify-start text-[#6b6760]">
 									<ChevronDown className="mr-2 h-4 w-4" />
 									View AI Reasoning
 								</Button>
 							</CollapsibleTrigger>
 							<CollapsibleContent>
-								<div className="mt-2 rounded-md bg-muted/50 p-3 text-sm">
-									<p className="font-medium mb-2">Context Analysis:</p>
-									<ul className="list-disc list-inside space-y-1 text-muted-foreground">
+								<div className="mt-2 rounded-md bg-[#faf9f7] p-3 text-sm">
+									<p className="font-medium mb-2 text-[#3d3a32]">Context Analysis:</p>
+									<ul className="list-disc list-inside space-y-1 text-[#8a857d]">
 										<li>Candidate: {generatedEmail.context.compliance.percentage}% complete ({generatedEmail.context.candidate.daysInOnboarding} days in onboarding)</li>
 										{generatedEmail.context.compliance.blockedByCandidate.length > 0 && (
 											<li>Blocked by candidate: {generatedEmail.context.compliance.blockedByCandidate.join(", ")}</li>
@@ -211,16 +211,16 @@ export function CandidateCommunications({
 											<li>With external providers: {generatedEmail.context.compliance.blockedByThirdParty.join(", ")}</li>
 										)}
 									</ul>
-									<p className="mt-3 text-muted-foreground">{generatedEmail.context.reasoning}</p>
+									<p className="mt-3 text-[#8a857d]">{generatedEmail.context.reasoning}</p>
 								</div>
 							</CollapsibleContent>
 						</Collapsible>
 
 						<div className="flex gap-2 pt-2">
-							<Button variant="outline" className="flex-1">
+							<Button variant="outline" className="flex-1 border-[#e0dcd4] text-[#3d3a32]">
 								Copy to Clipboard
 							</Button>
-							<Button variant="outline" onClick={() => setGeneratedEmail(null)}>
+							<Button variant="outline" onClick={() => setGeneratedEmail(null)} className="border-[#e0dcd4] text-[#3d3a32]">
 								Close Preview
 							</Button>
 						</div>
@@ -230,12 +230,12 @@ export function CandidateCommunications({
 
 			{/* Communication History */}
 			<div className="space-y-3">
-				<h4 className="text-sm font-medium text-muted-foreground">History</h4>
+				<h4 className="text-sm font-medium text-[#8a857d]">History</h4>
 
 				{loading && !history.length ? (
 					<div className="space-y-3">
 						{[1, 2, 3].map((i) => (
-							<Card key={i}>
+							<Card key={i} className="shadow-none! bg-white">
 								<CardContent className="py-4">
 									<div className="flex items-start gap-3">
 										<Skeleton className="h-10 w-10 rounded-full" />
@@ -249,41 +249,41 @@ export function CandidateCommunications({
 						))}
 					</div>
 				) : history.length === 0 ? (
-					<Card>
+					<Card className="shadow-none! bg-white">
 						<CardContent className="py-8 text-center">
-							<Mail className="mx-auto h-12 w-12 text-muted-foreground/50" />
-							<p className="mt-4 text-sm text-muted-foreground">
+							<Mail className="mx-auto h-12 w-12 text-[#a8a49c]" />
+							<p className="mt-4 text-sm text-[#8a857d]">
 								No communications yet. Click "Preview Next Email" to generate the first one.
 							</p>
 						</CardContent>
 					</Card>
 				) : (
 					history.map((item) => (
-						<Card key={item.id}>
+						<Card key={item.id} className="shadow-none! bg-white">
 							<CardContent className="py-4">
 								<div className="flex items-start gap-3">
-									<div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-										<Mail className="h-5 w-5 text-blue-600" />
+									<div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#eeedf8]">
+										<Mail className="h-5 w-5 text-[#4444cf]" />
 									</div>
 									<div className="flex-1 min-w-0">
 										<div className="flex items-center gap-2">
-											<p className="font-medium truncate">{item.subject}</p>
+											<p className="font-medium truncate text-[#1c1a15]">{item.subject}</p>
 											{item.status === "sent" ? (
-												<Badge variant="default" className="bg-green-500 shrink-0">
+												<Badge variant="outline" className="shrink-0 bg-[#edf7f1] text-[#3a9960] border-0">
 													<CheckCircle className="mr-1 h-3 w-3" />
 													Sent
 												</Badge>
 											) : (
-												<Badge variant="outline" className="shrink-0">
+												<Badge variant="outline" className="shrink-0 border-[#e5e2db] text-[#6b6760]">
 													<Clock className="mr-1 h-3 w-3" />
 													Preview
 												</Badge>
 											)}
 										</div>
-										<p className="text-sm text-muted-foreground truncate">
+										<p className="text-sm text-[#8a857d] truncate">
 											{item.preview}
 										</p>
-										<p className="mt-1 text-xs text-muted-foreground">
+										<p className="mt-1 text-xs text-[#a8a49c]">
 											{new Date(item.createdAt).toLocaleString()}
 										</p>
 									</div>
@@ -294,9 +294,9 @@ export function CandidateCommunications({
 										<CollapsibleTrigger asChild>
 											<Button variant="ghost" size="sm">
 												{expandedId === item.id ? (
-													<ChevronUp className="h-4 w-4" />
+													<ChevronUp className="h-4 w-4 text-[#a8a49c]" />
 												) : (
-													<ChevronDown className="h-4 w-4" />
+													<ChevronDown className="h-4 w-4 text-[#a8a49c]" />
 												)}
 											</Button>
 										</CollapsibleTrigger>
@@ -305,20 +305,20 @@ export function CandidateCommunications({
 								{expandedId === item.id && (
 									<div className="mt-4 space-y-3">
 										{/* Email Body */}
-										<div className="rounded-md border p-4 prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-ul:my-2 prose-li:my-0">
+										<div className="rounded-md border border-[#e5e2db] p-4 prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-ul:my-2 prose-li:my-0">
 											<Response>{item.body}</Response>
 										</div>
 										{/* AI Reasoning */}
 										{item.reasoning && (
 											<Collapsible>
 												<CollapsibleTrigger asChild>
-													<Button variant="ghost" size="sm" className="w-full justify-start">
+													<Button variant="ghost" size="sm" className="w-full justify-start text-[#6b6760]">
 														<ChevronDown className="mr-2 h-4 w-4" />
 														View AI Reasoning
 													</Button>
 												</CollapsibleTrigger>
 												<CollapsibleContent>
-													<div className="mt-2 rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
+													<div className="mt-2 rounded-md bg-[#faf9f7] p-3 text-sm text-[#8a857d]">
 														{item.reasoning}
 													</div>
 												</CollapsibleContent>

@@ -29,12 +29,28 @@ export interface CandidateState {
 }
 
 /**
+ * Reference contact data for seeding.
+ */
+export interface ReferenceContactSeed {
+	refereeName: string;
+	refereeEmail?: string;
+	refereePhone: string;
+	refereeJobTitle?: string;
+	refereeOrganisation: string;
+	relationship: "line_manager" | "colleague" | "hr_department" | "other";
+	candidateJobTitle?: string;
+	candidateStartDate?: string;
+	candidateEndDate?: string;
+}
+
+/**
  * Extended profile with state information for seeding.
  */
 export interface CandidateProfile {
 	profile: Omit<NewProfile, "organisationId">;
 	roleSlug: string;
 	state: CandidateState;
+	referenceContacts?: ReferenceContactSeed[];
 }
 
 /**
@@ -66,6 +82,30 @@ export const meridianCandidates: CandidateProfile[] = [
 			daysSinceActivity: 2,
 			notes: "Nearly complete, missing DBS, starts Monday. Priority chase.",
 		},
+		referenceContacts: [
+			{
+				refereeName: "Margaret Reynolds",
+				refereeEmail: "m.reynolds@nhs-north.nhs.uk",
+				refereePhone: "+447700900123",
+				refereeJobTitle: "Ward Sister",
+				refereeOrganisation: "Manchester Royal Infirmary",
+				relationship: "line_manager",
+				candidateJobTitle: "Staff Nurse",
+				candidateStartDate: "2020-03",
+				candidateEndDate: "2024-06",
+			},
+			{
+				refereeName: "Dr Richard Patel",
+				refereeEmail: "r.patel@mri.nhs.uk",
+				refereePhone: "+447700900456",
+				refereeJobTitle: "Consultant",
+				refereeOrganisation: "Manchester Royal Infirmary",
+				relationship: "colleague",
+				candidateJobTitle: "Staff Nurse",
+				candidateStartDate: "2020-03",
+				candidateEndDate: "2024-06",
+			},
+		],
 	},
 	{
 		profile: {
@@ -92,6 +132,19 @@ export const meridianCandidates: CandidateProfile[] = [
 			daysSinceActivity: 14,
 			notes: "Unresponsive for 2 weeks. NMC expiring in 7 days. Needs escalation.",
 		},
+		referenceContacts: [
+			{
+				refereeName: "Susan Clarke",
+				refereeEmail: "s.clarke@heartlands.nhs.uk",
+				refereePhone: "+447800900789",
+				refereeJobTitle: "Matron",
+				refereeOrganisation: "Birmingham Heartlands Hospital",
+				relationship: "line_manager",
+				candidateJobTitle: "Band 5 Nurse",
+				candidateStartDate: "2018-09",
+				candidateEndDate: "2023-11",
+			},
+		],
 	},
 	{
 		profile: {
@@ -116,6 +169,19 @@ export const meridianCandidates: CandidateProfile[] = [
 			daysSinceActivity: 5,
 			notes: "Fully compliant, recently cleared. Active placement at City Hospital ICU.",
 		},
+		referenceContacts: [
+			{
+				refereeName: "Dr Ling Wei",
+				refereeEmail: "l.wei@lth.nhs.uk",
+				refereePhone: "+447900100234",
+				refereeJobTitle: "ICU Consultant",
+				refereeOrganisation: "Leeds Teaching Hospitals",
+				relationship: "line_manager",
+				candidateJobTitle: "Band 6 Senior Nurse",
+				candidateStartDate: "2019-01",
+				candidateEndDate: "2024-08",
+			},
+		],
 	},
 	{
 		profile: {
@@ -405,6 +471,18 @@ export const oakwoodCandidates: CandidateProfile[] = [
 			daysSinceActivity: 7,
 			notes: "Senior domiciliary carer in Manchester. 8 years experience. Mentors new starters.",
 		},
+		referenceContacts: [
+			{
+				refereeName: "Angela Booth",
+				refereePhone: "+447700800111",
+				refereeJobTitle: "Registered Manager",
+				refereeOrganisation: "Comfort Care Services",
+				relationship: "line_manager",
+				candidateJobTitle: "Senior Carer",
+				candidateStartDate: "2016-04",
+				candidateEndDate: "2022-09",
+			},
+		],
 	},
 	{
 		profile: {
@@ -528,6 +606,29 @@ export const oakwoodCandidates: CandidateProfile[] = [
 			daysSinceActivity: 1,
 			notes: "Career changer from retail. Enthusiastic. Working through Care Certificate.",
 		},
+		referenceContacts: [
+			{
+				refereeName: "Trevor Banks",
+				refereePhone: "+447800200333",
+				refereeJobTitle: "Store Manager",
+				refereeOrganisation: "Marks & Spencer, Broadmead",
+				relationship: "line_manager",
+				candidateJobTitle: "Department Supervisor",
+				candidateStartDate: "2019-06",
+				candidateEndDate: "2024-12",
+			},
+			{
+				refereeName: "Carol Hughes",
+				refereeEmail: "carol.h@mands.co.uk",
+				refereePhone: "+447800200444",
+				refereeJobTitle: "HR Manager",
+				refereeOrganisation: "Marks & Spencer",
+				relationship: "hr_department",
+				candidateJobTitle: "Department Supervisor",
+				candidateStartDate: "2019-06",
+				candidateEndDate: "2024-12",
+			},
+		],
 	},
 	{
 		profile: {

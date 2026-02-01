@@ -2,12 +2,19 @@
 
 import { CheckIcon, CopyIcon, SendIcon } from "lucide-react";
 import { useState } from "react";
-import type { EmailDraft } from "@/lib/ai/tools/draft-email";
 import { Response } from "./elements/response";
 import { Button } from "./ui/button";
 
+interface EmailData {
+	recipientName?: string;
+	recipientEmail: string;
+	subject: string;
+	body: string;
+	cc?: string;
+}
+
 type EmailDraftProps = {
-	email: EmailDraft;
+	email: EmailData;
 };
 
 export function EmailDraftComponent({ email }: EmailDraftProps) {
@@ -25,7 +32,7 @@ export function EmailDraftComponent({ email }: EmailDraftProps) {
 	};
 
 	const handleCopy = async () => {
-		const emailText = `To: ${email.to}${email.cc ? `\nCC: ${email.cc}` : ""}\nSubject: ${email.subject}\n\n${email.body}`;
+		const emailText = `To: ${email.recipientEmail}${email.cc ? `\nCC: ${email.cc}` : ""}\nSubject: ${email.subject}\n\n${email.body}`;
 		await navigator.clipboard.writeText(emailText);
 		setCopied(true);
 		setTimeout(() => setCopied(false), 2000);
@@ -40,7 +47,7 @@ export function EmailDraftComponent({ email }: EmailDraftProps) {
 					</div>
 					<h3 className="font-semibold text-lg">Email Sent!</h3>
 					<p className="text-muted-foreground text-sm">
-						Your email to {email.to} has been sent successfully.
+						Your email to {email.recipientEmail} has been sent successfully.
 					</p>
 				</div>
 			</div>
@@ -54,7 +61,7 @@ export function EmailDraftComponent({ email }: EmailDraftProps) {
 				<div className="space-y-1.5 text-sm">
 					<div className="flex gap-2">
 						<span className="w-16 shrink-0 text-muted-foreground">To:</span>
-						<span className="font-medium">{email.to}</span>
+						<span className="font-medium">{email.recipientEmail}</span>
 					</div>
 					{email.cc && (
 						<div className="flex gap-2">

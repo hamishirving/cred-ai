@@ -71,6 +71,12 @@ export interface AgentExecutionContext {
 	orgPrompt?: string;
 	/** User who triggered the execution */
 	userId: string;
+	/** Pre-loaded memory from previous runs (if available) */
+	memory?: {
+		data: Record<string, unknown>;
+		runCount: number;
+		lastRunAt: Date | null;
+	};
 }
 
 /**
@@ -112,6 +118,7 @@ export interface SerializedAgentDefinition {
 		label: string;
 		description: string;
 		required: boolean;
+		defaultValue?: string;
 	}>;
 	constraints: {
 		maxSteps: number;

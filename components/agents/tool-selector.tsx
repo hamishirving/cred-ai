@@ -3,22 +3,18 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
-const AVAILABLE_TOOLS = [
-	{ name: "classifyDocument", description: "Classify a document type" },
-	{ name: "extractDocumentData", description: "Extract data from a document" },
-	{ name: "browseAndVerify", description: "Browser automation for verification" },
-	{ name: "getProfile", description: "Get candidate profile" },
-	{ name: "getDocuments", description: "Get profile documents" },
-	{ name: "updateDocumentStatus", description: "Update document status" },
-	{ name: "createTask", description: "Create a task for human review" },
-];
+interface ToolMeta {
+	name: string;
+	description: string;
+}
 
 interface ToolSelectorProps {
 	selected: string[];
 	onChange: (tools: string[]) => void;
+	availableTools: ToolMeta[];
 }
 
-export function ToolSelector({ selected, onChange }: ToolSelectorProps) {
+export function ToolSelector({ selected, onChange, availableTools }: ToolSelectorProps) {
 	function toggle(toolName: string) {
 		if (selected.includes(toolName)) {
 			onChange(selected.filter((t) => t !== toolName));
@@ -29,7 +25,7 @@ export function ToolSelector({ selected, onChange }: ToolSelectorProps) {
 
 	return (
 		<div className="flex flex-col gap-1.5">
-			{AVAILABLE_TOOLS.map((tool) => (
+			{availableTools.map((tool) => (
 				<div key={tool.name} className="flex items-center gap-2">
 					<Checkbox
 						id={`tool-${tool.name}`}

@@ -1,6 +1,8 @@
 "use client";
 
-import { ArrowUp } from "lucide-react";
+import { useState, useMemo } from "react";
+import { motion } from "framer-motion";
+import { ArrowUp, BarChart3, TrendingUp, Users, FileCheck } from "lucide-react";
 import {
 	Card,
 	CardContent,
@@ -8,17 +10,47 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-// Pipeline stages with stacked segments
-const pipelineStages = [
+// =============================================================================
+// TYPES
+// =============================================================================
+
+interface PipelineStage {
+	name: string;
+	total: number;
+	change: number;
+	segments: { name: string; value: number; color: string }[];
+}
+
+interface CohortRow {
+	cohort: string;
+	size: number;
+	days: (number | null)[];
+}
+
+// =============================================================================
+// MOCK DATA
+// =============================================================================
+
+const pipelineStages: PipelineStage[] = [
 	{
 		name: "Applied",
 		total: 245,
 		change: 12,
 		segments: [
-			{ name: "This week", value: 45, color: "hsl(210, 90%, 55%)" },
-			{ name: "Last week", value: 200, color: "hsl(210, 70%, 70%)" },
+			{ name: "This week", value: 45, color: "#4444cf" },
+			{ name: "Last week", value: 200, color: "#7a7ad9" },
 		],
 	},
 	{
@@ -26,8 +58,8 @@ const pipelineStages = [
 		total: 180,
 		change: 8,
 		segments: [
-			{ name: "Complete", value: 120, color: "hsl(142, 70%, 45%)" },
-			{ name: "In Progress", value: 60, color: "hsl(142, 50%, 65%)" },
+			{ name: "Complete", value: 120, color: "#3a9960" },
+			{ name: "In Progress", value: 60, color: "#6db88a" },
 		],
 	},
 	{
@@ -35,9 +67,9 @@ const pipelineStages = [
 		total: 142,
 		change: 5,
 		segments: [
-			{ name: "Verified", value: 85, color: "hsl(175, 60%, 45%)" },
-			{ name: "Pending", value: 40, color: "hsl(175, 40%, 60%)" },
-			{ name: "Requested", value: 17, color: "hsl(175, 30%, 75%)" },
+			{ name: "Verified", value: 85, color: "#2a8a7a" },
+			{ name: "Pending", value: 40, color: "#5aab9e" },
+			{ name: "Requested", value: 17, color: "#8ac4bb" },
 		],
 	},
 	{
@@ -45,8 +77,8 @@ const pipelineStages = [
 		total: 98,
 		change: 3,
 		segments: [
-			{ name: "Cleared", value: 65, color: "hsl(262, 60%, 55%)" },
-			{ name: "Processing", value: 33, color: "hsl(262, 40%, 70%)" },
+			{ name: "Cleared", value: 65, color: "#6b4fc7" },
+			{ name: "Processing", value: 33, color: "#9a86d9" },
 		],
 	},
 	{
@@ -54,26 +86,18 @@ const pipelineStages = [
 		total: 76,
 		change: 4,
 		segments: [
-			{ name: "Complete", value: 50, color: "hsl(320, 60%, 55%)" },
-			{ name: "In Progress", value: 26, color: "hsl(320, 40%, 70%)" },
+			{ name: "Complete", value: 50, color: "#c44d8b" },
+			{ name: "In Progress", value: 26, color: "#d480ab" },
 		],
 	},
 	{
 		name: "Ready",
 		total: 45,
 		change: 6,
-		segments: [{ name: "Active", value: 45, color: "hsl(45, 85%, 55%)" }],
+		segments: [{ name: "Active", value: 45, color: "#c49332" }],
 	},
 ];
 
-interface CohortRow {
-	cohort: string;
-	size: number;
-	// Percentage compliant at each day (0 = just started, 100 = all compliant)
-	days: (number | null)[];
-}
-
-// Data now shows % COMPLIANT (0% = just started, increasing to 100% = fully compliant)
 const cohortData: CohortRow[] = [
 	{
 		cohort: "Mean",
@@ -151,66 +175,193 @@ const dayColumns = [
 	"Day 10",
 ];
 
-// Get cell background color based on percentage compliant
-// Higher % = more compliant = more saturated color
+// =============================================================================
+// REPORT TABS
+// =============================================================================
+
+const reportTabs = [
+	{ value: "overview", label: "Overview" },
+	{ value: "pipeline", label: "Pipeline" },
+	{ value: "cohorts", label: "Cohorts" },
+] as const;
+
+type ReportTab = (typeof reportTabs)[number]["value"];
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
 function getCellColor(value: number | null, isMean: boolean, isDay0: boolean): string {
 	if (value === null) return "transparent";
+	if (isDay0) return isMean ? "#e8e0f0" : "#dfe6f0";
 
-	// Day 0 is always 0% - use faded/muted style
-	if (isDay0) {
-		return isMean ? "hsl(270, 30%, 92%)" : "hsl(210, 30%, 92%)";
-	}
-
-	// Mean row uses vibrant purple (similar to DBS Check bar)
 	if (isMean) {
-		if (value >= 90) return "hsl(262, 60%, 55%)";
-		if (value >= 70) return "hsl(262, 55%, 60%)";
-		if (value >= 50) return "hsl(262, 50%, 65%)";
-		if (value >= 30) return "hsl(262, 45%, 70%)";
-		return "hsl(262, 40%, 75%)";
+		if (value >= 90) return "#6b4fc7";
+		if (value >= 70) return "#7d65cf";
+		if (value >= 50) return "#8f7bd7";
+		if (value >= 30) return "#a191df";
+		return "#b3a7e7";
 	}
 
-	// Regular rows use vibrant blue (similar to Applied bar)
-	if (value >= 90) return "hsl(210, 90%, 55%)";
-	if (value >= 70) return "hsl(210, 85%, 60%)";
-	if (value >= 50) return "hsl(210, 80%, 65%)";
-	if (value >= 30) return "hsl(210, 70%, 70%)";
-	return "hsl(210, 60%, 75%)";
+	if (value >= 90) return "#4444cf";
+	if (value >= 70) return "#5c5cd5";
+	if (value >= 50) return "#7474db";
+	if (value >= 30) return "#8c8ce1";
+	return "#a4a4e7";
 }
 
 function getTextColor(value: number | null, isDay0: boolean): string {
-	if (value === null) return "hsl(var(--muted-foreground))";
-	// Day 0 column uses dark/muted text
-	if (isDay0) return "hsl(var(--muted-foreground))";
-	// All other cells use white text
+	if (value === null) return "#a8a49c";
+	if (isDay0) return "#8a857d";
 	return "white";
 }
 
-export default function ReportsPage() {
-	const maxTotal = Math.max(...pipelineStages.map((s) => s.total));
+// =============================================================================
+// SKELETON COMPONENTS
+// =============================================================================
+
+function PipelineSkeleton() {
+	return (
+		<Card className="shadow-none! bg-white">
+			<CardHeader className="pb-2">
+				<Skeleton className="h-5 w-[140px]" />
+			</CardHeader>
+			<CardContent>
+				<div className="grid grid-cols-6 gap-4 mb-6">
+					{Array.from({ length: 6 }).map((_, i) => (
+						<div key={i} className="space-y-2">
+							<Skeleton className="h-3 w-[60px]" />
+							<Skeleton className="h-6 w-[40px]" />
+							<Skeleton className="h-3 w-[30px]" />
+						</div>
+					))}
+				</div>
+				<div className="grid grid-cols-6 gap-4 h-[280px]">
+					{Array.from({ length: 6 }).map((_, i) => (
+						<div key={i} className="flex flex-col justify-end items-center">
+							<Skeleton className="w-full rounded-t-lg" style={{ height: `${60 + i * 5}%` }} />
+						</div>
+					))}
+				</div>
+			</CardContent>
+		</Card>
+	);
+}
+
+function CohortTableSkeleton() {
+	return (
+		<>
+			{Array.from({ length: 6 }).map((_, i) => (
+				<TableRow key={i} className="bg-white">
+					<TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
+					<TableCell><Skeleton className="h-4 w-[30px]" /></TableCell>
+					{Array.from({ length: 11 }).map((_, j) => (
+						<TableCell key={j} className="px-1">
+							<Skeleton className="h-7 w-full rounded" />
+						</TableCell>
+					))}
+				</TableRow>
+			))}
+		</>
+	);
+}
+
+// =============================================================================
+// COMPONENTS
+// =============================================================================
+
+function StatsOverview({ stages }: { stages: PipelineStage[] }) {
+	const totalCandidates = stages[0].total;
+	const readyCount = stages[stages.length - 1].total;
+	const conversionRate = Math.round((readyCount / totalCandidates) * 100);
 
 	return (
-		<div className="flex flex-1 flex-col gap-6 p-6">
-			<div>
-				<h1 className="text-2xl font-semibold">Reports</h1>
-				<p className="text-muted-foreground">
-					Analytics and compliance reporting dashboard
-				</p>
-			</div>
+		<div className="grid gap-4 md:grid-cols-3">
+			<motion.div
+				initial={{ opacity: 0, y: 12 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.3 }}
+			>
+				<Card className="shadow-none! bg-white">
+					<CardContent className="p-4">
+						<div className="flex items-start justify-between">
+							<div>
+								<p className="text-sm text-[#8a857d]">Total Candidates</p>
+								<p className="text-2xl font-semibold text-[#1c1a15] mt-1">{totalCandidates}</p>
+								<p className="text-xs text-[#3a9960] flex items-center gap-0.5 mt-1">
+									<TrendingUp className="h-3 w-3" />
+									12% from last month
+								</p>
+							</div>
+							<Users className="h-5 w-5 text-[#a8a49c]" />
+						</div>
+					</CardContent>
+				</Card>
+			</motion.div>
+			<motion.div
+				initial={{ opacity: 0, y: 12 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.3, delay: 0.05 }}
+			>
+				<Card className="shadow-none! bg-white">
+					<CardContent className="p-4">
+						<div className="flex items-start justify-between">
+							<div>
+								<p className="text-sm text-[#8a857d]">Ready to Start</p>
+								<p className="text-2xl font-semibold text-[#1c1a15] mt-1">{readyCount}</p>
+								<p className="text-xs text-[#3a9960] flex items-center gap-0.5 mt-1">
+									<TrendingUp className="h-3 w-3" />
+									6% from last month
+								</p>
+							</div>
+							<FileCheck className="h-5 w-5 text-[#a8a49c]" />
+						</div>
+					</CardContent>
+				</Card>
+			</motion.div>
+			<motion.div
+				initial={{ opacity: 0, y: 12 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.3, delay: 0.1 }}
+			>
+				<Card className="shadow-none! bg-white">
+					<CardContent className="p-4">
+						<div className="flex items-start justify-between">
+							<div>
+								<p className="text-sm text-[#8a857d]">Conversion Rate</p>
+								<p className="text-2xl font-semibold text-[#1c1a15] mt-1">{conversionRate}%</p>
+								<p className="text-xs text-[#8a857d] mt-1">Applied to ready</p>
+							</div>
+							<BarChart3 className="h-5 w-5 text-[#a8a49c]" />
+						</div>
+					</CardContent>
+				</Card>
+			</motion.div>
+		</div>
+	);
+}
 
-			{/* Pipeline Overview */}
-			<Card>
-				<CardHeader>
-					<CardTitle>Pipeline Overview</CardTitle>
+function PipelineChart({ stages }: { stages: PipelineStage[] }) {
+	const maxTotal = Math.max(...stages.map((s) => s.total));
+
+	return (
+		<motion.div
+			initial={{ opacity: 0, y: 12 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ duration: 0.3, delay: 0.15 }}
+		>
+			<Card className="shadow-none! bg-white">
+				<CardHeader className="pb-2">
+					<CardTitle className="text-sm font-semibold text-[#1c1a15]">Pipeline Overview</CardTitle>
 				</CardHeader>
 				<CardContent>
 					{/* Metric cards row */}
 					<div className="grid grid-cols-6 gap-4 mb-6">
-						{pipelineStages.map((stage) => (
+						{stages.map((stage) => (
 							<div key={stage.name} className="space-y-1">
-								<p className="text-sm text-muted-foreground">{stage.name}</p>
-								<p className="text-2xl font-semibold">{stage.total}</p>
-								<p className="text-sm text-green-600 flex items-center gap-0.5">
+								<p className="text-xs text-[#8a857d]">{stage.name}</p>
+								<p className="text-xl font-semibold text-[#1c1a15]">{stage.total}</p>
+								<p className="text-xs text-[#3a9960] flex items-center gap-0.5">
 									{stage.change}% <ArrowUp className="h-3 w-3" />
 								</p>
 							</div>
@@ -219,16 +370,18 @@ export default function ReportsPage() {
 
 					{/* Stacked vertical bars */}
 					<div className="grid grid-cols-6 gap-4 h-[280px]">
-						{pipelineStages.map((stage) => {
+						{stages.map((stage, stageIdx) => {
 							const heightPercent = (stage.total / maxTotal) * 100;
 							return (
 								<div
 									key={stage.name}
 									className="flex flex-col justify-end items-center"
 								>
-									<div
+									<motion.div
+										initial={{ height: 0 }}
+										animate={{ height: `${heightPercent}%` }}
+										transition={{ duration: 0.6, delay: stageIdx * 0.08 }}
 										className="w-full rounded-t-lg overflow-hidden flex flex-col-reverse"
-										style={{ height: `${heightPercent}%` }}
 									>
 										{stage.segments.map((segment, idx) => {
 											const segmentPercent =
@@ -247,81 +400,99 @@ export default function ReportsPage() {
 														{Math.round(segmentPercent)}%
 													</span>
 													{/* Tooltip on hover */}
-													<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-popover border rounded shadow-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-														<p className="font-medium">{segment.name}</p>
-														<p className="text-muted-foreground">
+													<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-white border border-[#e5e2db] rounded shadow-sm text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+														<p className="font-medium text-[#1c1a15]">{segment.name}</p>
+														<p className="text-[#8a857d]">
 															{segment.value} candidates
 														</p>
 													</div>
 												</div>
 											);
 										})}
-									</div>
+									</motion.div>
 								</div>
 							);
 						})}
 					</div>
 				</CardContent>
 			</Card>
+		</motion.div>
+	);
+}
 
-			{/* Cohort Analysis Table */}
-			<Card>
-				<CardHeader>
-					<CardTitle>Cohort Analysis: Time to Compliance</CardTitle>
-					<CardDescription>
+function CohortTable({ data }: { data: CohortRow[] }) {
+	return (
+		<motion.div
+			initial={{ opacity: 0, y: 12 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ duration: 0.3, delay: 0.2 }}
+		>
+			<Card className="shadow-none! bg-white">
+				<CardHeader className="pb-2">
+					<CardTitle className="text-sm font-semibold text-[#1c1a15]">
+						Cohort Analysis: Time to Compliance
+					</CardTitle>
+					<CardDescription className="text-[#8a857d]">
 						Percentage of candidates who have achieved compliance at each day
-						since starting. Higher is better - shows speed of compliance
-						completion.
+						since starting. Higher is better.
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="overflow-x-auto">
-					<table className="w-full text-sm">
-						<thead>
-							<tr className="border-b">
-								<th className="text-left py-3 pr-4 font-medium">Cohort</th>
-								<th className="text-center py-3 px-2 font-medium w-16">Size</th>
+					<Table>
+						<TableHeader>
+							<TableRow className="bg-[#faf9f7] hover:bg-[#faf9f7]">
+								<TableHead className="text-xs font-medium text-[#6b6760] min-w-[140px]">
+									Cohort
+								</TableHead>
+								<TableHead className="text-xs font-medium text-[#6b6760] text-center w-16">
+									Size
+								</TableHead>
 								{dayColumns.map((day) => (
-									<th
+									<TableHead
 										key={day}
-										className="text-center py-3 px-1 font-medium min-w-[70px]"
+										className="text-xs font-medium text-[#6b6760] text-center min-w-[70px] px-1"
 									>
 										{day}
-									</th>
+									</TableHead>
 								))}
-							</tr>
-						</thead>
-						<tbody>
-							{cohortData.map((row, rowIdx) => {
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{data.map((row) => {
 								const isMean = row.cohort === "Mean";
 								return (
-									<tr
+									<TableRow
 										key={row.cohort}
 										className={cn(
-											"border-b last:border-b-0",
+											"bg-white",
 											isMean && "font-medium"
 										)}
 									>
-										<td className="py-3 pr-4">
+										<TableCell className="py-2 pr-4">
 											{isMean ? (
 												<span className="flex items-center gap-1">
-													<span className="text-muted-foreground">↳</span>{" "}
-													{row.cohort}
+													<Badge
+														variant="outline"
+														className="text-[10px] px-1.5 border-[#6b4fc7]/30 text-[#6b4fc7]"
+													>
+														Mean
+													</Badge>
 												</span>
 											) : (
-												row.cohort
+												<span className="text-sm text-[#3d3a32]">{row.cohort}</span>
 											)}
-										</td>
-										<td className="text-center py-3 px-2 text-muted-foreground">
+										</TableCell>
+										<TableCell className="text-center py-2 px-2 text-sm text-[#8a857d] tabular-nums">
 											{row.size}
-										</td>
+										</TableCell>
 										{row.days.map((value, dayIdx) => {
 											const isDay0 = dayIdx === 0;
 											return (
-												<td key={dayIdx} className="py-2 px-1">
+												<TableCell key={dayIdx} className="py-1.5 px-1">
 													<div
 														className={cn(
 															"rounded px-2 py-1.5 text-center text-xs font-medium transition-colors",
-															value === null && "border border-dashed"
+															value === null && "border border-dashed border-[#e5e2db]"
 														)}
 														style={{
 															backgroundColor: getCellColor(value, isMean, isDay0),
@@ -330,16 +501,86 @@ export default function ReportsPage() {
 													>
 														{value !== null ? `${value.toFixed(1)}%` : "—"}
 													</div>
-												</td>
+												</TableCell>
 											);
 										})}
-									</tr>
+									</TableRow>
 								);
 							})}
-						</tbody>
-					</table>
+						</TableBody>
+					</Table>
 				</CardContent>
 			</Card>
+		</motion.div>
+	);
+}
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
+export default function ReportsPage() {
+	const [activeTab, setActiveTab] = useState<ReportTab>("overview");
+
+	const content = useMemo(() => {
+		switch (activeTab) {
+			case "overview":
+				return (
+					<div className="space-y-6">
+						<StatsOverview stages={pipelineStages} />
+						<PipelineChart stages={pipelineStages} />
+						<CohortTable data={cohortData} />
+					</div>
+				);
+			case "pipeline":
+				return (
+					<div className="space-y-6">
+						<StatsOverview stages={pipelineStages} />
+						<PipelineChart stages={pipelineStages} />
+					</div>
+				);
+			case "cohorts":
+				return (
+					<CohortTable data={cohortData} />
+				);
+			default:
+				return null;
+		}
+	}, [activeTab]);
+
+	return (
+		<div className="flex flex-1 flex-col gap-10 p-8 bg-[#faf9f7] min-h-full">
+			{/* Header */}
+			<div>
+				<h1 className="text-4xl font-semibold tracking-tight text-balance text-[#1c1a15]">Reports</h1>
+				<p className="text-[#6b6760] text-sm mt-1">
+					Analytics and compliance reporting
+				</p>
+			</div>
+
+			{/* Tabs */}
+			<div className="flex items-center gap-1 border-b border-[#eeeae4]">
+				{reportTabs.map((tab) => {
+					const isSelected = activeTab === tab.value;
+					return (
+						<button
+							key={tab.value}
+							onClick={() => setActiveTab(tab.value)}
+							className={cn(
+								"px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer whitespace-nowrap outline-none",
+								isSelected
+									? "border-[#4444cf] text-[#4444cf]"
+									: "border-transparent text-[#8a857d] hover:text-[#3d3a32] hover:border-[#ccc8c0]"
+							)}
+						>
+							{tab.label}
+						</button>
+					);
+				})}
+			</div>
+
+			{/* Content */}
+			{content}
 		</div>
 	);
 }

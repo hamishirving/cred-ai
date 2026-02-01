@@ -16,6 +16,17 @@ import { extractDocumentData } from "@/lib/ai/tools/extract-document-data";
 import { browseAndVerify, createBrowseAndVerify } from "@/lib/ai/tools/browse-and-verify";
 import type { BrowserActionCallback } from "@/lib/ai/tools/browse-and-verify";
 import { updateDocumentStatus } from "@/lib/ai/tools/update-document-status";
+import { getAgentMemoryTool } from "@/lib/ai/tools/get-agent-memory";
+import { saveAgentMemoryTool } from "@/lib/ai/tools/save-agent-memory";
+import { draftEmail } from "@/lib/ai/tools/draft-email";
+import { getCompliancePackages } from "@/lib/ai/tools/get-compliance-packages";
+import { getReferenceContactsTool } from "@/lib/ai/tools/get-reference-contacts";
+import { initiateVoiceCallTool } from "@/lib/ai/tools/initiate-voice-call";
+import { getCallStatusTool } from "@/lib/ai/tools/get-call-status";
+import { updateReferenceStatusTool } from "@/lib/ai/tools/update-reference-status";
+import { getLocalProfile } from "@/lib/ai/tools/get-local-profile";
+import { getLocalCompliance } from "@/lib/ai/tools/get-local-compliance";
+import { searchLocalCandidates } from "@/lib/ai/tools/search-local-candidates";
 
 /**
  * Registry of all tools available to agents, keyed by name.
@@ -29,6 +40,17 @@ const toolRegistry: Record<string, Tool> = {
 	extractDocumentData: extractDocumentData as Tool,
 	browseAndVerify: browseAndVerify as Tool,
 	updateDocumentStatus: updateDocumentStatus as Tool,
+	getAgentMemory: getAgentMemoryTool as Tool,
+	saveAgentMemory: saveAgentMemoryTool as Tool,
+	draftEmail: draftEmail as Tool,
+	getCompliancePackages: getCompliancePackages as Tool,
+	getReferenceContacts: getReferenceContactsTool as Tool,
+	initiateVoiceCall: initiateVoiceCallTool as Tool,
+	getCallStatus: getCallStatusTool as Tool,
+	updateReferenceStatus: updateReferenceStatusTool as Tool,
+	getLocalProfile: getLocalProfile as Tool,
+	getLocalCompliance: getLocalCompliance as Tool,
+	searchLocalCandidates: searchLocalCandidates as Tool,
 };
 
 /** Optional callbacks for context-aware tool resolution */
@@ -80,4 +102,23 @@ export function getAvailableToolNames(): string[] {
  */
 export function registerTool(name: string, tool: Tool): void {
 	toolRegistry[name] = tool;
+}
+
+/** Metadata for a tool — safe to pass to client components. */
+export interface ToolMetadata {
+	name: string;
+	description: string;
+}
+
+/**
+ * Get metadata for all registered tools.
+ * Extracts the first line of each tool's description for display.
+ */
+export function getToolMetadata(): ToolMetadata[] {
+	return Object.entries(toolRegistry).map(([name, t]) => {
+		const raw = (t as { description?: string }).description ?? "";
+		// Take first sentence or line as short description
+		const firstLine = raw.split("\n")[0].trim();
+		return { name, description: firstLine };
+	});
 }

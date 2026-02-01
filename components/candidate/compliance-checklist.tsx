@@ -68,6 +68,7 @@ interface GroupConfig {
 	color: string;
 	borderColor: string;
 	badgeClass: string;
+	dotColor: string;
 	emptyMessage: string;
 }
 
@@ -76,36 +77,40 @@ const GROUP_CONFIG: GroupConfig[] = [
 		key: "candidate",
 		label: "Candidate action needed",
 		icon: <AlertCircle className="h-4 w-4" />,
-		color: "text-orange-600",
-		borderColor: "border-orange-200",
-		badgeClass: "bg-orange-100 text-orange-700 border-orange-200",
+		color: "text-[#c49332]",
+		borderColor: "border-[#c49332]/20",
+		badgeClass: "bg-[#faf5eb] text-[#a87c2a] border-0",
+		dotColor: "bg-[#c49332]",
 		emptyMessage: "No items waiting on candidate",
 	},
 	{
 		key: "admin",
 		label: "Internal review",
 		icon: <FileText className="h-4 w-4" />,
-		color: "text-blue-600",
-		borderColor: "border-blue-200",
-		badgeClass: "bg-blue-100 text-blue-700 border-blue-200",
+		color: "text-[#4444cf]",
+		borderColor: "border-[#4444cf]/20",
+		badgeClass: "bg-[#eeedf8] text-[#4444cf] border-0",
+		dotColor: "bg-[#4444cf]",
 		emptyMessage: "No items under review",
 	},
 	{
 		key: "third_party",
 		label: "Third party",
 		icon: <ExternalLink className="h-4 w-4" />,
-		color: "text-purple-600",
-		borderColor: "border-purple-200",
-		badgeClass: "bg-purple-100 text-purple-700 border-purple-200",
+		color: "text-[#3636b8]",
+		borderColor: "border-[#3636b8]/20",
+		badgeClass: "bg-[#eeedf8] text-[#3636b8] border-0",
+		dotColor: "bg-[#3636b8]",
 		emptyMessage: "No items with external providers",
 	},
 	{
 		key: "complete",
 		label: "Complete",
 		icon: <CheckCircle2 className="h-4 w-4" />,
-		color: "text-green-600",
-		borderColor: "border-green-200",
-		badgeClass: "bg-green-100 text-green-700 border-green-200",
+		color: "text-[#3a9960]",
+		borderColor: "border-[#3a9960]/20",
+		badgeClass: "bg-[#edf7f1] text-[#3a9960] border-0",
+		dotColor: "bg-[#3a9960]",
 		emptyMessage: "No completed items",
 	},
 ];
@@ -192,16 +197,16 @@ export function ComplianceChecklist({
 		<div className="space-y-3">
 			{/* Placement header */}
 			{showPlacementHeader && placement && (
-				<Card>
+				<Card className="shadow-none! bg-white">
 					<CardContent className="py-4">
 						<div className="flex items-center justify-between">
 							<div>
-								<h3 className="font-semibold">
+								<h3 className="font-semibold text-[#1c1a15]">
 									{placement.roleName && `${placement.roleName} @ `}
 									{placement.workNodeName}
 								</h3>
 								{placement.startDate && (
-									<p className="text-sm text-muted-foreground">
+									<p className="text-sm text-[#8a857d]">
 										Start: {formatDate(placement.startDate)}
 										{daysToStart !== null && daysToStart >= 0 && (
 											<span className="ml-2">
@@ -212,8 +217,8 @@ export function ComplianceChecklist({
 								)}
 							</div>
 							<div className="text-right">
-								<span className="text-2xl font-bold">{percentage}%</span>
-								<p className="text-sm text-muted-foreground">
+								<span className="text-2xl font-bold text-[#1c1a15]">{percentage}%</span>
+								<p className="text-sm text-[#8a857d]">
 									{completeItems}/{totalItems} complete
 								</p>
 							</div>
@@ -237,7 +242,7 @@ export function ComplianceChecklist({
 					<Card
 						key={config.key}
 						className={cn(
-							"transition-colors",
+							"shadow-none! bg-white transition-colors",
 							!isEmpty && config.borderColor
 						)}
 					>
@@ -246,7 +251,7 @@ export function ComplianceChecklist({
 							onOpenChange={() => toggleGroup(config.key)}
 						>
 							<CollapsibleTrigger asChild>
-								<CardHeader className="py-3 cursor-pointer hover:bg-muted/50 transition-colors">
+								<CardHeader className="py-3 cursor-pointer hover:bg-[#f0ede7]/50 transition-colors">
 									<div className="flex items-center justify-between">
 										<CardTitle className="text-sm font-medium flex items-center gap-2">
 											<span className={config.color}>{config.icon}</span>
@@ -266,10 +271,9 @@ export function ComplianceChecklist({
 												<Button
 													variant="ghost"
 													size="sm"
-													className="h-7 text-xs"
+													className="h-7 text-xs text-[#6b6760]"
 													onClick={(e) => {
 														e.stopPropagation();
-														// Chase all - could open a modal
 													}}
 												>
 													<MessageSquare className="h-3 w-3 mr-1" />
@@ -277,9 +281,9 @@ export function ComplianceChecklist({
 												</Button>
 											)}
 											{isExpanded ? (
-												<ChevronUp className="h-4 w-4 text-muted-foreground" />
+												<ChevronUp className="h-4 w-4 text-[#a8a49c]" />
 											) : (
-												<ChevronDown className="h-4 w-4 text-muted-foreground" />
+												<ChevronDown className="h-4 w-4 text-[#a8a49c]" />
 											)}
 										</div>
 									</div>
@@ -289,7 +293,7 @@ export function ComplianceChecklist({
 							<CollapsibleContent>
 								<CardContent className="pt-0 pb-3">
 									{isEmpty ? (
-										<p className="text-sm text-muted-foreground py-2">
+										<p className="text-sm text-[#8a857d] py-2">
 											{config.emptyMessage}
 										</p>
 									) : (
@@ -343,7 +347,7 @@ function ComplianceItem({
 		switch (item.blockedBy) {
 			case "candidate":
 				if (item.daysWaiting !== undefined) {
-					return `No upload • ${formatDaysAgo(item.daysWaiting)}`;
+					return `No upload \u00b7 ${formatDaysAgo(item.daysWaiting)}`;
 				}
 				return item.actionRequired || "Awaiting upload";
 			case "admin":
@@ -377,29 +381,26 @@ function ComplianceItem({
 		item.expiresAt && daysUntil(item.expiresAt) !== null && daysUntil(item.expiresAt)! <= 30;
 
 	return (
-		<li className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-muted/50 transition-colors group">
+		<li className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-[#f0ede7]/50 transition-colors group">
 			<div className="flex items-center gap-3 min-w-0 flex-1">
 				{/* Status indicator */}
 				<div
 					className={cn(
 						"h-2 w-2 rounded-full shrink-0",
-						config.key === "complete" ? "bg-green-500" :
-						config.key === "candidate" ? "bg-orange-500" :
-						config.key === "admin" ? "bg-blue-500" :
-						"bg-purple-500"
+						config.dotColor
 					)}
 				/>
 
 				{/* Name and status */}
 				<div className="min-w-0 flex-1">
-					<p className="text-sm font-medium truncate">{item.elementName}</p>
-					<p className="text-xs text-muted-foreground flex items-center gap-1">
+					<p className="text-sm font-medium truncate text-[#1c1a15]">{item.elementName}</p>
+					<p className="text-xs text-[#8a857d] flex items-center gap-1">
 						{item.blockedBy !== "complete" && (
 							<Clock className="h-3 w-3" />
 						)}
 						{getStatusText()}
 						{isExpiringSoon && item.blockedBy === "complete" && (
-							<Badge variant="outline" className="ml-2 text-xs py-0 h-5 text-amber-600 border-amber-300">
+							<Badge variant="outline" className="ml-2 text-xs py-0 h-5 text-[#c49332] border-[#c49332]/30">
 								Expiring
 							</Badge>
 						)}
@@ -414,7 +415,7 @@ function ComplianceItem({
 					<Button
 						variant="ghost"
 						size="sm"
-						className="h-7 text-xs"
+						className="h-7 text-xs text-[#6b6760]"
 						onClick={() => onChase(item.elementId)}
 					>
 						Chase
@@ -424,7 +425,7 @@ function ComplianceItem({
 					<Button
 						variant="ghost"
 						size="sm"
-						className="h-7 text-xs"
+						className="h-7 text-xs text-[#6b6760]"
 						onClick={() => onReview(item.elementId)}
 					>
 						Review
@@ -434,7 +435,7 @@ function ComplianceItem({
 					<Button
 						variant="ghost"
 						size="sm"
-						className="h-7 text-xs"
+						className="h-7 text-xs text-[#6b6760]"
 						onClick={() => onChase(item.elementId)}
 					>
 						Chase

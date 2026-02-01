@@ -22,11 +22,17 @@ import { ToolSelector } from "@/components/agents/tool-selector";
 import type { Agent } from "@/lib/db/schema/agents";
 import type { AgentTrigger, AgentOversight, AgentConstraints, ConditionGroup } from "@/lib/db/schema/agents";
 
-interface AgentEditorProps {
-	agent: Agent;
+interface ToolMeta {
+	name: string;
+	description: string;
 }
 
-export function AgentEditor({ agent }: AgentEditorProps) {
+interface AgentEditorProps {
+	agent: Agent;
+	availableTools: ToolMeta[];
+}
+
+export function AgentEditor({ agent, availableTools }: AgentEditorProps) {
 	const router = useRouter();
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -189,7 +195,7 @@ export function AgentEditor({ agent }: AgentEditorProps) {
 							<CardTitle className="text-xs">Tools</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<ToolSelector selected={tools} onChange={setTools} />
+							<ToolSelector selected={tools} onChange={setTools} availableTools={availableTools} />
 						</CardContent>
 					</Card>
 

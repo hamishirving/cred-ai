@@ -7,10 +7,14 @@
 
 import type { AgentDefinition, SerializedAgentDefinition } from "./types";
 import { blsVerificationAgent } from "./definitions/bls-verification";
+import { onboardingCompanionAgent } from "./definitions/onboarding-companion";
+import { referenceCheckAgent } from "./definitions/reference-check";
 
 /** All registered agents */
 const agents: Record<string, AgentDefinition> = {
 	[blsVerificationAgent.id]: blsVerificationAgent,
+	[onboardingCompanionAgent.id]: onboardingCompanionAgent,
+	[referenceCheckAgent.id]: referenceCheckAgent,
 };
 
 /**
@@ -38,7 +42,10 @@ export function serializeAgent(
 ): SerializedAgentDefinition {
 	const schemaShape = agent.inputSchema.shape;
 	const inputFields = Object.entries(schemaShape).map(([key, zodField]) => {
-		const field = zodField as { description?: string; _def?: { typeName?: string } };
+		const field = zodField as { description?: string; _def?: { typeName?: string; defaultValue?: unknown; innerType?: { _def?: { typeName?: string } } } };
+		// ZodDefault wraps the inner type
+		const isDefault = field._def?.typeName === "ZodDefault";
+		const innerDef = isDefault ? field._def?.innerType?._def : field._def;
 		return {
 			key,
 			label: key
@@ -46,7 +53,10 @@ export function serializeAgent(
 				.replace(/^./, (s) => s.toUpperCase())
 				.trim(),
 			description: field.description || "",
-			required: !field._def?.typeName?.includes("Optional"),
+			required: !innerDef?.typeName?.includes("Optional") && !isDefault,
+			...(isDefault && field._def?.defaultValue != null
+				? { defaultValue: String(typeof field._def.defaultValue === "function" ? field._def.defaultValue() : field._def.defaultValue) }
+				: {}),
 		};
 	});
 

@@ -169,7 +169,15 @@ export function AgentPage({ agent }: AgentPageProps) {
 	const [executions, setExecutions] = useState<AgentExecution[]>([]);
 	const [loadingExecs, setLoadingExecs] = useState(true);
 	const [dialogOpen, setDialogOpen] = useState(false);
-	const [formData, setFormData] = useState<Record<string, string>>({});
+	const [formData, setFormData] = useState<Record<string, string>>(() => {
+		const defaults: Record<string, string> = {};
+		for (const field of agent.inputFields) {
+			if (field.defaultValue) {
+				defaults[field.key] = field.defaultValue;
+			}
+		}
+		return defaults;
+	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [uploadState, setUploadState] = useState<"idle" | "uploading" | "done" | "error">("idle");
 	const [uploadError, setUploadError] = useState("");

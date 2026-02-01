@@ -75,6 +75,7 @@ export type AgentInputField = {
 	label: string;
 	description: string;
 	required: boolean;
+	defaultValue?: string;
 };
 
 /**
