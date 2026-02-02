@@ -21,7 +21,11 @@ import type {
 import { resolveTools } from "./tool-resolver";
 
 /** Layer 1: System-level safety and behaviour rails */
-const AGENT_SYSTEM_BASE = `You are an autonomous AI agent executing a specific task for a compliance platform.
+function getAgentSystemBase(): string {
+	const now = new Date();
+	return `You are an autonomous AI agent executing a specific task for a compliance platform.
+
+CURRENT DATE/TIME: ${now.toISOString()} (${now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}, ${now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })})
 
 RULES:
 - Use British English spelling (organisation, colour, favour)
@@ -34,7 +38,9 @@ RULES:
 - Your final summary should be 2-3 short bullet points, not a full report
 - NEVER use emoji in your output — no ✅, 🎉, ✓ symbols etc.
 - Never use sign-off lines like "The Oakwood Care Team"
-- Never use headings larger than ### in your output`;
+- Never use headings larger than ### in your output
+- When setting due dates, always use dates in the future relative to the current date above`;
+}
 
 /**
  * Assemble the 4-layer prompt for an agent execution.
@@ -46,7 +52,7 @@ function buildAgentPrompt(
 ): string {
 	const layers = [
 		// Layer 1: System base
-		AGENT_SYSTEM_BASE,
+		getAgentSystemBase(),
 		// Layer 2: Organisation prompt
 		ctx.orgPrompt ? `\nORGANISATION CONTEXT:\n${ctx.orgPrompt}` : "",
 		// Layer 3: Agent-specific prompt
