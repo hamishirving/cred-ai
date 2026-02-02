@@ -27,9 +27,9 @@ When to use:
 - User asks to "create a task for @Someone"
 - User wants to assign follow-up work to a colleague
 - User mentions someone with @ and describes work to be done
-- User says "@me" to assign a task to themselves
+- User says "@me" to assign a task to themselves (chat context only)
 
-Extract the assignee's first name from the @ mention (e.g., "@Sarah" → "Sarah", "@me" → "me"). The special value "me" assigns the task to the current user. Parse natural language dates like "Friday", "next week", "tomorrow" into actual dates.`,
+Extract the assignee's first name from the @ mention (e.g., "@Sarah" → "Sarah", "@me" → "me"). The special value "me" assigns the task to the current user (only works in chat with an authenticated session — agents/webhooks must use a specific team member name). Parse natural language dates like "Friday", "next week", "tomorrow" into actual dates.`,
 
 	inputSchema: z.object({
 		title: z

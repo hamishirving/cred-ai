@@ -4,6 +4,55 @@ import { cookies } from "next/headers";
 import * as postmark from "postmark";
 import { logEmailActivity } from "@/lib/db/queries";
 
+/**
+ * Strip markdown formatting from text for plain-text emails.
+ * Converts markdown links to "text (url)" format and removes
+ * bold/italic/heading syntax.
+ */
+function stripMarkdown(text: string): string {
+	return text
+		// Convert [text](url) links to "text (url)"
+		.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)")
+		// Remove bold **text** or __text__
+		.replace(/(\*\*|__)(.*?)\1/g, "$2")
+		// Remove italic *text* or _text_ (but not mid-word underscores)
+		.replace(/(\*|_)(.*?)\1/g, "$2")
+		// Remove heading markers
+		.replace(/^#{1,6}\s+/gm, "")
+		// Remove horizontal rules
+		.replace(/^[-*_]{3,}\s*$/gm, "")
+		// Clean up bullet markers to plain dashes
+		.replace(/^\*\s+/gm, "- ");
+}
+
+/**
+ * Convert markdown body to simple HTML for email rendering.
+ * Handles links, bold, italic, paragraphs, and line breaks.
+ */
+function markdownToEmailHtml(text: string): string {
+	const html = text
+		// Remove heading markers (before escaping)
+		.replace(/^#{1,6}\s+/gm, "")
+		// Remove horizontal rules
+		.replace(/^[-*_]{3,}\s*$/gm, "")
+		// Clean up bullet markers to plain dashes
+		.replace(/^\*\s+/gm, "- ")
+		// Escape HTML entities
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		// Convert markdown links to <a> tags
+		.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+		// Convert bold
+		.replace(/(\*\*|__)(.*?)\1/g, "<strong>$2</strong>")
+		// Convert italic
+		.replace(/(\*|_)(.*?)\1/g, "<em>$2</em>")
+		// Convert line breaks to <br>
+		.replace(/\n/g, "<br>");
+
+	return html;
+}
+
 const emailSchema = z.object({
 	recipientName: z.string().describe("Recipient's first name"),
 	recipientEmail: z.string().email().describe("Recipient email address"),
@@ -82,7 +131,8 @@ IMPORTANT: When asking someone to upload documents, complete tasks, or take any 
 						From: process.env.POSTMARK_FROM_EMAIL || "compliance@credentially.io",
 						To: input.recipientEmail,
 						Subject: input.subject,
-						TextBody: input.body,
+						TextBody: stripMarkdown(input.body),
+						HtmlBody: markdownToEmailHtml(input.body),
 						...(input.cc ? { Cc: input.cc } : {}),
 						MessageStream: "outbound",
 					});
