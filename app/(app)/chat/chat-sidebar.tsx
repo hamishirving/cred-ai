@@ -71,11 +71,11 @@ export function ChatSidebar({ user, children }: ChatSidebarProps) {
 				} as React.CSSProperties
 			}
 		>
-			<Sidebar collapsible="none" className="border-r">
+			<Sidebar collapsible="none" className="border-r border-[#e5e2db] bg-white">
 				<SidebarHeader>
 					<SidebarMenu>
-						<div className="flex flex-row items-center justify-between px-2">
-							<span className="font-semibold text-sm">Chat History</span>
+						<div className="flex flex-row items-center justify-between px-2 py-1">
+							<span className="text-xs font-medium uppercase text-[#8a857d] tracking-wide">Chat History</span>
 							<div className="flex flex-row gap-1">
 								{user && (
 									<Tooltip>
@@ -118,7 +118,7 @@ export function ChatSidebar({ user, children }: ChatSidebarProps) {
 					<SidebarHistory user={user} />
 				</SidebarContent>
 			</Sidebar>
-			<main className="flex-1 overflow-hidden">{children}</main>
+			<main className="flex-1 overflow-hidden bg-[#f7f5f0]">{children}</main>
 
 			<AlertDialog
 				onOpenChange={setShowDeleteAllDialog}

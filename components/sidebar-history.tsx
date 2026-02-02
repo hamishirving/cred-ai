@@ -163,7 +163,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 		return (
 			<SidebarGroup>
 				<SidebarGroupContent>
-					<div className="flex w-full flex-row items-center justify-center gap-2 px-2 text-sm text-zinc-500">
+					<div className="flex w-full flex-row items-center justify-center gap-2 px-2 text-sm text-[#8a857d]">
 						Login to save and revisit previous chats!
 					</div>
 				</SidebarGroupContent>
@@ -174,7 +174,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 	if (isLoading) {
 		return (
 			<SidebarGroup>
-				<div className="px-2 py-1 text-sidebar-foreground/50 text-xs">
+				<div className="px-2 py-1 text-xs font-medium uppercase text-[#8a857d] tracking-wide">
 					Today
 				</div>
 				<SidebarGroupContent>
@@ -204,7 +204,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 		return (
 			<SidebarGroup>
 				<SidebarGroupContent>
-					<div className="flex w-full flex-row items-center justify-center gap-2 px-2 text-sm text-zinc-500">
+					<div className="flex w-full flex-row items-center justify-center gap-2 px-2 text-sm text-[#8a857d]">
 						Your conversations will appear here once you start chatting!
 					</div>
 				</SidebarGroupContent>
@@ -229,7 +229,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 									<div className="flex flex-col gap-6">
 										{groupedChats.today.length > 0 && (
 											<div>
-												<div className="px-2 py-1 text-sidebar-foreground/50 text-xs">
+												<div className="px-2 py-1 text-xs font-medium uppercase text-[#8a857d] tracking-wide">
 													Today
 												</div>
 												{groupedChats.today.map((chat) => (
@@ -249,7 +249,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 
 										{groupedChats.yesterday.length > 0 && (
 											<div>
-												<div className="px-2 py-1 text-sidebar-foreground/50 text-xs">
+												<div className="px-2 py-1 text-xs font-medium uppercase text-[#8a857d] tracking-wide">
 													Yesterday
 												</div>
 												{groupedChats.yesterday.map((chat) => (
@@ -269,7 +269,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 
 										{groupedChats.lastWeek.length > 0 && (
 											<div>
-												<div className="px-2 py-1 text-sidebar-foreground/50 text-xs">
+												<div className="px-2 py-1 text-xs font-medium uppercase text-[#8a857d] tracking-wide">
 													Last 7 days
 												</div>
 												{groupedChats.lastWeek.map((chat) => (
@@ -289,7 +289,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 
 										{groupedChats.lastMonth.length > 0 && (
 											<div>
-												<div className="px-2 py-1 text-sidebar-foreground/50 text-xs">
+												<div className="px-2 py-1 text-xs font-medium uppercase text-[#8a857d] tracking-wide">
 													Last 30 days
 												</div>
 												{groupedChats.lastMonth.map((chat) => (
@@ -309,7 +309,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 
 										{groupedChats.older.length > 0 && (
 											<div>
-												<div className="px-2 py-1 text-sidebar-foreground/50 text-xs">
+												<div className="px-2 py-1 text-xs font-medium uppercase text-[#8a857d] tracking-wide">
 													Older than last month
 												</div>
 												{groupedChats.older.map((chat) => (
@@ -340,11 +340,11 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
 					/>
 
 					{hasReachedEnd ? (
-						<div className="mt-8 flex w-full flex-row items-center justify-center gap-2 px-2 text-sm text-zinc-500">
+						<div className="mt-8 flex w-full flex-row items-center justify-center gap-2 px-2 text-sm text-[#8a857d]">
 							You have reached the end of your chat history.
 						</div>
 					) : (
-						<div className="mt-8 flex flex-row items-center gap-2 p-2 text-zinc-500 dark:text-zinc-400">
+						<div className="mt-8 flex flex-row items-center gap-2 p-2 text-[#8a857d]">
 							<div className="animate-spin">
 								<LoaderIcon />
 							</div>

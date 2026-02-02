@@ -14,6 +14,10 @@ import {
 	tasks,
 	escalations,
 	activities,
+	// People (leaf tables)
+	referenceContacts,
+	// AI Agents
+	agentMemory,
 	// Journey
 	stageTransitions,
 	entityStagePositions,
@@ -214,6 +218,18 @@ export async function clearAllData() {
 	}
 	console.log("   ✓ Cleared org_memberships (preserved real user memberships)");
 
+	// Agent memory (not org-scoped, delete all)
+	await db.delete(agentMemory);
+	console.log("   ✓ Cleared agent_memory");
+
+	// Reference contacts (org-scoped, must delete before profiles)
+	if (preservedOrgIds.length > 0) {
+		await db.delete(referenceContacts).where(notInArray(referenceContacts.organisationId, preservedOrgIds));
+	} else {
+		await db.delete(referenceContacts);
+	}
+	console.log("   ✓ Cleared reference_contacts");
+
 	// Profiles: preserve those in preserved orgs
 	if (preservedOrgIds.length > 0) {
 		await db.delete(profiles).where(notInArray(profiles.organisationId, preservedOrgIds));
@@ -382,6 +398,8 @@ export async function clearOrgData(orgId: string): Promise<void> {
 	await db.delete(complianceElements).where(eq(complianceElements.organisationId, orgId));
 
 	// 7. Identity
+	// Reference contacts (must delete before profiles)
+	await db.delete(referenceContacts).where(eq(referenceContacts.organisationId, orgId));
 	// Delete all org memberships (will be restored for real users after roles recreated)
 	await db.delete(orgMemberships).where(eq(orgMemberships.organisationId, orgId));
 	await db.delete(profiles).where(eq(profiles.organisationId, orgId));

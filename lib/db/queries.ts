@@ -11,6 +11,7 @@ import {
 	inArray,
 	lt,
 	lte,
+	sql,
 	type SQL,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -52,6 +53,16 @@ import {
 	type NewTask,
 	activities,
 	type Activity,
+	agents,
+	type Agent,
+	type NewAgent,
+	agentExecutions,
+	type AgentExecution,
+	type NewAgentExecution,
+	agentMemory,
+	type AgentMemory,
+	referenceContacts,
+	type ReferenceContact,
 } from "./schema";
 import type {
 	TranscriptMessage,
@@ -1182,4 +1193,330 @@ export async function getProfileTimeline({
 		startDate,
 		endDate,
 	};
+}
+
+// ============================================
+// Agent Execution Queries
+// ============================================
+
+export async function createAgentExecution({
+	agentId,
+	orgId,
+	userId,
+	triggerType,
+	input,
+	model,
+}: {
+	agentId: string;
+	orgId?: string;
+	userId?: string;
+	triggerType?: "manual" | "schedule" | "event";
+	input?: Record<string, unknown>;
+	model?: string;
+}): Promise<AgentExecution> {
+	const [result] = await db
+		.insert(agentExecutions)
+		.values({
+			agentId,
+			orgId: orgId || undefined,
+			userId: userId || undefined,
+			triggerType: triggerType || "manual",
+			status: "running",
+			input,
+			steps: [],
+			model,
+		})
+		.returning();
+	return result;
+}
+
+export async function updateAgentExecution({
+	id,
+	status,
+	steps,
+	output,
+	tokensUsed,
+	durationMs,
+}: {
+	id: string;
+	status?: "running" | "completed" | "failed" | "escalated";
+	steps?: import("@/lib/ai/agents/types").AgentStep[];
+	output?: Record<string, unknown>;
+	tokensUsed?: { inputTokens: number; outputTokens: number; totalTokens: number };
+	durationMs?: number;
+}): Promise<void> {
+	const updates: Partial<NewAgentExecution> = {};
+	if (status) updates.status = status;
+	if (steps) updates.steps = steps;
+	if (output) updates.output = output;
+	if (tokensUsed) updates.tokensUsed = tokensUsed;
+	if (durationMs !== undefined) updates.durationMs = durationMs;
+	if (status === "completed" || status === "failed" || status === "escalated") {
+		updates.completedAt = new Date();
+	}
+
+	await db
+		.update(agentExecutions)
+		.set(updates)
+		.where(eq(agentExecutions.id, id));
+}
+
+export async function getAgentExecution({
+	id,
+}: {
+	id: string;
+}): Promise<AgentExecution | null> {
+	const [result] = await db
+		.select()
+		.from(agentExecutions)
+		.where(eq(agentExecutions.id, id));
+	return result || null;
+}
+
+export async function getAgentExecutionsByAgentId({
+	agentId,
+	limit = 20,
+}: {
+	agentId: string;
+	limit?: number;
+}): Promise<AgentExecution[]> {
+	return db
+		.select()
+		.from(agentExecutions)
+		.where(eq(agentExecutions.agentId, agentId))
+		.orderBy(desc(agentExecutions.createdAt))
+		.limit(limit);
+}
+
+// ============================================
+// Agent Definition Queries
+// ============================================
+
+export async function getAgentById({
+	id,
+}: {
+	id: string;
+}): Promise<Agent | null> {
+	const [result] = await db
+		.select()
+		.from(agents)
+		.where(eq(agents.id, id));
+	return result || null;
+}
+
+export async function getAgentByCode({
+	code,
+}: {
+	code: string;
+}): Promise<Agent | null> {
+	const [result] = await db
+		.select()
+		.from(agents)
+		.where(eq(agents.code, code));
+	return result || null;
+}
+
+export async function getAllAgents({
+	orgId,
+}: {
+	orgId?: string;
+} = {}): Promise<Agent[]> {
+	if (orgId) {
+		return db
+			.select()
+			.from(agents)
+			.where(eq(agents.isActive, true))
+			.orderBy(asc(agents.name));
+	}
+	return db
+		.select()
+		.from(agents)
+		.where(eq(agents.isActive, true))
+		.orderBy(asc(agents.name));
+}
+
+export async function createAgentDefinition(
+	data: NewAgent,
+): Promise<Agent> {
+	const [result] = await db
+		.insert(agents)
+		.values(data)
+		.returning();
+	return result;
+}
+
+export async function updateAgentDefinition({
+	id,
+	...data
+}: Partial<NewAgent> & { id: string }): Promise<Agent | null> {
+	const [result] = await db
+		.update(agents)
+		.set({ ...data, updatedAt: new Date() })
+		.where(eq(agents.id, id))
+		.returning();
+	return result || null;
+}
+
+// ============================================
+// Agent Memory
+// ============================================
+
+/**
+ * Get agent memory by composite key (agentId + subjectId + orgId).
+ */
+export async function getAgentMemory({
+	agentId,
+	subjectId,
+	orgId,
+}: {
+	agentId: string;
+	subjectId: string;
+	orgId: string;
+}): Promise<AgentMemory | null> {
+	const [result] = await db
+		.select()
+		.from(agentMemory)
+		.where(
+			and(
+				eq(agentMemory.agentId, agentId),
+				eq(agentMemory.subjectId, subjectId),
+				eq(agentMemory.orgId, orgId),
+			),
+		);
+	return result || null;
+}
+
+/**
+ * Upsert agent memory — insert or update on conflict.
+ * Increments runCount and updates lastRunAt on each call.
+ */
+export async function upsertAgentMemory({
+	agentId,
+	subjectId,
+	orgId,
+	memory,
+}: {
+	agentId: string;
+	subjectId: string;
+	orgId: string;
+	memory: Record<string, unknown>;
+}): Promise<AgentMemory> {
+	const now = new Date();
+	const [result] = await db
+		.insert(agentMemory)
+		.values({
+			agentId,
+			subjectId,
+			orgId,
+			memory,
+			lastRunAt: now,
+			runCount: 1,
+			createdAt: now,
+			updatedAt: now,
+		})
+		.onConflictDoUpdate({
+			target: [agentMemory.agentId, agentMemory.subjectId, agentMemory.orgId],
+			set: {
+				memory,
+				lastRunAt: now,
+				runCount: sql`${agentMemory.runCount} + 1`,
+				updatedAt: now,
+			},
+		})
+		.returning();
+	return result;
+}
+
+// ============================================
+// Email Activity Logging
+// ============================================
+
+/**
+ * Log a drafted email as an activity for audit trail.
+ */
+export async function logEmailActivity({
+	organisationId,
+	profileId,
+	subject,
+	body,
+	recipientEmail,
+	recipientName,
+	reasoning,
+}: {
+	organisationId: string;
+	profileId: string;
+	subject: string;
+	body: string;
+	recipientEmail: string;
+	recipientName: string;
+	reasoning?: string;
+}): Promise<void> {
+	await db.insert(activities).values({
+		organisationId,
+		profileId,
+		activityType: "message_sent",
+		actor: "ai",
+		channel: "email",
+		summary: `Email drafted: ${subject}`,
+		details: {
+			recipientEmail,
+			recipientName,
+			subject,
+			body,
+			status: "drafted",
+		},
+		aiReasoning: reasoning,
+		visibleToCandidate: "true",
+	});
+}
+
+// ============================================
+// Reference Contacts
+// ============================================
+
+/**
+ * Get all reference contacts for a profile within an organisation.
+ */
+export async function getReferenceContactsForProfile({
+	profileId,
+	organisationId,
+}: {
+	profileId: string;
+	organisationId: string;
+}): Promise<ReferenceContact[]> {
+	return db
+		.select()
+		.from(referenceContacts)
+		.where(
+			and(
+				eq(referenceContacts.profileId, profileId),
+				eq(referenceContacts.organisationId, organisationId),
+			),
+		);
+}
+
+/**
+ * Update a reference contact's status and captured data.
+ */
+export async function updateReferenceContact({
+	id,
+	status,
+	capturedData,
+}: {
+	id: string;
+	status?: "pending" | "contacted" | "completed" | "failed";
+	capturedData?: Record<string, unknown>;
+}): Promise<ReferenceContact> {
+	const updates: Record<string, unknown> = {
+		updatedAt: new Date(),
+	};
+	if (status) updates.status = status;
+	if (capturedData) updates.capturedData = capturedData;
+
+	const [result] = await db
+		.update(referenceContacts)
+		.set(updates as Partial<typeof referenceContacts.$inferInsert>)
+		.where(eq(referenceContacts.id, id))
+		.returning();
+	return result;
 }

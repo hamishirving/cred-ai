@@ -16,18 +16,11 @@ import {
 	Zap,
 	AlertTriangle,
 	ChevronRight,
-	ChevronDown,
 	Mail,
 	FileText,
 	Shield,
 	Phone,
 	Sparkles,
-	Clock,
-	User,
-	ArrowUpRight,
-	Check,
-	X,
-	Bell,
 	TrendingUp,
 	TrendingDown,
 	Minus,
@@ -38,16 +31,17 @@ import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
-	CardDescription,
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 // =============================================================================
@@ -278,12 +272,12 @@ function getInitials(name: string): string {
 }
 
 const avatarColors = [
-	"bg-blue-500",
-	"bg-purple-500",
-	"bg-pink-500",
-	"bg-green-500",
-	"bg-orange-500",
-	"bg-teal-500",
+	"bg-[#4444cf]",
+	"bg-[#3a9960]",
+	"bg-[#c49332]",
+	"bg-[#c93d4e]",
+	"bg-[#6b6760]",
+	"bg-[#3636b8]",
 ];
 
 function getAvatarColor(name: string): string {
@@ -312,39 +306,33 @@ function getActivityColor(type: ActivityItem["type"]) {
 	switch (type) {
 		case "message":
 			return {
-				bg: "bg-blue-500",
-				text: "text-blue-500",
-				glow: "shadow-[0_0_10px_rgba(59,130,246,0.5)]",
+				bg: "bg-[#4444cf]",
+				text: "text-[#4444cf]",
 			};
 		case "document":
 			return {
-				bg: "bg-purple-500",
-				text: "text-purple-500",
-				glow: "shadow-[0_0_10px_rgba(168,85,247,0.5)]",
+				bg: "bg-[#8a7e6b]",
+				text: "text-[#8a7e6b]",
 			};
 		case "compliance":
 			return {
-				bg: "bg-orange-500",
-				text: "text-orange-500",
-				glow: "shadow-[0_0_10px_rgba(249,115,22,0.5)]",
+				bg: "bg-[#c49332]",
+				text: "text-[#c49332]",
 			};
 		case "reference":
 			return {
-				bg: "bg-green-500",
-				text: "text-green-500",
-				glow: "shadow-[0_0_10px_rgba(34,197,94,0.5)]",
+				bg: "bg-[#3a9960]",
+				text: "text-[#3a9960]",
 			};
 		case "verification":
 			return {
-				bg: "bg-teal-500",
-				text: "text-teal-500",
-				glow: "shadow-[0_0_10px_rgba(20,184,166,0.5)]",
+				bg: "bg-[#3636b8]",
+				text: "text-[#3636b8]",
 			};
 		default:
 			return {
-				bg: "bg-gray-500",
-				text: "text-gray-500",
-				glow: "",
+				bg: "bg-[#8a857d]",
+				text: "text-[#8a857d]",
 			};
 	}
 }
@@ -381,15 +369,15 @@ function AnimatedCounter({ value, duration = 1000 }: { value: number; duration?:
 
 function TrendIndicator({ trend, className }: { trend: "up" | "down" | "stable"; className?: string }) {
 	if (trend === "up") {
-		return <TrendingUp className={cn("h-4 w-4 text-green-500", className)} />;
+		return <TrendingUp className={cn("h-4 w-4 text-[#3a9960]", className)} />;
 	}
 	if (trend === "down") {
-		return <TrendingDown className={cn("h-4 w-4 text-red-500", className)} />;
+		return <TrendingDown className={cn("h-4 w-4 text-[#c93d4e]", className)} />;
 	}
-	return <Minus className={cn("h-4 w-4 text-muted-foreground", className)} />;
+	return <Minus className={cn("h-4 w-4 text-[#8a857d]", className)} />;
 }
 
-function Sparkline({ data, color = "#3b82f6" }: { data: { value: number }[]; color?: string }) {
+function Sparkline({ data, color = "#4444cf" }: { data: { value: number }[]; color?: string }) {
 	return (
 		<div className="h-8 w-20">
 			<ResponsiveContainer width="100%" height="100%">
@@ -431,13 +419,13 @@ function StatsCard({
 	suffix?: string;
 }) {
 	return (
-		<Card>
+		<Card className="shadow-none! bg-white">
 			<CardContent className="p-4">
 				<div className="flex items-start justify-between">
 					<div className="flex-1">
-						<p className="text-sm text-muted-foreground">{title}</p>
+						<p className="text-sm text-[#8a857d]">{title}</p>
 						<div className="flex items-baseline gap-2 mt-1">
-							<p className="text-2xl font-bold">
+							<p className="text-2xl font-semibold text-[#1c1a15]">
 								<AnimatedCounter value={value} />
 								{suffix}
 							</p>
@@ -445,7 +433,7 @@ function StatsCard({
 						</div>
 					</div>
 					<div className="flex flex-col items-end gap-2">
-						<Icon className="h-5 w-5 text-muted-foreground" />
+						<Icon className="h-5 w-5 text-[#a8a49c]" />
 						{sparklineData && (
 							<Sparkline data={sparklineData} color={sparklineColor} />
 						)}
@@ -462,7 +450,7 @@ function ComplianceRing({ rate }: { rate: number }) {
 	const gaps = 100 - compliant - expiring;
 
 	return (
-		<Card>
+		<Card className="shadow-none! bg-white">
 			<CardContent className="p-4">
 				<div className="flex items-center gap-4">
 					<div className="relative h-16 w-16">
@@ -483,7 +471,7 @@ function ComplianceRing({ rate }: { rate: number }) {
 								cy="18"
 								r="15.9"
 								fill="none"
-								stroke="#ef4444"
+								stroke="#c93d4e"
 								strokeWidth="2"
 								strokeDasharray={`${gaps} ${100 - gaps}`}
 								strokeDashoffset={-compliant - expiring}
@@ -495,7 +483,7 @@ function ComplianceRing({ rate }: { rate: number }) {
 								cy="18"
 								r="15.9"
 								fill="none"
-								stroke="#f59e0b"
+								stroke="#c49332"
 								strokeWidth="2"
 								strokeDasharray={`${expiring} ${100 - expiring}`}
 								strokeDashoffset={-compliant}
@@ -507,7 +495,7 @@ function ComplianceRing({ rate }: { rate: number }) {
 								cy="18"
 								r="15.9"
 								fill="none"
-								stroke="#22c55e"
+								stroke="#3a9960"
 								strokeWidth="2"
 								strokeDasharray={`${compliant} ${100 - compliant}`}
 								strokeDashoffset="0"
@@ -515,22 +503,22 @@ function ComplianceRing({ rate }: { rate: number }) {
 							/>
 						</svg>
 						<div className="absolute inset-0 flex items-center justify-center">
-							<span className="text-sm font-bold">{rate}%</span>
+							<span className="text-sm font-semibold text-[#1c1a15]">{rate}%</span>
 						</div>
 					</div>
 					<div className="flex-1">
-						<p className="text-sm text-muted-foreground">Compliance Rate</p>
+						<p className="text-sm text-[#8a857d]">Compliance Rate</p>
 						<div className="mt-2 space-y-1 text-xs">
 							<div className="flex items-center gap-2">
-								<div className="h-2 w-2 rounded-full bg-green-500" />
+								<div className="h-2 w-2 rounded-full bg-[#3a9960]" />
 								<span>{compliant}% Compliant</span>
 							</div>
 							<div className="flex items-center gap-2">
-								<div className="h-2 w-2 rounded-full bg-amber-500" />
+								<div className="h-2 w-2 rounded-full bg-[#c49332]" />
 								<span>{expiring}% Expiring</span>
 							</div>
 							<div className="flex items-center gap-2">
-								<div className="h-2 w-2 rounded-full bg-red-500" />
+								<div className="h-2 w-2 rounded-full bg-[#c93d4e]" />
 								<span>{gaps}% Gaps</span>
 							</div>
 						</div>
@@ -554,20 +542,20 @@ function UrgentAlertsBanner({ alerts }: { alerts: UrgentAlert[] }) {
 					className={cn(
 						"flex items-center justify-between rounded-lg border p-3",
 						alert.severity === "critical"
-							? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950"
-							: "border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950"
+							? "border-[#c93d4e]/20 bg-[#fdf0f1]"
+							: "border-[#c49332]/20 bg-[#faf5eb]"
 					)}
 				>
 					<div className="flex items-center gap-3">
 						<AlertTriangle
 							className={cn(
 								"h-5 w-5",
-								alert.severity === "critical" ? "text-red-600" : "text-amber-600"
+								alert.severity === "critical" ? "text-[#c93d4e]" : "text-[#c49332]"
 							)}
 						/>
 						<div>
 							<p className="font-medium text-sm">{alert.title}</p>
-							<p className="text-xs text-muted-foreground">{alert.description}</p>
+							<p className="text-xs text-[#8a857d]">{alert.description}</p>
 						</div>
 					</div>
 					<Button variant="outline" size="sm" asChild>
@@ -579,88 +567,6 @@ function UrgentAlertsBanner({ alerts }: { alerts: UrgentAlert[] }) {
 	);
 }
 
-function ActivityFeedItem({ item, isNew }: { item: ActivityItem; isNew?: boolean }) {
-	const [isOpen, setIsOpen] = useState(false);
-	const Icon = getActivityIcon(item.type);
-	const colors = getActivityColor(item.type);
-
-	return (
-		<motion.div
-			initial={isNew ? { opacity: 0, y: -20, height: 0 } : false}
-			animate={{ opacity: 1, y: 0, height: "auto" }}
-			transition={{ duration: 0.3 }}
-		>
-			<Collapsible open={isOpen} onOpenChange={setIsOpen}>
-				<div
-					className={cn(
-						"flex items-start gap-3 rounded-lg border p-3 transition-colors",
-						isNew && "bg-primary/5 border-primary/20"
-					)}
-				>
-					<div className={cn("mt-0.5 rounded-full p-1.5", colors.bg, colors.glow)}>
-						<Icon className="h-3.5 w-3.5 text-white" />
-					</div>
-					<div className="flex-1 min-w-0">
-						<div className="flex items-start justify-between gap-2">
-							<div className="flex-1">
-								<div className="flex items-center gap-2">
-									<Badge variant="outline" className="text-[10px] gap-1 px-1.5 border-purple-500/50 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.4)]">
-										<Sparkles className="h-2.5 w-2.5" />
-									</Badge>
-									<span className="text-xs text-muted-foreground">
-										{formatDistanceToNow(item.timestamp, { addSuffix: true })}
-									</span>
-								</div>
-								<p className="text-sm mt-1">{item.summary}</p>
-								{item.details && (
-									<p className="text-xs text-muted-foreground mt-0.5">
-										{item.details}
-									</p>
-								)}
-							</div>
-							{item.subject && (
-								<CollapsibleTrigger asChild>
-									<Button variant="ghost" size="sm" className="h-7 px-2 shrink-0">
-										{isOpen ? (
-											<ChevronDown className="h-4 w-4" />
-										) : (
-											<ChevronRight className="h-4 w-4" />
-										)}
-									</Button>
-								</CollapsibleTrigger>
-							)}
-						</div>
-						<CollapsibleContent>
-							{item.subject && (
-								<div className="mt-2 pt-2 border-t flex items-center justify-between">
-									<div className="flex items-center gap-2">
-										<Avatar className="h-6 w-6">
-											<AvatarFallback
-												className={cn(
-													getAvatarColor(item.subject.name),
-													"text-[10px] text-white"
-												)}
-											>
-												{getInitials(item.subject.name)}
-											</AvatarFallback>
-										</Avatar>
-										<span className="text-sm">{item.subject.name}</span>
-									</div>
-									<Button variant="outline" size="sm" asChild>
-										<Link href={`/candidates/${item.subject.id}`}>
-											View Candidate
-										</Link>
-									</Button>
-								</div>
-							)}
-						</CollapsibleContent>
-					</div>
-				</div>
-			</Collapsible>
-		</motion.div>
-	);
-}
-
 function ActivityFeed({
 	activities,
 	newActivityIds,
@@ -669,189 +575,242 @@ function ActivityFeed({
 	newActivityIds: Set<string>;
 }) {
 	return (
-		<Card className="flex flex-col h-full">
-			<CardHeader className="pb-3">
-				<div className="flex items-center justify-between">
-					<div>
-						<CardTitle className="text-lg flex items-center gap-2">
-							<Zap className="h-5 w-5" />
-							Agent Activity
-						</CardTitle>
-						<CardDescription>Real-time updates from AI</CardDescription>
-					</div>
-					<div className="flex items-center gap-1">
-						<span className="relative flex h-2 w-2">
-							<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-							<span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-						</span>
-						<span className="text-xs text-muted-foreground">Live</span>
-					</div>
+		<div className="flex flex-col h-full">
+			<div className="flex items-center justify-between mb-2 px-1">
+				<h2 className="text-base font-semibold tracking-tight text-[#1c1a15] flex items-center gap-2">
+					<Zap className="h-4 w-4 text-[#6b6760]" />
+					Agent Activity
+				</h2>
+				<div className="flex items-center gap-1">
+					<span className="relative flex h-2 w-2">
+						<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3a9960] opacity-75"></span>
+						<span className="relative inline-flex rounded-full h-2 w-2 bg-[#3a9960]"></span>
+					</span>
+					<span className="text-xs text-[#8a857d]">Live</span>
 				</div>
-			</CardHeader>
-			<CardContent className="flex-1 overflow-hidden">
-				<div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-					<AnimatePresence mode="popLayout">
-						{activities.map((activity) => (
-							<ActivityFeedItem
-								key={activity.id}
-								item={activity}
-								isNew={newActivityIds.has(activity.id)}
-							/>
-						))}
-					</AnimatePresence>
-				</div>
-			</CardContent>
-		</Card>
+			</div>
+			<Card className="shadow-none! bg-white">
+				<Table>
+					<TableHeader>
+						<TableRow className="bg-[#faf9f7] hover:bg-[#faf9f7]">
+							<TableHead className="text-xs font-medium text-[#6b6760]">Activity</TableHead>
+							<TableHead className="text-xs font-medium text-[#6b6760] w-[140px]">Subject</TableHead>
+							<TableHead className="text-xs font-medium text-[#6b6760] w-[100px]">Time</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						<AnimatePresence mode="popLayout">
+							{activities.map((activity) => {
+								const Icon = getActivityIcon(activity.type);
+								const colors = getActivityColor(activity.type);
+								const isNew = newActivityIds.has(activity.id);
+
+								return (
+									<motion.tr
+										key={activity.id}
+										initial={isNew ? { opacity: 0, y: -20 } : false}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ duration: 0.3 }}
+										className={cn(
+											"bg-white hover:bg-[#f7f5f0] border-b border-[#e5e2db] last:border-b-0",
+											isNew && "bg-[#eeedf8]"
+										)}
+									>
+										<TableCell className="py-2">
+											<div className="flex items-center gap-2">
+												<div className={cn("rounded-full p-1.5 shrink-0", colors.bg)}>
+													<Icon className="h-3 w-3 text-white" />
+												</div>
+												<div className="min-w-0">
+													<div className="flex items-center gap-1.5">
+														<span className="text-sm font-medium truncate">{activity.summary}</span>
+														<Sparkles className="h-3 w-3 text-[#4444cf]/50 shrink-0" />
+													</div>
+													{activity.details && (
+														<p className="text-xs text-[#8a857d] truncate">{activity.details}</p>
+													)}
+												</div>
+											</div>
+										</TableCell>
+										<TableCell className="py-2">
+											{activity.subject ? (
+												<Link
+													href={`/candidates/${activity.subject.id}`}
+													className="flex items-center gap-1.5 hover:underline"
+												>
+													<Avatar className="h-5 w-5">
+														<AvatarFallback
+															className={cn(
+																getAvatarColor(activity.subject.name),
+																"text-[8px] text-white"
+															)}
+														>
+															{getInitials(activity.subject.name)}
+														</AvatarFallback>
+													</Avatar>
+													<span className="text-sm truncate">{activity.subject.name}</span>
+												</Link>
+											) : (
+												<span className="text-sm text-[#8a857d]">—</span>
+											)}
+										</TableCell>
+										<TableCell className="py-2">
+											<span className="text-xs text-[#8a857d] whitespace-nowrap">
+												{formatDistanceToNow(activity.timestamp, { addSuffix: true })}
+											</span>
+										</TableCell>
+									</motion.tr>
+								);
+							})}
+						</AnimatePresence>
+					</TableBody>
+				</Table>
+			</Card>
+		</div>
 	);
 }
 
 const priorityConfig = {
 	urgent: {
 		label: "Urgent",
-		color: "bg-red-500",
-		textColor: "text-red-700",
-		bgColor: "bg-red-50",
+		color: "bg-[#c93d4e]",
+		textColor: "text-[#c93d4e]",
+		bgColor: "bg-[#fdf0f1]",
 	},
 	high: {
 		label: "High",
-		color: "bg-orange-500",
-		textColor: "text-orange-700",
-		bgColor: "bg-orange-50",
+		color: "bg-[#c49332]",
+		textColor: "text-[#a87c2a]",
+		bgColor: "bg-[#faf5eb]",
 	},
 	medium: {
 		label: "Medium",
-		color: "bg-yellow-500",
-		textColor: "text-yellow-700",
-		bgColor: "bg-yellow-50",
+		color: "bg-[#c49332]/60",
+		textColor: "text-[#a87c2a]",
+		bgColor: "bg-[#faf5eb]",
 	},
 	low: {
 		label: "Low",
-		color: "bg-gray-400",
-		textColor: "text-gray-600",
-		bgColor: "bg-gray-50",
+		color: "bg-[#a8a49c]",
+		textColor: "text-[#6b6760]",
+		bgColor: "bg-[#f0ede7]",
 	},
 };
 
-const statusConfig = {
-	pending: { label: "Pending", icon: Clock, color: "text-yellow-600" },
-	in_progress: { label: "In Progress", icon: ArrowUpRight, color: "text-blue-600" },
-	completed: { label: "Completed", icon: Check, color: "text-green-600" },
-	dismissed: { label: "Dismissed", icon: X, color: "text-gray-500" },
-	snoozed: { label: "Snoozed", icon: Bell, color: "text-purple-600" },
-};
-
-function TaskPreviewCard({ task }: { task: TaskPreview }) {
-	const StatusIcon = statusConfig[task.status].icon;
-
-	return (
-		<div className="flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-			<div
-				className={cn(
-					"w-1 h-10 rounded-full shrink-0",
-					priorityConfig[task.priority].color
-				)}
-			/>
-			<div className="flex-1 min-w-0">
-				<div className="flex items-center gap-2 mb-1">
-					<Badge
-						className={cn(
-							"text-[10px]",
-							priorityConfig[task.priority].bgColor,
-							priorityConfig[task.priority].textColor,
-							"border-0"
-						)}
-					>
-						{priorityConfig[task.priority].label}
-					</Badge>
-					{task.source === "ai_agent" && (
-						<Badge variant="outline" className="text-[10px] gap-0.5 px-1 border-purple-500/50 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.4)]">
-							<Sparkles className="h-2.5 w-2.5" />
-						</Badge>
-					)}
-					<StatusIcon
-						className={cn("h-3.5 w-3.5", statusConfig[task.status].color)}
-					/>
-				</div>
-				<p className="text-sm line-clamp-1">{task.title}</p>
-				{task.subject && (
-					<div className="flex items-center gap-1.5 mt-1">
-						<Avatar className="h-4 w-4">
-							<AvatarFallback
-								className={cn(
-									getAvatarColor(task.subject.name),
-									"text-[8px] text-white"
-								)}
-							>
-								{getInitials(task.subject.name)}
-							</AvatarFallback>
-						</Avatar>
-						<span className="text-xs text-muted-foreground truncate">
-							{task.subject.name}
-						</span>
-					</div>
-				)}
-			</div>
-			<Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
-				<Link href={`/tasks`}>
-					<ChevronRight className="h-4 w-4" />
-				</Link>
-			</Button>
-		</div>
-	);
-}
-
 function TasksPreview({ tasks }: { tasks: TaskPreview[] }) {
 	return (
-		<Card className="flex flex-col h-full">
-			<CardHeader className="pb-3">
-				<div className="flex items-center justify-between">
-					<div>
-						<CardTitle className="text-lg flex items-center gap-2">
-							<ClipboardList className="h-5 w-5" />
-							Needs Attention
-						</CardTitle>
-						<CardDescription>Tasks requiring your input</CardDescription>
-					</div>
-					<Button variant="outline" size="sm" asChild>
-						<Link href="/tasks">View All</Link>
-					</Button>
-				</div>
-			</CardHeader>
-			<CardContent className="flex-1 overflow-hidden">
-				<div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-					{tasks.map((task) => (
-						<TaskPreviewCard key={task.id} task={task} />
-					))}
-				</div>
-			</CardContent>
-		</Card>
+		<div className="flex flex-col h-full">
+			<div className="flex items-center justify-between mb-2 px-1">
+				<h2 className="text-base font-semibold tracking-tight text-[#1c1a15] flex items-center gap-2">
+					<ClipboardList className="h-4 w-4 text-[#6b6760]" />
+					Needs Attention
+				</h2>
+				<Button variant="outline" size="sm" asChild>
+					<Link href="/tasks">View All</Link>
+				</Button>
+			</div>
+			<Card className="shadow-none! bg-white">
+				<Table>
+					<TableHeader>
+						<TableRow className="bg-[#faf9f7] hover:bg-[#faf9f7]">
+							<TableHead className="text-xs font-medium text-[#6b6760]">Task</TableHead>
+							<TableHead className="text-xs font-medium text-[#6b6760] w-[140px]">Subject</TableHead>
+							<TableHead className="text-xs font-medium text-[#6b6760] w-[90px]">Priority</TableHead>
+							<TableHead className="text-xs font-medium text-[#6b6760] w-[40px]"></TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{tasks.map((task) => (
+							<TableRow
+								key={task.id}
+								className="bg-white cursor-pointer hover:bg-[#f7f5f0]"
+								onClick={() => window.location.href = "/tasks"}
+							>
+								<TableCell className="py-2">
+									<div className="flex items-center gap-2">
+										<div
+											className={cn(
+												"w-1 h-8 rounded-full shrink-0",
+												priorityConfig[task.priority].color
+											)}
+										/>
+										<div className="min-w-0">
+											<div className="flex items-center gap-1.5">
+												<span className="text-sm font-medium truncate">{task.title}</span>
+												{task.source === "ai_agent" && (
+													<Sparkles className="h-3 w-3 text-[#4444cf]/50 shrink-0" />
+												)}
+											</div>
+										</div>
+									</div>
+								</TableCell>
+								<TableCell className="py-2">
+									{task.subject ? (
+										<div className="flex items-center gap-1.5">
+											<Avatar className="h-5 w-5">
+												<AvatarFallback
+													className={cn(
+														getAvatarColor(task.subject.name),
+														"text-[8px] text-white"
+													)}
+												>
+													{getInitials(task.subject.name)}
+												</AvatarFallback>
+											</Avatar>
+											<span className="text-sm truncate">{task.subject.name}</span>
+										</div>
+									) : (
+										<span className="text-sm text-[#8a857d]">—</span>
+									)}
+								</TableCell>
+								<TableCell className="py-2">
+									<Badge
+										variant="outline"
+										className={cn(
+											"text-xs font-medium border-0",
+											priorityConfig[task.priority].bgColor,
+											priorityConfig[task.priority].textColor
+										)}
+									>
+										{priorityConfig[task.priority].label}
+									</Badge>
+								</TableCell>
+								<TableCell className="py-2">
+									<ChevronRight className="h-4 w-4 text-[#a8a49c]" />
+								</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
+			</Card>
+		</div>
 	);
 }
 
 function PipelineFunnel() {
 	const stages = [
-		{ label: "Applied", count: 23, color: "bg-blue-500" },
-		{ label: "Documents", count: 15, color: "bg-purple-500" },
-		{ label: "Verification", count: 8, color: "bg-orange-500" },
-		{ label: "Ready", count: 4, color: "bg-green-500" },
+		{ label: "Applied", count: 23, color: "bg-[#4444cf]" },
+		{ label: "Documents", count: 15, color: "bg-[#8a7e6b]" },
+		{ label: "Verification", count: 8, color: "bg-[#c49332]" },
+		{ label: "Ready", count: 4, color: "bg-[#3a9960]" },
 	];
 
 	const maxCount = Math.max(...stages.map((s) => s.count));
 
 	return (
-		<Card>
+		<Card className="shadow-none! bg-white">
 			<CardHeader className="pb-2">
-				<CardTitle className="text-sm font-medium">Onboarding Pipeline</CardTitle>
+				<CardTitle className="text-base font-semibold tracking-tight text-[#1c1a15]">Onboarding Pipeline</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<div className="space-y-2">
 					{stages.map((stage, index) => (
 						<div key={stage.label} className="flex items-center gap-3">
-							<div className="w-24 text-xs text-muted-foreground">
+							<div className="w-24 text-xs text-[#8a857d]">
 								{stage.label}
 							</div>
 							<div className="flex-1">
-								<div className="h-6 bg-muted rounded-full overflow-hidden">
+								<div className="h-6 bg-[#f0ede7] rounded-full overflow-hidden">
 									<motion.div
 										initial={{ width: 0 }}
 										animate={{ width: `${(stage.count / maxCount) * 100}%` }}
@@ -860,7 +819,7 @@ function PipelineFunnel() {
 									/>
 								</div>
 							</div>
-							<div className="w-8 text-sm font-medium text-right">
+							<div className="w-8 text-sm font-semibold text-[#1c1a15] text-right">
 								{stage.count}
 							</div>
 						</div>
@@ -947,11 +906,11 @@ export default function HomePage() {
 	}, [addNewActivity]);
 
 	return (
-		<div className="flex flex-1 flex-col gap-6 p-6">
+		<div className="flex flex-1 flex-col gap-10 p-8 bg-[#faf9f7] min-h-full">
 			{/* Header */}
 			<div>
-				<h1 className="text-2xl font-semibold">Dashboard</h1>
-				<p className="text-muted-foreground">
+				<h1 className="text-4xl font-semibold tracking-tight text-balance text-[#1c1a15]">Dashboard</h1>
+				<p className="text-[#6b6760] text-sm mt-1">
 					Your AI team at work — here's what's happening
 				</p>
 			</div>
@@ -977,7 +936,7 @@ export default function HomePage() {
 					icon={Zap}
 					trend={stats.trends.actions}
 					sparklineData={MOCK_SPARKLINE_DATA}
-					sparklineColor="#3b82f6"
+					sparklineColor="#4444cf"
 				/>
 			</div>
 

@@ -41,6 +41,7 @@ export * from "./skill-requirements";
 
 // People Domain
 export * from "./profiles";
+export * from "./reference-contacts";
 
 // Work Domain (ATS Expansion Path)
 export * from "./jobs";
@@ -62,3 +63,8 @@ export * from "./activities";
 export * from "./escalations";
 export * from "./escalation-options";
 export * from "./tasks";
+
+// AI Agents Domain
+export * from "./agents";
+export * from "./agent-executions";
+export * from "./agent-memory";

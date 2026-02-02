@@ -43,7 +43,8 @@ export async function proxy(request: NextRequest) {
 
 	// Public API routes (accessible without auth)
 	const isPublicApi =
-		request.nextUrl.pathname.match(/^\/api\/organisations\/[^/]+\/user-roles$/);
+		request.nextUrl.pathname.match(/^\/api\/organisations\/[^/]+\/user-roles$/) ||
+		request.nextUrl.pathname.startsWith("/api/webhooks/");
 
 	// PostHog analytics routes
 	const isPostHogRoute = request.nextUrl.pathname.startsWith("/ingest");

@@ -115,11 +115,114 @@ const employmentVerificationTemplate: VoiceTemplate = {
 };
 
 // ============================================
+// Reference Check Template
+// ============================================
+
+const referenceCheckContextSchema: FieldSchema[] = [
+	{
+		key: "candidateName",
+		label: "Candidate Name",
+		type: "string",
+		required: true,
+		description: "Full name of the candidate being referenced",
+	},
+	{
+		key: "refereeName",
+		label: "Referee Name",
+		type: "string",
+		required: true,
+		description: "Name of the referee being called",
+	},
+	{
+		key: "candidateJobTitle",
+		label: "Job Title",
+		type: "string",
+		required: true,
+		description: "Job title the candidate held",
+	},
+	{
+		key: "companyName",
+		label: "Company",
+		type: "string",
+		required: true,
+		description: "Organisation where the candidate worked",
+	},
+	{
+		key: "startDate",
+		label: "Start Date",
+		type: "date",
+		description: "When the candidate started (YYYY-MM)",
+	},
+	{
+		key: "endDate",
+		label: "End Date",
+		type: "date",
+		description: "When the candidate left (YYYY-MM)",
+	},
+];
+
+const referenceCheckCaptureSchema: FieldSchema[] = [
+	{
+		key: "confirmed_jobTitle",
+		label: "Confirmed Job Title",
+		type: "string",
+	},
+	{
+		key: "confirmed_startDate",
+		label: "Confirmed Start Date",
+		type: "date",
+	},
+	{
+		key: "confirmed_endDate",
+		label: "Confirmed End Date",
+		type: "date",
+	},
+	{
+		key: "eligible_for_rehire",
+		label: "Eligible for Rehire",
+		type: "boolean",
+	},
+	{
+		key: "would_recommend",
+		label: "Would Recommend",
+		type: "boolean",
+	},
+	{
+		key: "performance_summary",
+		label: "Performance Summary",
+		type: "string",
+	},
+	{
+		key: "additional_notes",
+		label: "Additional Notes",
+		type: "string",
+	},
+];
+
+const referenceCheckTemplate: VoiceTemplate = {
+	slug: "reference-check",
+	name: "Reference Check",
+	description:
+		"Conduct a reference check with a previous employer or colleague. The AI agent will call the referee and gather employment details, performance feedback, and rehire eligibility.",
+	vapiAssistantId: process.env.VAPI_ASSISTANT_ID || "",
+
+	contextSchema: referenceCheckContextSchema,
+	captureSchema: referenceCheckCaptureSchema,
+
+	ui: {
+		buttonLabel: "Initiate Reference Check",
+		successMessage: "Reference check complete",
+		icon: "phone",
+	},
+};
+
+// ============================================
 // Template Registry
 // ============================================
 
 export const templates: Record<string, VoiceTemplate> = {
 	"employment-verification": employmentVerificationTemplate,
+	"reference-check": referenceCheckTemplate,
 };
 
 // ============================================

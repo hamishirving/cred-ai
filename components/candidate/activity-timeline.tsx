@@ -31,42 +31,42 @@ interface PositionedActivity {
 }
 
 // =============================================================================
-// CONSTANTS
+// CONSTANTS - hex colour system matching dashboard/tasks
 // =============================================================================
 
 const ACTOR_CONFIG = {
 	ai: {
-		bg: "bg-purple-500",
-		text: "text-purple-500",
-		bgLight: "bg-purple-100",
+		bg: "bg-[#4444cf]",
+		text: "text-[#4444cf]",
+		bgLight: "bg-[#eeedf8]",
 		label: "AI",
 		Icon: Bot,
 	},
 	admin: {
-		bg: "bg-blue-500",
-		text: "text-blue-500",
-		bgLight: "bg-blue-100",
+		bg: "bg-[#3636b8]",
+		text: "text-[#3636b8]",
+		bgLight: "bg-[#eeedf8]",
 		label: "Admin",
 		Icon: Users,
 	},
 	candidate: {
-		bg: "bg-green-500",
-		text: "text-green-500",
-		bgLight: "bg-green-100",
+		bg: "bg-[#3a9960]",
+		text: "text-[#3a9960]",
+		bgLight: "bg-[#edf7f1]",
 		label: "Candidate",
 		Icon: User,
 	},
 	system: {
-		bg: "bg-gray-400",
-		text: "text-gray-400",
-		bgLight: "bg-gray-100",
+		bg: "bg-[#8a857d]",
+		text: "text-[#8a857d]",
+		bgLight: "bg-[#f0ede7]",
 		label: "System",
 		Icon: Cog,
 	},
 	integration: {
-		bg: "bg-gray-400",
-		text: "text-gray-400",
-		bgLight: "bg-gray-100",
+		bg: "bg-[#8a857d]",
+		text: "text-[#8a857d]",
+		bgLight: "bg-[#f0ede7]",
 		label: "Integration",
 		Icon: Link2,
 	},
@@ -157,7 +157,7 @@ function ActivityDot({ positioned }: { positioned: PositionedActivity }) {
 						>
 							{config.label}
 						</Badge>
-						<span className="text-[10px] text-muted-foreground">
+						<span className="text-[10px] text-[#8a857d]">
 							{format(activity.createdAt, "d MMM, HH:mm")}
 						</span>
 					</div>
@@ -208,18 +208,18 @@ export function ActivityTimeline({ data, profileId }: ActivityTimelineProps) {
 
 	return (
 		<TooltipProvider delayDuration={0} disableHoverableContent>
-			<Card>
+			<Card className="shadow-none! bg-white">
 				<CardContent className="p-4">
 					<div className="flex items-center justify-between mb-3">
 						<div>
-							<h3 className="text-sm font-medium">Activity Timeline</h3>
-							<p className="text-xs text-muted-foreground">
+							<h3 className="text-sm font-medium text-[#1c1a15]">Activity Timeline</h3>
+							<p className="text-xs text-[#8a857d]">
 								{activities.length} activit{activities.length === 1 ? "y" : "ies"} in the last 7 days
 							</p>
 						</div>
 						<a
 							href={`/candidates/${profileId}/timeline`}
-							className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+							className="text-xs text-[#8a857d] hover:text-[#3d3a32] flex items-center gap-1 transition-colors"
 						>
 							View all <ChevronRight className="h-3 w-3" />
 						</a>
@@ -236,13 +236,13 @@ export function ActivityTimeline({ data, profileId }: ActivityTimelineProps) {
 							{/* Wide timeline content */}
 							<div className="relative px-6" style={{ width: "150%", minWidth: "600px" }}>
 								{/* Main timeline line */}
-								<div className="absolute left-6 right-6 top-[12px] h-px bg-border" />
+								<div className="absolute left-6 right-6 top-[12px] h-px bg-[#e5e2db]" />
 
 								{/* Day tick marks - small ticks down from line */}
 								{tickPositions.map(({ date, xPercent }) => (
 									<div
 										key={date.toISOString()}
-										className="absolute w-px h-2 bg-border/50"
+										className="absolute w-px h-2 bg-[#e5e2db]/50"
 										style={{ left: `calc(${xPercent}% + 24px - ${xPercent * 48 / 100}px)`, top: 12 }}
 									/>
 								))}
@@ -271,7 +271,7 @@ export function ActivityTimeline({ data, profileId }: ActivityTimelineProps) {
 										.map(({ date, xPercent }) => (
 											<span
 												key={date.toISOString()}
-												className="absolute text-[10px] text-muted-foreground transform -translate-x-1/2"
+												className="absolute text-[10px] text-[#a8a49c] transform -translate-x-1/2"
 												style={{ left: `${xPercent}%` }}
 											>
 												{formatTickLabel(date, endDate)}

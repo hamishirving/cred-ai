@@ -29,6 +29,7 @@ import {
 	escalations,
 	escalationOptions,
 	tasks,
+	referenceContacts,
 } from "../schema";
 import {
 	ukComplianceElements,
@@ -447,6 +448,7 @@ Sign off as: "${config.name} Credentialing Team"`),
 	let evidenceCount = 0;
 	let activityCount = 0;
 	let taskCount = 0;
+	let referenceContactCount = 0;
 
 	for (const candidateConfig of config.candidates) {
 		// Create User (global identity)
@@ -890,6 +892,27 @@ Sign off as: "${config.name} Credentialing Team"`),
 			});
 			taskCount++;
 		}
+
+		// Create reference contacts if defined
+		if (candidateConfig.referenceContacts) {
+			for (const ref of candidateConfig.referenceContacts) {
+				await db.insert(referenceContacts).values({
+					profileId: profile.id,
+					organisationId: org.id,
+					refereeName: ref.refereeName,
+					refereeEmail: ref.refereeEmail,
+					refereePhone: ref.refereePhone,
+					refereeJobTitle: ref.refereeJobTitle,
+					refereeOrganisation: ref.refereeOrganisation,
+					relationship: ref.relationship,
+					candidateJobTitle: ref.candidateJobTitle,
+					candidateStartDate: ref.candidateStartDate,
+					candidateEndDate: ref.candidateEndDate,
+					status: "pending",
+				});
+				referenceContactCount++;
+			}
+		}
 	}
 
 	console.log(`   ✓ Created ${userCount} users`);
@@ -897,6 +920,7 @@ Sign off as: "${config.name} Credentialing Team"`),
 	console.log(`   ✓ Created ${evidenceCount} evidence records`);
 	console.log(`   ✓ Created ${activityCount} activities`);
 	console.log(`   ✓ Created ${taskCount} tasks`);
+	console.log(`   ✓ Created ${referenceContactCount} reference contacts`);
 
 	return org;
 }

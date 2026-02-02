@@ -34,6 +34,29 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			daysSinceActivity: 3,
 			notes: "Active assignment at UCLA Medical Center ICU. California licensed. Fully compliant.",
 		},
+		referenceContacts: [
+			{
+				refereeName: "Dr Karen Liu",
+				refereeEmail: "k.liu@ucsf.edu",
+				refereePhone: "+14155551234",
+				refereeJobTitle: "Nurse Manager",
+				refereeOrganisation: "UCSF Medical Center",
+				relationship: "line_manager",
+				candidateJobTitle: "ICU Registered Nurse",
+				candidateStartDate: "2021-03",
+				candidateEndDate: "2024-06",
+			},
+			{
+				refereeName: "James Novak",
+				refereePhone: "+14155555678",
+				refereeJobTitle: "Charge Nurse",
+				refereeOrganisation: "UCSF Medical Center",
+				relationship: "colleague",
+				candidateJobTitle: "ICU Registered Nurse",
+				candidateStartDate: "2021-03",
+				candidateEndDate: "2024-06",
+			},
+		],
 	},
 	{
 		profile: {
@@ -60,6 +83,19 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			daysSinceActivity: 2,
 			notes: "Has Florida license, needs Texas license for upcoming Houston Methodist assignment.",
 		},
+		referenceContacts: [
+			{
+				refereeName: "Patricia Santos",
+				refereeEmail: "p.santos@baptisthealth.net",
+				refereePhone: "+13055559012",
+				refereeJobTitle: "ER Director",
+				refereeOrganisation: "Baptist Health South Florida",
+				relationship: "line_manager",
+				candidateJobTitle: "ER Registered Nurse",
+				candidateStartDate: "2019-08",
+				candidateEndDate: "2024-10",
+			},
+		],
 	},
 	{
 		profile: {
@@ -294,6 +330,19 @@ export const lakesideCandidates: CandidateProfile[] = [
 			daysSinceActivity: 10,
 			notes: "Charge Nurse at TMC flagship. Long-tenured. All compliant.",
 		},
+		referenceContacts: [
+			{
+				refereeName: "Dr Michael Foster",
+				refereeEmail: "m.foster@methodisthealth.com",
+				refereePhone: "+17135553456",
+				refereeJobTitle: "Chief Nursing Officer",
+				refereeOrganisation: "Houston Methodist Hospital",
+				relationship: "line_manager",
+				candidateJobTitle: "Charge Nurse",
+				candidateStartDate: "2017-01",
+				candidateEndDate: "2023-12",
+			},
+		],
 	},
 	{
 		profile: {
@@ -373,6 +422,29 @@ export const lakesideCandidates: CandidateProfile[] = [
 			daysSinceActivity: 2,
 			notes: "New hire for ICU. Completing specialty certifications.",
 		},
+		referenceContacts: [
+			{
+				refereeName: "Linda Brennan",
+				refereePhone: "+12815557890",
+				refereeJobTitle: "Nurse Manager",
+				refereeOrganisation: "Memorial Hermann Hospital",
+				relationship: "line_manager",
+				candidateJobTitle: "Staff RN",
+				candidateStartDate: "2022-06",
+				candidateEndDate: "2025-01",
+			},
+			{
+				refereeName: "Amy Torres",
+				refereeEmail: "a.torres@memorialhermann.org",
+				refereePhone: "+12815558901",
+				refereeJobTitle: "Charge Nurse",
+				refereeOrganisation: "Memorial Hermann Hospital",
+				relationship: "colleague",
+				candidateJobTitle: "Staff RN",
+				candidateStartDate: "2022-06",
+				candidateEndDate: "2025-01",
+			},
+		],
 	},
 	{
 		profile: {

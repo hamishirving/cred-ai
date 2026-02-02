@@ -2,12 +2,19 @@
 
 import { CheckIcon, CopyIcon, SendIcon } from "lucide-react";
 import { useState } from "react";
-import type { EmailDraft } from "@/lib/ai/tools/draft-email";
 import { Response } from "./elements/response";
 import { Button } from "./ui/button";
 
+interface EmailData {
+	recipientName?: string;
+	recipientEmail: string;
+	subject: string;
+	body: string;
+	cc?: string;
+}
+
 type EmailDraftProps = {
-	email: EmailDraft;
+	email: EmailData;
 };
 
 export function EmailDraftComponent({ email }: EmailDraftProps) {
@@ -25,7 +32,7 @@ export function EmailDraftComponent({ email }: EmailDraftProps) {
 	};
 
 	const handleCopy = async () => {
-		const emailText = `To: ${email.to}${email.cc ? `\nCC: ${email.cc}` : ""}\nSubject: ${email.subject}\n\n${email.body}`;
+		const emailText = `To: ${email.recipientEmail}${email.cc ? `\nCC: ${email.cc}` : ""}\nSubject: ${email.subject}\n\n${email.body}`;
 		await navigator.clipboard.writeText(emailText);
 		setCopied(true);
 		setTimeout(() => setCopied(false), 2000);
@@ -33,14 +40,14 @@ export function EmailDraftComponent({ email }: EmailDraftProps) {
 
 	if (sent) {
 		return (
-			<div className="w-[600px] max-w-full rounded-xl border bg-card p-6 shadow-sm">
+			<div className="w-[600px] max-w-full rounded-xl border bg-white p-6 dark:bg-card">
 				<div className="flex flex-col items-center gap-3 text-center">
 					<div className="flex size-12 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
 						<CheckIcon className="size-6" />
 					</div>
 					<h3 className="font-semibold text-lg">Email Sent!</h3>
 					<p className="text-muted-foreground text-sm">
-						Your email to {email.to} has been sent successfully.
+						Your email to {email.recipientEmail} has been sent successfully.
 					</p>
 				</div>
 			</div>
@@ -48,13 +55,13 @@ export function EmailDraftComponent({ email }: EmailDraftProps) {
 	}
 
 	return (
-		<div className="w-[600px] max-w-full overflow-hidden rounded-xl border bg-card shadow-sm">
+		<div className="w-[600px] max-w-full overflow-hidden rounded-xl border bg-white dark:bg-card">
 			{/* Email Header */}
 			<div className="border-b bg-muted/30 px-4 py-3">
 				<div className="space-y-1.5 text-sm">
 					<div className="flex gap-2">
 						<span className="w-16 shrink-0 text-muted-foreground">To:</span>
-						<span className="font-medium">{email.to}</span>
+						<span className="font-medium">{email.recipientEmail}</span>
 					</div>
 					{email.cc && (
 						<div className="flex gap-2">
