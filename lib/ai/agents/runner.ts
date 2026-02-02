@@ -150,10 +150,7 @@ export async function executeAgent(
 			messages: [{ role: "user", content: userMessage }],
 			tools,
 			maxRetries: 2,
-			timeout: {
-				totalMs: agent.constraints.maxExecutionTime,
-				chunkMs: 30_000,
-			},
+			abortSignal: AbortSignal.timeout(agent.constraints.maxExecutionTime),
 			stopWhen: stepCountIs(agent.constraints.maxSteps),
 			onStepFinish: async (event) => {
 				stepIndex++;
