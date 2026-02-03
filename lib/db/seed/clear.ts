@@ -354,7 +354,11 @@ export async function clearOrgData(orgId: string): Promise<void> {
 	await db.delete(tasks).where(eq(tasks.organisationId, orgId));
 	// escalation_options cascade from escalations
 	await db.delete(escalations).where(eq(escalations.organisationId, orgId));
+	// Delete activities by org ID, and also by profile ID to catch any with mismatched org
 	await db.delete(activities).where(eq(activities.organisationId, orgId));
+	if (profileIds.length > 0) {
+		await db.delete(activities).where(inArray(activities.profileId, profileIds));
+	}
 
 	// 2. Journey - profile-scoped tables
 	if (profileIds.length > 0) {
