@@ -164,9 +164,10 @@ const PAGE_SIZE = 10;
 
 interface AgentPageProps {
 	agent: SerializedAgentDefinition;
+	sampleCandidate?: { name: string; email: string } | null;
 }
 
-export function AgentPage({ agent }: AgentPageProps) {
+export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 	const router = useRouter();
 	const [executions, setExecutions] = useState<AgentExecution[]>([]);
 	const [loadingExecs, setLoadingExecs] = useState(true);
@@ -176,6 +177,25 @@ export function AgentPage({ agent }: AgentPageProps) {
 		for (const field of agent.inputFields) {
 			if (field.defaultValue) {
 				defaults[field.key] = field.defaultValue;
+			}
+			// Pre-populate candidate fields with sample from DB
+			if (sampleCandidate && !field.defaultValue) {
+				if (field.key === "candidateName" || field.key === "senderName") {
+					defaults[field.key] = sampleCandidate.name;
+				}
+				if (field.key === "senderEmail") {
+					defaults[field.key] = sampleCandidate.email;
+				}
+			}
+			// Demo defaults for inbound email responder
+			if (!field.defaultValue) {
+				if (field.key === "subject") {
+					defaults[field.key] = "Question about my DBS check";
+				}
+				if (field.key === "bodyText") {
+					defaults[field.key] =
+						"Hi, I uploaded my DBS certificate last week but I haven't heard anything back. Can you let me know what the status is? Thanks";
+				}
 			}
 		}
 		return defaults;

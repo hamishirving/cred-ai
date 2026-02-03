@@ -98,7 +98,6 @@ End with a brief summary of what you composed and why.`,
 		candidateName: z
 			.string()
 			.min(1)
-			.default("Sarah Mitchell")
 			.describe("Name or email of the candidate to compose an email for"),
 	}),
 

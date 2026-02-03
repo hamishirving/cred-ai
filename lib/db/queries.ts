@@ -1520,3 +1520,29 @@ export async function updateReferenceContact({
 		.returning();
 	return result;
 }
+
+/**
+ * Get a sample candidate for an organisation.
+ * Used for pre-populating agent test inputs.
+ */
+export async function getSampleCandidate({
+	organisationId,
+}: {
+	organisationId: string;
+}): Promise<{ name: string; email: string } | null> {
+	const [result] = await db
+		.select({
+			firstName: profiles.firstName,
+			lastName: profiles.lastName,
+			email: profiles.email,
+		})
+		.from(profiles)
+		.where(eq(profiles.organisationId, organisationId))
+		.limit(1);
+
+	if (!result) return null;
+	return {
+		name: `${result.firstName} ${result.lastName}`,
+		email: result.email,
+	};
+}

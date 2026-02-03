@@ -89,7 +89,6 @@ End with a brief summary of the reference check outcome.`,
 		candidateName: z
 			.string()
 			.min(1)
-			.default("Sarah Thompson")
 			.describe("Name or email of the candidate to check references for"),
 		phoneNumber: z
 			.string()

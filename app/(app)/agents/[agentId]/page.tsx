@@ -5,8 +5,10 @@
  * Test button opens input dialog, creates execution, navigates to execution page.
  */
 
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { getAgentDefinition, serializeAgent } from "@/lib/ai/agents/registry";
+import { getSampleCandidate } from "@/lib/db/queries";
 import { AgentPage } from "./agent-page";
 
 export default async function AgentDetailPage(props: {
@@ -19,5 +21,17 @@ export default async function AgentDetailPage(props: {
 		notFound();
 	}
 
-	return <AgentPage agent={serializeAgent(agent)} />;
+	// Get sample candidate for pre-populating test inputs
+	const cookieStore = await cookies();
+	const organisationId = cookieStore.get("selectedOrgId")?.value;
+	const sampleCandidate = organisationId
+		? await getSampleCandidate({ organisationId })
+		: null;
+
+	return (
+		<AgentPage
+			agent={serializeAgent(agent)}
+			sampleCandidate={sampleCandidate}
+		/>
+	);
 }
