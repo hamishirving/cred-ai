@@ -71,15 +71,21 @@ IMPORTANT: Never use "me" as the assignee — you are an automated agent with no
 		senderEmail: z
 			.string()
 			.email()
+			.default("sarah.thompson@email.com")
 			.describe("Email address of the person who sent the inbound email"),
 		senderName: z
 			.string()
+			.default("Sarah Thompson")
 			.describe("Display name of the sender"),
 		subject: z
 			.string()
+			.default("Question about my DBS check")
 			.describe("Subject line of the inbound email"),
 		bodyText: z
 			.string()
+			.default(
+				"Hi, I uploaded my DBS certificate last week but I haven't heard anything back. Can you let me know what the status is and if there's anything else you need from me? Thanks, Sarah",
+			)
 			.describe("Plain text body of the inbound email"),
 	}),
 

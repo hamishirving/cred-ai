@@ -35,6 +35,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
 	Dialog,
 	DialogContent,
@@ -317,6 +318,9 @@ export function AgentPage({ agent }: AgentPageProps) {
 								<form onSubmit={handleSubmit} className="flex flex-col gap-3">
 									{agent.inputFields.map((field) => {
 										const isUrl = field.key.toLowerCase().includes("url");
+										const isPhoneNumber = field.key.toLowerCase().includes("phone");
+										const isBodyText = field.key.toLowerCase().includes("body");
+										const hasDefault = !!field.defaultValue && !isPhoneNumber;
 
 										return (
 											<div key={field.key} className="flex flex-col gap-1.5">
@@ -330,21 +334,27 @@ export function AgentPage({ agent }: AgentPageProps) {
 												{isUrl ? (
 													<div className="flex flex-col gap-2">
 														<div
-															className="flex items-center gap-2 p-3 border border-dashed border-[#ccc8c0] rounded-md cursor-pointer hover:bg-[#f7f5f0] transition-colors duration-150"
-															onClick={() => fileInputRef.current?.click()}
+															className={cn(
+																"flex items-center gap-2 p-3 border border-dashed border-[#ccc8c0] rounded-md transition-colors duration-150",
+																hasDefault
+																	? "opacity-50 cursor-not-allowed"
+																	: "cursor-pointer hover:bg-[#f7f5f0]",
+															)}
+															onClick={() => !hasDefault && fileInputRef.current?.click()}
 															onKeyDown={(e) => {
-																if (e.key === "Enter" || e.key === " ") {
+																if (!hasDefault && (e.key === "Enter" || e.key === " ")) {
 																	fileInputRef.current?.click();
 																}
 															}}
 															role="button"
-															tabIndex={0}
+															tabIndex={hasDefault ? -1 : 0}
 														>
 															<input
 																ref={fileInputRef}
 																type="file"
 																accept="image/*,application/pdf"
 																className="hidden"
+																disabled={hasDefault}
 																onChange={(e) => handleFileUpload(e, field.key)}
 															/>
 															{uploadState === "uploading" ? (
@@ -389,6 +399,7 @@ export function AgentPage({ agent }: AgentPageProps) {
 															id={field.key}
 															placeholder={field.description}
 															value={formData[field.key] || ""}
+															disabled={hasDefault}
 															onChange={(e) =>
 																setFormData((prev) => ({
 																	...prev,
@@ -398,11 +409,27 @@ export function AgentPage({ agent }: AgentPageProps) {
 															className="text-sm"
 														/>
 													</div>
+												) : isBodyText ? (
+													<Textarea
+														id={field.key}
+														placeholder={field.description}
+														value={formData[field.key] || ""}
+														disabled={hasDefault}
+														onChange={(e) =>
+															setFormData((prev) => ({
+																...prev,
+																[field.key]: e.target.value,
+															}))
+														}
+														rows={4}
+														className="text-sm resize-none"
+													/>
 												) : (
 													<Input
 														id={field.key}
 														placeholder={field.description}
 														value={formData[field.key] || ""}
+														disabled={hasDefault}
 														onChange={(e) =>
 															setFormData((prev) => ({
 																...prev,

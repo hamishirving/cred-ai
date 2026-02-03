@@ -60,6 +60,7 @@ End with a brief summary of findings and the action taken.`,
 		candidateEmail: z
 			.string()
 			.email()
+			.default("hamish.irving+spencer@credentially.io")
 			.describe("Email address of the candidate whose certificate to verify"),
 		documentUrl: z
 			.string()
