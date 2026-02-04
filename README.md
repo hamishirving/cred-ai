@@ -1,53 +1,89 @@
-# Cred AI - Employee Management Chatbot
+# Cred AI - Compliance Intelligence Playground
 
-An AI-powered chatbot for employee data management, built with Next.js, Supabase, and Anthropic Claude.
+An AI-powered playground for testing compliance automation capabilities before production implementation. Built with Next.js, Supabase, and Anthropic Claude.
 
-**Note:** This is a playground application for internal testing and demonstration purposes.
+**Note:** This is a playground application for internal testing and demonstration purposes. It uses local Supabase seed data, not the production Credentially API.
 
 ## Features
 
-- **Next.js App Router**
-  - Advanced routing for seamless navigation and performance
-  - React Server Components (RSCs) and Server Actions for server-side rendering
+### Chat Interface
+- Streaming chat with Claude 4.5 models
+- Tool calling with inline UI rendering
+- Artifacts for code, documents, and data visualisation
+- Model switching (Sonnet/Haiku)
 
-- **AI SDK 6**
-  - Unified API for generating text, structured objects, and tool calls with LLMs
-  - Hooks for building dynamic chat and generative user interfaces
-  - Direct Anthropic integration with Claude 4.5 models
+### Agents Framework
+- Four specialised agents: BLS Verification, Reference Check, Onboarding Companion, Inbound Email Responder
+- Agent runner with step-by-step execution tracking
+- Memory persistence across sessions
+- Tool resolution and access control per agent
 
-- **Supabase Backend**
-  - PostgreSQL database with connection pooling
-  - Email/password authentication
-  - SSR-ready auth with automatic session management
+### AI Tools (25+)
+- **Profile Management**: lookup, create, update candidate profiles
+- **Compliance**: packages, status, document classification
+- **Documents**: create, update, extract data, classify
+- **Search**: knowledge base (Ragie), local candidates
+- **Communication**: draft emails, initiate voice calls
+- **Forms**: dynamic form generation
+- **Web Automation**: browse and verify (Browserbase + Stagehand)
+- **Tasks**: create and manage tasks
+- **Memory**: agent memory persistence
 
-- **Drizzle ORM + Hybrid Migrations**
-  - Type-safe database queries with full schema inference
-  - Drizzle Kit generates SQL migrations from schema changes
-  - Supabase CLI applies migrations (avoids [drizzle-kit introspection bug](https://github.com/drizzle-team/drizzle-orm/issues/4632))
+### Candidates Management
+- List view with filtering and search
+- Profile detail pages
+- Compliance status tracking
+- Document management
 
-- **Credentially API Integration**
-  - Employee profile lookup and management
-  - Document retrieval
-  - Organization metadata access
+### Voice Integration
+- Vapi AI voice calling
+- Call templates for different scenarios (reference checks, reminders)
+- Session recording and playback
+- Call status tracking
 
-- **PostHog Analytics**
-  - User behaviour tracking and event analytics
-  - Session recording and error capturing
-  - Reverse proxy for reliable data collection
+### Settings & Configuration
+- Organisation settings
+- User management and roles
+- Compliance elements configuration
+- Pipeline stages
 
-- **shadcn/ui Components**
-  - Styling with [Tailwind CSS](https://tailwindcss.com)
-  - Component primitives from [Radix UI](https://radix-ui.com)
+### Tasks
+- Task management dashboard
+- Task creation from chat
+
+### Reports
+- Compliance reporting
+- Analytics dashboards
+
+### Search
+- Global search
+- Knowledge base search (Ragie)
+
+### Data Model Visualisation
+- ERD/schema explorer
+- Interactive diagram
 
 ## Tech Stack
 
-- **Frontend**: Next.js 16, React 19, TypeScript
+**Core**
+- **Framework**: Next.js 16 (App Router), React 19, TypeScript
+- **AI**: Anthropic Claude 4.5 via AI SDK 6
 - **Database**: Supabase Postgres + Drizzle ORM (hybrid migrations)
-- **Authentication**: Supabase Auth (email/password)
-- **AI Provider**: Anthropic Claude 4.5 (direct API)
-- **Analytics**: PostHog (client + server-side)
+- **Auth**: Supabase Auth (email/password)
+
+**AI & Automation**
+- **Voice**: Vapi AI (@vapi-ai/server-sdk)
+- **Web Automation**: Browserbase + Stagehand
+- **RAG/Search**: Ragie
+- **Analytics**: PostHog
+
+**UI & Editors**
 - **Styling**: Tailwind CSS, shadcn/ui
-- **External API**: Credentially Public API v2.0.0
+- **Code Editor**: CodeMirror 6
+- **Rich Text**: ProseMirror
+- **Data Grid**: react-data-grid
+- **Diagrams**: React Flow (@xyflow/react)
+- **Charts**: Recharts
 
 ## Environment Setup
 
@@ -62,12 +98,21 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
 # AI Provider - Anthropic (direct API)
 ANTHROPIC_API_KEY="sk-ant-..."
 
-# Credentially Public API v2.0.0
-CREDENTIALLY_API_URL="https://dev-eu-london.drfocused.com/gateway"
-CREDENTIALLY_API_KEY="your-api-key"
+# Voice - Vapi
+VAPI_API_KEY="your-vapi-key"
+
+# Web Automation - Browserbase
+BROWSERBASE_API_KEY="your-browserbase-key"
+BROWSERBASE_PROJECT_ID="your-project-id"
+
+# RAG - Ragie
+RAGIE_API_KEY="your-ragie-key"
+
+# Email - Postmark
+POSTMARK_API_KEY="your-postmark-key"
 ```
 
-See `.env.example` for more details.
+See `.env.example` for the complete list.
 
 ## Getting Started
 
@@ -76,7 +121,6 @@ See `.env.example` for more details.
 - Node.js 18+ and pnpm
 - A Supabase account and project
 - An Anthropic API key
-- Credentially API credentials
 
 ### Installation
 
@@ -102,7 +146,12 @@ See `.env.example` for more details.
    pnpm db:push
    ```
 
-5. **Start the development server**
+5. **Seed demo data**
+   ```bash
+   pnpm db:seed
+   ```
+
+6. **Start the development server**
    ```bash
    pnpm dev
    ```
@@ -136,6 +185,9 @@ pnpm db:studio
 
 # Seed demo data
 pnpm db:seed
+
+# Clear all data
+pnpm db:clear
 ```
 
 See `lib/db/CLAUDE.md` for detailed workflow.
@@ -150,16 +202,36 @@ This project uses Claude 4.5 models via direct Anthropic API integration:
 
 Models are configured in `lib/ai/providers.ts` and can be switched in the UI.
 
-## Credentially API Tools
+## Project Structure
 
-The chatbot includes specialized tools for employee management:
-
-- **Profile Lookup** (`lookupProfile`) - Search employees by email or ID
-- **Document Retrieval** (`getDocuments`) - Fetch employee documents
-- **Organization Metadata** (`getMetadata`) - Get custom field schemas
-- **Profile Management** (`manageProfile`) - Create and update employee profiles
-
-Tools are defined in `lib/ai/tools/` and registered in `app/(chat)/api/chat/route.ts`.
+```
+├── app/
+│   ├── (app)/              # Main application routes
+│   │   ├── agents/         # Agent execution UI
+│   │   ├── candidates/     # Candidate list and profiles
+│   │   ├── chat/           # Chat interface
+│   │   ├── data-model/     # ERD visualisation
+│   │   ├── reports/        # Compliance reports
+│   │   ├── search/         # Search interface
+│   │   ├── settings/       # Org and user settings
+│   │   ├── tasks/          # Task management
+│   │   └── voice/          # Voice call interface
+│   ├── (public)/           # Public routes (landing)
+│   ├── api/                # API routes
+│   └── auth/               # Auth callbacks
+├── components/             # React components
+├── lib/
+│   ├── ai/
+│   │   ├── agents/         # Agent definitions and runner
+│   │   ├── tools/          # 25+ AI tools
+│   │   └── prompts.ts      # System prompts
+│   ├── db/                 # Drizzle schema and queries
+│   ├── ragie/              # Ragie RAG client
+│   ├── supabase/           # Supabase client utilities
+│   └── voice/              # Vapi voice integration
+├── hooks/                  # Custom React hooks
+└── docs/                   # Architecture and design docs
+```
 
 ## Authentication
 
@@ -169,27 +241,6 @@ The app uses Supabase email/password authentication:
 - Unauthenticated users are redirected to the login page
 - User sessions are managed via SSR-safe Supabase client
 - User data is automatically synced from Supabase auth to the app's User table
-
-## Project Structure
-
-```
-├── app/
-│   ├── (auth)/          # Authentication logic
-│   ├── (chat)/          # Chat interface and API routes
-│   └── layout.tsx       # Root layout with providers
-├── components/          # React components
-├── lib/
-│   ├── ai/             # AI SDK configuration and tools
-│   ├── api/            # Credentially API client
-│   ├── db/             # Drizzle schema and queries
-│   └── supabase/       # Supabase client utilities
-└── hooks/              # Custom React hooks
-```
-
-## Known Limitations
-
-- File uploads are temporarily disabled
-- No Redis caching (removed for simplicity)
 
 ## Contributing
 
