@@ -1,6 +1,6 @@
 # Cred AI
 
-Playground for testing AI capabilities before production implementation. Uses local Supabase seed data for experimenting with new features.
+Playground for testing AI capabilities before production implementation. Uses a hybrid data approach: some tools connect to the Credentially API for live candidate data, others use local Supabase seed data for experimentation.
 
 ## Tech Stack
 

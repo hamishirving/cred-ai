@@ -2,7 +2,7 @@
 
 An AI-powered playground for testing compliance automation capabilities before production implementation. Built with Next.js, Supabase, and Anthropic Claude.
 
-**Note:** This is a playground application for internal testing and demonstration purposes. It uses local Supabase seed data, not the production Credentially API.
+**Note:** This is a playground application for internal testing and demonstration purposes. It uses a hybrid data approach: some tools connect to the Credentially API for live candidate data, while others use local Supabase seed data for experimentation.
 
 ## Features
 
@@ -94,6 +94,10 @@ Create a `.env.local` file with the following variables:
 DATABASE_URL="postgresql://user:password@host:6543/postgres"
 NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
+
+# Credentially API (live candidate data)
+CRED_API_URL="https://api.credentially.io"
+CRED_API_KEY="your-cred-api-key"
 
 # AI Provider - Anthropic (direct API)
 ANTHROPIC_API_KEY="sk-ant-..."
