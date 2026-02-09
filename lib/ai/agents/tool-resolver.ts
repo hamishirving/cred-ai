@@ -15,6 +15,7 @@ import { classifyDocument } from "@/lib/ai/tools/classify-document";
 import { extractDocumentData } from "@/lib/ai/tools/extract-document-data";
 import { browseAndVerify, createBrowseAndVerify } from "@/lib/ai/tools/browse-and-verify";
 import type { BrowserActionCallback } from "@/lib/ai/tools/browse-and-verify";
+import { dvlaBrowseVerify, createDvlaBrowseVerify } from "@/lib/ai/tools/dvla-browse-verify";
 import { updateDocumentStatus } from "@/lib/ai/tools/update-document-status";
 import { getAgentMemoryTool } from "@/lib/ai/tools/get-agent-memory";
 import { saveAgentMemoryTool } from "@/lib/ai/tools/save-agent-memory";
@@ -40,6 +41,7 @@ const toolRegistry: Record<string, Tool> = {
 	classifyDocument: classifyDocument as Tool,
 	extractDocumentData: extractDocumentData as Tool,
 	browseAndVerify: browseAndVerify as Tool,
+	dvlaBrowseVerify: dvlaBrowseVerify as Tool,
 	updateDocumentStatus: updateDocumentStatus as Tool,
 	getAgentMemory: getAgentMemoryTool as Tool,
 	saveAgentMemory: saveAgentMemoryTool as Tool,
@@ -78,6 +80,12 @@ export function resolveTools(
 		// Context-aware factory for browseAndVerify
 		if (name === "browseAndVerify" && callbacks?.onBrowserAction) {
 			resolved[name] = createBrowseAndVerify(callbacks.onBrowserAction) as Tool;
+			continue;
+		}
+
+		// Context-aware factory for dvlaBrowseVerify
+		if (name === "dvlaBrowseVerify" && callbacks?.onBrowserAction) {
+			resolved[name] = createDvlaBrowseVerify(callbacks.onBrowserAction) as Tool;
 			continue;
 		}
 

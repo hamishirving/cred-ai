@@ -242,8 +242,10 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 		fetchExecutions();
 	}, [agent.id]);
 
+	// Redirect to execution detail as soon as we have an execution ID
 	useEffect(() => {
 		if (executionId && isSubmitting) {
+			setIsSubmitting(false);
 			router.push(`/agents/${agent.id}/executions/${executionId}`);
 		}
 	}, [executionId, isSubmitting, agent.id, router]);
@@ -340,7 +342,8 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 										const isUrl = field.key.toLowerCase().includes("url");
 										const isPhoneNumber = field.key.toLowerCase().includes("phone");
 										const isBodyText = field.key.toLowerCase().includes("body");
-										const hasDefault = !!field.defaultValue && !isPhoneNumber;
+										// Only lock URL fields with defaults (e.g., pre-configured document URLs)
+										const hasDefault = isUrl && !!field.defaultValue;
 
 										return (
 											<div key={field.key} className="flex flex-col gap-1.5">
@@ -481,6 +484,7 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 					</div>
 				</div>
 
+	
 				{/* Details card */}
 				<div className="bg-white border border-[#e5e2db] rounded-lg p-5">
 					<div className="grid grid-cols-2 sm:grid-cols-4 gap-6">

@@ -30,14 +30,47 @@ export async function GET(
 
 	try {
 		const bb = new Browserbase({ apiKey });
-		const recording = await bb.sessions.recording.retrieve(sessionId);
 
-		console.log(
-			`[recording] sessionId=${sessionId} type=${typeof recording} isArray=${Array.isArray(recording)} length=${Array.isArray(recording) ? recording.length : "n/a"} keys=${recording && typeof recording === "object" && !Array.isArray(recording) ? Object.keys(recording).join(",") : "n/a"}`,
-		);
+		// Check session status first — recording only available after COMPLETED
+		const bbSession = await bb.sessions.retrieve(sessionId);
+		console.log(`[recording] sessionId=${sessionId} sessionStatus=${bbSession.status}`);
 
-		// Return empty array if no recording data (not ready yet)
-		if (!recording || (Array.isArray(recording) && recording.length === 0)) {
+		if (bbSession.status === "RUNNING") {
+			// Request the session to finish so the recording gets processed
+			const projectId = process.env.BROWSERBASE_PROJECT_ID;
+			if (projectId) {
+				try {
+					await bb.sessions.update(sessionId, { projectId, status: "REQUEST_RELEASE" });
+					console.log(`[recording] Sent REQUEST_RELEASE for ${sessionId}`);
+				} catch {
+					// May already be released
+				}
+			}
+			return Response.json([], { status: 202 });
+		}
+
+		// Call BrowserBase API directly — the SDK may not parse the response correctly
+		const res = await fetch(`https://api.browserbase.com/v1/sessions/${sessionId}/recording`, {
+			headers: { "x-bb-api-key": apiKey },
+		});
+
+		console.log(`[recording] sessionId=${sessionId} apiStatus=${res.status} contentType=${res.headers.get("content-type")}`);
+
+		if (!res.ok) {
+			console.log(`[recording] API error: ${res.status} ${res.statusText}`);
+			return Response.json([], { status: 202 });
+		}
+
+		const raw = await res.text();
+		console.log(`[recording] sessionId=${sessionId} rawLength=${raw.length} preview=${raw.slice(0, 200)}`);
+
+		if (!raw || raw === "[]") {
+			return Response.json([], { status: 202 });
+		}
+
+		const recording = JSON.parse(raw);
+
+		if (!Array.isArray(recording) || recording.length === 0) {
 			return Response.json([], { status: 202 });
 		}
 

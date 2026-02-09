@@ -116,8 +116,11 @@ export async function executeAgent(
 	ctx: AgentExecutionContext,
 	callbacks: AgentStreamCallbacks,
 ): Promise<void> {
+	console.log("[agent-runner] executeAgent called for:", agent.id);
+	console.log("[agent-runner] Tools:", agent.tools);
 	const startTime = Date.now();
 	const steps: AgentStep[] = [];
+	const browserActions: BrowserAction[] = [];
 	let stepIndex = 0;
 	let executionId = "";
 
@@ -142,10 +145,24 @@ export async function executeAgent(
 		// Build the 4-layer system prompt
 		const system = buildAgentPrompt(agent, ctx, dynamicContext);
 
+		// Wrap browser action callback to collect actions AND forward to client
+		const handleBrowserAction = (action: BrowserAction) => {
+			browserActions.push(action);
+			callbacks.onBrowserAction?.(action);
+			// Persist to DB periodically (non-blocking)
+			updateAgentExecution({
+				id: executionId,
+				browserActions: [...browserActions],
+			}).catch((err) =>
+				console.warn("[agent-runner] Failed to update browser actions:", err),
+			);
+		};
+
 		// Resolve tool subset (inject browser action callback for real-time streaming)
 		const tools = resolveTools(agent.tools, {
-			onBrowserAction: callbacks.onBrowserAction,
+			onBrowserAction: handleBrowserAction,
 		});
+		console.log("[agent-runner] Resolved tools:", Object.keys(tools));
 
 		// Build invocation message
 		const userMessage = buildInvocationMessage(agent, ctx.input);
@@ -158,11 +175,12 @@ export async function executeAgent(
 			maxRetries: 2,
 			timeout: {
 				totalMs: agent.constraints.maxExecutionTime,
-				chunkMs: 30_000,
+				chunkMs: 120_000, // Increased for long-running browser tools
 			},
 			stopWhen: stepCountIs(agent.constraints.maxSteps),
 			onStepFinish: async (event) => {
 				stepIndex++;
+				console.log(`[agent-runner] onStepFinish #${stepIndex}, toolCalls:`, event.toolCalls?.length || 0);
 				const stepTimestamp = new Date().toISOString();
 
 				// Capture tool calls
@@ -222,6 +240,7 @@ export async function executeAgent(
 				);
 			},
 			onFinish: async ({ usage }) => {
+				console.log("[agent-runner] onFinish called, steps:", steps.length);
 				const durationMs = Date.now() - startTime;
 				const usageData = {
 					inputTokens: usage.inputTokens ?? 0,

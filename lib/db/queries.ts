@@ -1234,6 +1234,7 @@ export async function updateAgentExecution({
 	id,
 	status,
 	steps,
+	browserActions,
 	output,
 	tokensUsed,
 	durationMs,
@@ -1241,6 +1242,7 @@ export async function updateAgentExecution({
 	id: string;
 	status?: "running" | "completed" | "failed" | "escalated";
 	steps?: import("@/lib/ai/agents/types").AgentStep[];
+	browserActions?: import("@/lib/ai/agents/types").BrowserAction[];
 	output?: Record<string, unknown>;
 	tokensUsed?: { inputTokens: number; outputTokens: number; totalTokens: number };
 	durationMs?: number;
@@ -1248,6 +1250,7 @@ export async function updateAgentExecution({
 	const updates: Partial<NewAgentExecution> = {};
 	if (status) updates.status = status;
 	if (steps) updates.steps = steps;
+	if (browserActions) updates.browserActions = browserActions;
 	if (output) updates.output = output;
 	if (tokensUsed) updates.tokensUsed = tokensUsed;
 	if (durationMs !== undefined) updates.durationMs = durationMs;

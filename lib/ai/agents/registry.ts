@@ -7,6 +7,7 @@
 
 import type { AgentDefinition, SerializedAgentDefinition } from "./types";
 import { blsVerificationAgent } from "./definitions/bls-verification";
+import { dvlaVerificationAgent } from "./definitions/dvla-verification";
 import { onboardingCompanionAgent } from "./definitions/onboarding-companion";
 import { referenceCheckAgent } from "./definitions/reference-check";
 import { inboundEmailResponderAgent } from "./definitions/inbound-email-responder";
@@ -14,6 +15,7 @@ import { inboundEmailResponderAgent } from "./definitions/inbound-email-responde
 /** All registered agents */
 const agents: Record<string, AgentDefinition> = {
 	[blsVerificationAgent.id]: blsVerificationAgent,
+	[dvlaVerificationAgent.id]: dvlaVerificationAgent,
 	[onboardingCompanionAgent.id]: onboardingCompanionAgent,
 	[referenceCheckAgent.id]: referenceCheckAgent,
 	[inboundEmailResponderAgent.id]: inboundEmailResponderAgent,

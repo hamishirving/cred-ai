@@ -13,7 +13,7 @@ import {
 	uuid,
 	varchar,
 } from "drizzle-orm/pg-core";
-import type { AgentStep } from "@/lib/ai/agents/types";
+import type { AgentStep, BrowserAction } from "@/lib/ai/agents/types";
 
 /**
  * agent_executions table — audit trail for every agent run.
@@ -51,6 +51,9 @@ export const agentExecutions = pgTable("agent_executions", {
 
 	/** Steps taken during execution (full audit trail) */
 	steps: jsonb("steps").$type<AgentStep[]>().default([]),
+
+	/** Browser actions from automation tools (real-time progress) */
+	browserActions: jsonb("browser_actions").$type<BrowserAction[]>().default([]),
 
 	/** Final output / summary */
 	output: jsonb("output").$type<Record<string, unknown>>(),

@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, Globe, Navigation, MousePointer, Type, Monitor, Eye } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import type { AgentStep, BrowserAction } from "@/lib/ai/agents/types";
 import { ToolStepCard } from "./step-cards/tool-step-card";
 import { ReasoningStepCard } from "./step-cards/reasoning-step-card";
@@ -30,7 +31,7 @@ function StepCard({
 	isRunning: boolean;
 }) {
 	if (step.type === "tool-call") {
-		if (step.toolName === "browseAndVerify") {
+		if (step.toolName === "browseAndVerify" || step.toolName === "dvlaBrowseVerify") {
 			const isActive = isLastStep && isRunning;
 			return (
 				<BrowserStepCard
@@ -50,16 +51,28 @@ function StepCard({
 	return <ReasoningStepCard step={step} />;
 }
 
+/** Verb label for browser action type */
+function previewActionVerb(type: string): string {
+	const lower = type.toLowerCase();
+	if (lower === "goto" || lower === "navigate") return "Navigate";
+	if (lower === "click" || lower === "act") return "Click";
+	if (lower === "type" || lower === "fillform") return "Type";
+	if (lower === "screenshot") return "Screenshot";
+	if (lower === "extract" || lower === "observe") return "Extract";
+	if (lower === "browser-ready") return "Ready";
+	return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
 /** Format browser action for display in preview */
 function formatPreviewAction(action: BrowserAction): string {
-	if (action.type === "browser-ready") return "Browser session ready";
+	if (action.type === "browser-ready") return "Browser session initialised";
 	if (action.action) {
 		try {
 			const parsed = JSON.parse(action.action);
 			if (parsed.instruction) return parsed.instruction;
 			if (parsed.action) return parsed.action;
-			if (parsed.url) return `Navigate to ${new URL(parsed.url).hostname}`;
-			if (parsed.text) return `Type "${parsed.text}"`;
+			if (parsed.url) return new URL(parsed.url).hostname;
+			if (parsed.text) return `"${parsed.text}"`;
 		} catch {
 			if (action.action.length < 100) return action.action;
 		}
@@ -123,7 +136,7 @@ export function ExecutionTimeline({
 						allSteps={orderedSteps}
 						liveViewUrl={liveViewUrl}
 						browserActions={
-							step.type === "tool-call" && step.toolName === "browseAndVerify"
+							step.type === "tool-call" && (step.toolName === "browseAndVerify" || step.toolName === "dvlaBrowseVerify")
 								? browserActions
 								: undefined
 						}
@@ -134,26 +147,33 @@ export function ExecutionTimeline({
 			))}
 
 			{/* Browser actions preview before the tool step has completed */}
-			{status === "running" && browserActions.length > 0 && !steps.some((s) => s.type === "tool-call" && s.toolName === "browseAndVerify") && (
-				<div className="flex flex-col gap-1 p-3 rounded-lg border border-[#4444cf]/20 bg-[#eeedf8]/50">
-					<div className="flex items-center gap-2 text-xs font-medium text-[#4444cf]">
-						<Loader2 className="size-3 animate-spin" />
+			{status === "running" && browserActions.length > 0 && !steps.some((s) => s.type === "tool-call" && (s.toolName === "browseAndVerify" || s.toolName === "dvlaBrowseVerify")) && (
+				<div className="flex flex-col gap-1 p-3 rounded-lg border border-border/50 bg-white">
+					<div className="flex items-center gap-2 text-xs font-medium text-[#1c1a15]">
+						<Loader2 className="size-3 animate-spin text-[#8a857d]" />
 						Browser working...
 					</div>
-					<div className="flex flex-col gap-1 ml-5">
-						{browserActions.map((action) => (
-							<div
-								key={action.index}
-								className="flex items-start gap-1.5 text-xs text-[#8a857d]"
-							>
-								<div className="flex items-center justify-center size-4 rounded bg-[#eeedf8] shrink-0 mt-0.5">
-									<PreviewActionIcon type={action.type} />
-								</div>
-								<span className="leading-relaxed">
-									{formatPreviewAction(action)}
-								</span>
-							</div>
-						))}
+					<div className="ml-5 relative h-5">
+						<AnimatePresence mode="wait">
+							{browserActions.length > 0 && (
+								<motion.div
+									key={browserActions[browserActions.length - 1].index}
+									initial={{ opacity: 0 }}
+									animate={{ opacity: 1 }}
+									exit={{ opacity: 0 }}
+									transition={{ duration: 0.25 }}
+									className="absolute inset-0 flex items-start gap-1.5 text-xs text-[#8a857d]"
+								>
+									<div className="flex items-center justify-center size-4 shrink-0 mt-0.5">
+										<PreviewActionIcon type={browserActions[browserActions.length - 1].type} />
+									</div>
+									<span className="leading-relaxed truncate">
+										<span className="font-medium text-[#6b6760]">{previewActionVerb(browserActions[browserActions.length - 1].type)}:</span>{" "}
+										{formatPreviewAction(browserActions[browserActions.length - 1])}
+									</span>
+								</motion.div>
+							)}
+						</AnimatePresence>
 					</div>
 				</div>
 			)}
