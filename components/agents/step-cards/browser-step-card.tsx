@@ -52,7 +52,7 @@ interface BrowserStepCardProps {
 
 export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActive }: BrowserStepCardProps) {
 	const isBrowserTool = step.type === "tool-call" &&
-		(step.toolName === "browseAndVerify" || step.toolName === "dvlaBrowseVerify");
+		(step.toolName === "browseAndVerify" || step.toolName === "dvlaBrowseVerify" || step.toolName === "gdcBrowseVerify");
 	if (!isBrowserTool) return null;
 
 	const output = step.toolOutput as
@@ -89,7 +89,7 @@ export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActi
 							<Globe className="size-3 text-[#6b6760]" />
 						</div>
 						<span className="text-xs font-medium">
-							{step.toolName === "dvlaBrowseVerify" ? "DVLA Portal Verification" : "Browser Verification"}
+							{step.toolName === "dvlaBrowseVerify" ? "DVLA Portal Verification" : step.toolName === "gdcBrowseVerify" ? "GDC Register Verification" : "Browser Verification"}
 						</span>
 						{verified !== undefined && (
 							verified

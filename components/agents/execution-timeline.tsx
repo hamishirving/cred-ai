@@ -31,7 +31,7 @@ function StepCard({
 	isRunning: boolean;
 }) {
 	if (step.type === "tool-call") {
-		if (step.toolName === "browseAndVerify" || step.toolName === "dvlaBrowseVerify") {
+		if (step.toolName === "browseAndVerify" || step.toolName === "dvlaBrowseVerify" || step.toolName === "gdcBrowseVerify") {
 			const isActive = isLastStep && isRunning;
 			return (
 				<BrowserStepCard
@@ -136,7 +136,7 @@ export function ExecutionTimeline({
 						allSteps={orderedSteps}
 						liveViewUrl={liveViewUrl}
 						browserActions={
-							step.type === "tool-call" && (step.toolName === "browseAndVerify" || step.toolName === "dvlaBrowseVerify")
+							step.type === "tool-call" && (step.toolName === "browseAndVerify" || step.toolName === "dvlaBrowseVerify" || step.toolName === "gdcBrowseVerify")
 								? browserActions
 								: undefined
 						}
@@ -147,7 +147,7 @@ export function ExecutionTimeline({
 			))}
 
 			{/* Browser actions preview before the tool step has completed */}
-			{status === "running" && browserActions.length > 0 && !steps.some((s) => s.type === "tool-call" && (s.toolName === "browseAndVerify" || s.toolName === "dvlaBrowseVerify")) && (
+			{status === "running" && browserActions.length > 0 && !steps.some((s) => s.type === "tool-call" && (s.toolName === "browseAndVerify" || s.toolName === "dvlaBrowseVerify" || s.toolName === "gdcBrowseVerify")) && (
 				<div className="flex flex-col gap-1 p-3 rounded-lg border border-border/50 bg-white">
 					<div className="flex items-center gap-2 text-xs font-medium text-[#1c1a15]">
 						<Loader2 className="size-3 animate-spin text-[#8a857d]" />
