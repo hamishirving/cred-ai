@@ -1,31 +1,27 @@
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ProfileDto } from "@/lib/api/types";
 import { formatDate } from "@/lib/utils";
 
-function ComplianceStatus({ status }: { status: string }) {
+function ComplianceStatusBadge({ status }: { status: string }) {
 	const normalized = status.toLowerCase().replace(/_/g, " ");
 	const isCompliant = normalized === "compliant";
 	const isAwaiting = normalized.includes("awaiting") || normalized.includes("conditional");
 
-	// Format: NOT_COMPLIANT -> Not compliant
 	const formatted = status
 		.replace(/[_-]/g, " ")
 		.toLowerCase()
 		.replace(/^\w/, (c) => c.toUpperCase());
 
+	const variant = isCompliant ? "success" : isAwaiting ? "warning" : "danger";
+
 	return (
-		<span
-			className={cn(
-				"text-sm",
-				isCompliant
-					? "text-green-600"
-					: isAwaiting
-						? "text-yellow-600"
-						: "text-red-600"
-			)}
+		<Badge
+			variant={variant}
+			className={cn("shrink-0 text-xs")}
 		>
 			{formatted}
-		</span>
+		</Badge>
 	);
 }
 
@@ -33,6 +29,63 @@ function buildFullName(profile: ProfileDto) {
 	return [profile.title?.defaultValue, profile.firstName, profile.lastName]
 		.filter(Boolean)
 		.join(" ");
+}
+
+/** e.g. "Contact Details.Home Address" → "Home Address", "Position Details.Contract Type" → "Contract Type" */
+function formatFieldLabel(name: string, shortName?: string): string {
+	if (shortName && !shortName.includes(".")) return shortName;
+	const afterDot = name.split(".").pop()?.trim();
+	return afterDot || name;
+}
+
+/** Handles composite fields (array of {value}), address objects, and primitives */
+function formatFieldValue(value: unknown): string {
+	if (value === null || value === undefined) return "";
+	if (typeof value !== "object") return String(value);
+
+	// Array of sub-fields: [{name, shortName, value}, ...] — e.g. Home Address from Credentially
+	if (Array.isArray(value)) {
+		const items = value as Array<{ value?: unknown; shortName?: string }>;
+		const addressOrder = [
+			"Line 1",
+			"Line1",
+			"Line 2",
+			"Line2",
+			"Address Line 1",
+			"Address Line 2",
+			"City",
+			"Town",
+			"County",
+			"State",
+			"Postcode",
+			"Postal Code",
+			"Zip",
+			"Country",
+		];
+		const byShortName = new Map(items.map((i) => [i.shortName ?? "", i.value]));
+		const ordered = addressOrder
+			.map((key) => byShortName.get(key))
+			.filter((v): v is string => v != null && v !== "" && typeof v !== "object");
+		const rest = items
+			.filter((i) => !addressOrder.includes(i.shortName ?? ""))
+			.map((i) => i.value)
+			.filter((v): v is string => v != null && v !== "" && typeof v !== "object");
+		const combined = [...ordered, ...rest];
+		return combined.length > 0 ? combined.join(", ") : "";
+	}
+
+	const obj = value as Record<string, unknown>;
+	// Flat address object
+	const addressKeys = [
+		"line1", "line2", "street", "city", "town", "county", "state",
+		"postcode", "zip", "postalCode", "country",
+	];
+	const parts = addressKeys
+		.filter((k) => obj[k] && typeof obj[k] === "string")
+		.map((k) => String(obj[k]));
+	if (parts.length > 0) return parts.join(", ");
+	// Don't stringify internals — skip complex objects
+	return "";
 }
 
 export function ProfileCard({ profile }: { profile: ProfileDto }) {
@@ -55,9 +108,11 @@ export function ProfileCard({ profile }: { profile: ProfileDto }) {
 		<div className="not-prose my-3 w-fit min-w-80 max-w-2xl rounded-lg border bg-card px-5 py-4 shadow-sm">
 			<div className="flex items-start justify-between gap-4">
 				<div className="min-w-0 flex-1">
-					<div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-						<h3 className="truncate font-semibold text-base">{fullName}</h3>
-						<ComplianceStatus status={profile.complianceStatus} />
+					<div className="flex items-center justify-between gap-3">
+						<h3 className="min-w-0 truncate font-semibold text-base">
+							{fullName}
+						</h3>
+						<ComplianceStatusBadge status={profile.complianceStatus} />
 					</div>
 
 					{primaryJob?.role?.name && (
@@ -117,9 +172,9 @@ export function ProfileCard({ profile }: { profile: ProfileDto }) {
 
 						{interestingFields?.map((field) => (
 							<div key={field.shortName || field.name} className="text-muted-foreground">
-								{field.name}:{" "}
+								{formatFieldLabel(field.name, field.shortName)}:{" "}
 								<span className="font-medium text-foreground">
-									{String(field.value)}
+									{formatFieldValue(field.value)}
 								</span>
 							</div>
 						))}

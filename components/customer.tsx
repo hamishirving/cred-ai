@@ -1,30 +1,21 @@
 import type { Customer } from "@/lib/api/types";
+import { Badge } from "@/components/ui/badge";
 
 function StatusBadge({ status }: { status?: Customer["status"] }) {
 	if (!status) return null;
 
-	const styles = {
-		active: {
-			backgroundColor: "var(--positive-bg)",
-			color: "var(--positive-dark)",
-		},
-		inactive: {
-			backgroundColor: "var(--muted)",
-			color: "var(--muted-foreground)",
-		},
-		pending: {
-			backgroundColor: "var(--warning-bg)",
-			color: "var(--warning-dark)",
-		},
-	};
+	const variantByStatus = {
+		active: "success",
+		inactive: "neutral",
+		pending: "warning",
+	} as const;
+
+	const variant = variantByStatus[status] ?? "neutral";
 
 	return (
-		<span
-			className="rounded-full px-2 py-0.5 text-xs font-medium capitalize"
-			style={styles[status]}
-		>
+		<Badge variant={variant} className="px-2 py-0.5 text-xs font-medium capitalize">
 			{status}
-		</span>
+		</Badge>
 	);
 }
 

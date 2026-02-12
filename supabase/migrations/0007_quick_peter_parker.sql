@@ -1,0 +1,1 @@
+ALTER TABLE "agent_executions" ADD COLUMN "browser_actions" jsonb DEFAULT '[]'::jsonb;

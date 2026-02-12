@@ -49,8 +49,8 @@ const pipelineStages: PipelineStage[] = [
 		total: 245,
 		change: 12,
 		segments: [
-			{ name: "This week", value: 45, color: "#4444cf" },
-			{ name: "Last week", value: 200, color: "#7a7ad9" },
+			{ name: "This week", value: 45, color: "var(--primary)" },
+			{ name: "Last week", value: 200, color: "color-mix(in srgb, var(--primary) 65%, white)" },
 		],
 	},
 	{
@@ -58,8 +58,8 @@ const pipelineStages: PipelineStage[] = [
 		total: 180,
 		change: 8,
 		segments: [
-			{ name: "Complete", value: 120, color: "#3a9960" },
-			{ name: "In Progress", value: 60, color: "#6db88a" },
+			{ name: "Complete", value: 120, color: "var(--positive)" },
+			{ name: "In Progress", value: 60, color: "color-mix(in srgb, var(--positive) 65%, white)" },
 		],
 	},
 	{
@@ -67,9 +67,9 @@ const pipelineStages: PipelineStage[] = [
 		total: 142,
 		change: 5,
 		segments: [
-			{ name: "Verified", value: 85, color: "#2a8a7a" },
-			{ name: "Pending", value: 40, color: "#5aab9e" },
-			{ name: "Requested", value: 17, color: "#8ac4bb" },
+			{ name: "Verified", value: 85, color: "var(--chart-2)" },
+			{ name: "Pending", value: 40, color: "color-mix(in srgb, var(--chart-2) 72%, white)" },
+			{ name: "Requested", value: 17, color: "color-mix(in srgb, var(--chart-2) 50%, white)" },
 		],
 	},
 	{
@@ -77,8 +77,8 @@ const pipelineStages: PipelineStage[] = [
 		total: 98,
 		change: 3,
 		segments: [
-			{ name: "Cleared", value: 65, color: "#6b4fc7" },
-			{ name: "Processing", value: 33, color: "#9a86d9" },
+			{ name: "Cleared", value: 65, color: "var(--chart-5)" },
+			{ name: "Processing", value: 33, color: "color-mix(in srgb, var(--chart-5) 65%, white)" },
 		],
 	},
 	{
@@ -86,15 +86,15 @@ const pipelineStages: PipelineStage[] = [
 		total: 76,
 		change: 4,
 		segments: [
-			{ name: "Complete", value: 50, color: "#c44d8b" },
-			{ name: "In Progress", value: 26, color: "#d480ab" },
+			{ name: "Complete", value: 50, color: "var(--chart-4)" },
+			{ name: "In Progress", value: 26, color: "color-mix(in srgb, var(--chart-4) 65%, white)" },
 		],
 	},
 	{
 		name: "Ready",
 		total: 45,
 		change: 6,
-		segments: [{ name: "Active", value: 45, color: "#c49332" }],
+		segments: [{ name: "Active", value: 45, color: "var(--warning)" }],
 	},
 ];
 
@@ -193,27 +193,31 @@ type ReportTab = (typeof reportTabs)[number]["value"];
 
 function getCellColor(value: number | null, isMean: boolean, isDay0: boolean): string {
 	if (value === null) return "transparent";
-	if (isDay0) return isMean ? "#e8e0f0" : "#dfe6f0";
-
-	if (isMean) {
-		if (value >= 90) return "#6b4fc7";
-		if (value >= 70) return "#7d65cf";
-		if (value >= 50) return "#8f7bd7";
-		if (value >= 30) return "#a191df";
-		return "#b3a7e7";
+	if (isDay0) {
+		return isMean
+			? "color-mix(in srgb, var(--chart-5) 22%, transparent)"
+			: "color-mix(in srgb, var(--primary) 22%, transparent)";
 	}
 
-	if (value >= 90) return "#4444cf";
-	if (value >= 70) return "#5c5cd5";
-	if (value >= 50) return "#7474db";
-	if (value >= 30) return "#8c8ce1";
-	return "#a4a4e7";
+	if (isMean) {
+		if (value >= 90) return "var(--chart-5)";
+		if (value >= 70) return "color-mix(in srgb, var(--chart-5) 82%, white)";
+		if (value >= 50) return "color-mix(in srgb, var(--chart-5) 68%, white)";
+		if (value >= 30) return "color-mix(in srgb, var(--chart-5) 56%, white)";
+		return "color-mix(in srgb, var(--chart-5) 45%, white)";
+	}
+
+	if (value >= 90) return "var(--primary)";
+	if (value >= 70) return "color-mix(in srgb, var(--primary) 82%, white)";
+	if (value >= 50) return "color-mix(in srgb, var(--primary) 68%, white)";
+	if (value >= 30) return "color-mix(in srgb, var(--primary) 56%, white)";
+	return "color-mix(in srgb, var(--primary) 45%, white)";
 }
 
 function getTextColor(value: number | null, isDay0: boolean): string {
-	if (value === null) return "#a8a49c";
-	if (isDay0) return "#8a857d";
-	return "white";
+	if (value === null) return "var(--muted-foreground)";
+	if (isDay0) return "var(--muted-foreground)";
+	return "var(--primary-foreground)";
 }
 
 // =============================================================================
@@ -222,7 +226,7 @@ function getTextColor(value: number | null, isDay0: boolean): string {
 
 function PipelineSkeleton() {
 	return (
-		<Card className="shadow-none! bg-white">
+		<Card className="shadow-none! bg-card">
 			<CardHeader className="pb-2">
 				<Skeleton className="h-5 w-[140px]" />
 			</CardHeader>
@@ -252,7 +256,7 @@ function CohortTableSkeleton() {
 	return (
 		<>
 			{Array.from({ length: 6 }).map((_, i) => (
-				<TableRow key={i} className="bg-white">
+				<TableRow key={i} className="bg-card">
 					<TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
 					<TableCell><Skeleton className="h-4 w-[30px]" /></TableCell>
 					{Array.from({ length: 11 }).map((_, j) => (
@@ -282,18 +286,18 @@ function StatsOverview({ stages }: { stages: PipelineStage[] }) {
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ duration: 0.3 }}
 			>
-				<Card className="shadow-none! bg-white">
+				<Card className="shadow-none! bg-card">
 					<CardContent className="p-4">
 						<div className="flex items-start justify-between">
 							<div>
-								<p className="text-sm text-[#8a857d]">Total Candidates</p>
-								<p className="text-2xl font-semibold text-[#1c1a15] mt-1">{totalCandidates}</p>
-								<p className="text-xs text-[#3a9960] flex items-center gap-0.5 mt-1">
+								<p className="mt-1 text-sm text-muted-foreground">Total Candidates</p>
+								<p className="mt-1 text-2xl font-semibold text-foreground">{totalCandidates}</p>
+								<p className="mt-1 flex items-center gap-0.5 text-xs text-[var(--positive)]">
 									<TrendingUp className="h-3 w-3" />
 									12% from last month
 								</p>
 							</div>
-							<Users className="h-5 w-5 text-[#a8a49c]" />
+							<Users className="h-5 w-5 text-muted-foreground/80" />
 						</div>
 					</CardContent>
 				</Card>
@@ -303,18 +307,18 @@ function StatsOverview({ stages }: { stages: PipelineStage[] }) {
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ duration: 0.3, delay: 0.05 }}
 			>
-				<Card className="shadow-none! bg-white">
+				<Card className="shadow-none! bg-card">
 					<CardContent className="p-4">
 						<div className="flex items-start justify-between">
 							<div>
-								<p className="text-sm text-[#8a857d]">Ready to Start</p>
-								<p className="text-2xl font-semibold text-[#1c1a15] mt-1">{readyCount}</p>
-								<p className="text-xs text-[#3a9960] flex items-center gap-0.5 mt-1">
+								<p className="text-sm text-muted-foreground">Ready to Start</p>
+								<p className="mt-1 text-2xl font-semibold text-foreground">{readyCount}</p>
+								<p className="mt-1 flex items-center gap-0.5 text-xs text-[var(--positive)]">
 									<TrendingUp className="h-3 w-3" />
 									6% from last month
 								</p>
 							</div>
-							<FileCheck className="h-5 w-5 text-[#a8a49c]" />
+							<FileCheck className="h-5 w-5 text-muted-foreground/80" />
 						</div>
 					</CardContent>
 				</Card>
@@ -324,15 +328,15 @@ function StatsOverview({ stages }: { stages: PipelineStage[] }) {
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ duration: 0.3, delay: 0.1 }}
 			>
-				<Card className="shadow-none! bg-white">
+				<Card className="shadow-none! bg-card">
 					<CardContent className="p-4">
 						<div className="flex items-start justify-between">
 							<div>
-								<p className="text-sm text-[#8a857d]">Conversion Rate</p>
-								<p className="text-2xl font-semibold text-[#1c1a15] mt-1">{conversionRate}%</p>
-								<p className="text-xs text-[#8a857d] mt-1">Applied to ready</p>
+								<p className="text-sm text-muted-foreground">Conversion Rate</p>
+								<p className="mt-1 text-2xl font-semibold text-foreground">{conversionRate}%</p>
+								<p className="mt-1 text-xs text-muted-foreground">Applied to ready</p>
 							</div>
-							<BarChart3 className="h-5 w-5 text-[#a8a49c]" />
+							<BarChart3 className="h-5 w-5 text-muted-foreground/80" />
 						</div>
 					</CardContent>
 				</Card>
@@ -350,18 +354,18 @@ function PipelineChart({ stages }: { stages: PipelineStage[] }) {
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.3, delay: 0.15 }}
 		>
-			<Card className="shadow-none! bg-white">
+			<Card className="shadow-none! bg-card">
 				<CardHeader className="pb-2">
-					<CardTitle className="text-base font-semibold tracking-tight text-[#1c1a15]">Pipeline Overview</CardTitle>
+					<CardTitle className="text-base font-semibold tracking-tight text-foreground">Pipeline Overview</CardTitle>
 				</CardHeader>
 				<CardContent>
 					{/* Metric cards row */}
 					<div className="grid grid-cols-6 gap-4 mb-6">
 						{stages.map((stage) => (
 							<div key={stage.name} className="space-y-1">
-								<p className="text-xs text-[#8a857d]">{stage.name}</p>
-								<p className="text-xl font-semibold text-[#1c1a15]">{stage.total}</p>
-								<p className="text-xs text-[#3a9960] flex items-center gap-0.5">
+								<p className="text-xs text-muted-foreground">{stage.name}</p>
+								<p className="text-xl font-semibold text-foreground">{stage.total}</p>
+								<p className="flex items-center gap-0.5 text-xs text-[var(--positive)]">
 									{stage.change}% <ArrowUp className="h-3 w-3" />
 								</p>
 							</div>
@@ -400,9 +404,9 @@ function PipelineChart({ stages }: { stages: PipelineStage[] }) {
 														{Math.round(segmentPercent)}%
 													</span>
 													{/* Tooltip on hover */}
-													<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-white border border-[#e5e2db] rounded shadow-sm text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-														<p className="font-medium text-[#1c1a15]">{segment.name}</p>
-														<p className="text-[#8a857d]">
+													<div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded border border-border bg-card px-2 py-1 text-xs opacity-0 transition-opacity group-hover:opacity-100">
+														<p className="font-medium text-foreground">{segment.name}</p>
+														<p className="text-muted-foreground">
 															{segment.value} candidates
 														</p>
 													</div>
@@ -427,12 +431,12 @@ function CohortTable({ data }: { data: CohortRow[] }) {
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.3, delay: 0.2 }}
 		>
-			<Card className="shadow-none! bg-white">
+			<Card className="shadow-none! bg-card">
 				<CardHeader className="pb-2">
-					<CardTitle className="text-base font-semibold tracking-tight text-[#1c1a15]">
+					<CardTitle className="text-base font-semibold tracking-tight text-foreground">
 						Cohort Analysis: Time to Compliance
 					</CardTitle>
-					<CardDescription className="text-[#8a857d]">
+					<CardDescription className="text-muted-foreground">
 						Percentage of candidates who have achieved compliance at each day
 						since starting. Higher is better.
 					</CardDescription>
@@ -440,17 +444,17 @@ function CohortTable({ data }: { data: CohortRow[] }) {
 				<CardContent className="overflow-x-auto">
 					<Table>
 						<TableHeader>
-							<TableRow className="bg-[#faf9f7] hover:bg-[#faf9f7]">
-								<TableHead className="text-xs font-medium text-[#6b6760] min-w-[140px]">
+							<TableRow className="bg-[var(--table-head-surface)] hover:bg-[var(--hover-surface)]">
+								<TableHead className="min-w-[140px] text-xs font-medium text-muted-foreground">
 									Cohort
 								</TableHead>
-								<TableHead className="text-xs font-medium text-[#6b6760] text-center w-16">
+								<TableHead className="w-16 text-center text-xs font-medium text-muted-foreground">
 									Size
 								</TableHead>
 								{dayColumns.map((day) => (
 									<TableHead
 										key={day}
-										className="text-xs font-medium text-[#6b6760] text-center min-w-[70px] px-1"
+										className="min-w-[70px] px-1 text-center text-xs font-medium text-muted-foreground"
 									>
 										{day}
 									</TableHead>
@@ -464,7 +468,7 @@ function CohortTable({ data }: { data: CohortRow[] }) {
 									<TableRow
 										key={row.cohort}
 										className={cn(
-											"bg-white",
+											"bg-card",
 											isMean && "font-medium"
 										)}
 									>
@@ -472,17 +476,17 @@ function CohortTable({ data }: { data: CohortRow[] }) {
 											{isMean ? (
 												<span className="flex items-center gap-1">
 													<Badge
-														variant="outline"
-														className="text-[10px] px-1.5 border-[#6b4fc7]/30 text-[#6b4fc7]"
+														variant="info"
+														className="px-1.5 text-[10px]"
 													>
 														Mean
 													</Badge>
 												</span>
 											) : (
-												<span className="text-sm text-[#3d3a32]">{row.cohort}</span>
+												<span className="text-sm text-foreground">{row.cohort}</span>
 											)}
 										</TableCell>
-										<TableCell className="text-center py-2 px-2 text-sm text-[#8a857d] tabular-nums">
+										<TableCell className="px-2 py-2 text-center text-sm tabular-nums text-muted-foreground">
 											{row.size}
 										</TableCell>
 										{row.days.map((value, dayIdx) => {
@@ -492,7 +496,7 @@ function CohortTable({ data }: { data: CohortRow[] }) {
 													<div
 														className={cn(
 															"rounded px-2 py-1.5 text-center text-xs font-medium transition-colors",
-															value === null && "border border-dashed border-[#e5e2db]"
+															value === null && "border border-dashed border-border"
 														)}
 														style={{
 															backgroundColor: getCellColor(value, isMean, isDay0),
@@ -549,17 +553,17 @@ export default function ReportsPage() {
 	}, [activeTab]);
 
 	return (
-		<div className="flex flex-1 flex-col gap-10 p-8 bg-[#faf9f7] min-h-full">
+		<div className="flex min-h-full flex-1 flex-col gap-10 bg-background p-8">
 			{/* Header */}
 			<div>
-				<h1 className="text-4xl font-semibold tracking-tight text-balance text-[#1c1a15]">Reports</h1>
-				<p className="text-[#6b6760] text-sm mt-1">
+				<h1 className="text-balance text-4xl font-semibold tracking-tight text-foreground">Reports</h1>
+				<p className="mt-1 text-sm text-muted-foreground">
 					Analytics and compliance reporting
 				</p>
 			</div>
 
 			{/* Tabs */}
-			<div className="flex items-center gap-1 border-b border-[#eeeae4]">
+			<div className="flex items-center gap-1 border-b border-border">
 				{reportTabs.map((tab) => {
 					const isSelected = activeTab === tab.value;
 					return (
@@ -569,8 +573,8 @@ export default function ReportsPage() {
 							className={cn(
 								"px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer whitespace-nowrap outline-none",
 								isSelected
-									? "border-[#4444cf] text-[#4444cf]"
-									: "border-transparent text-[#8a857d] hover:text-[#3d3a32] hover:border-[#ccc8c0]"
+									? "border-primary text-primary"
+									: "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
 							)}
 						>
 							{tab.label}

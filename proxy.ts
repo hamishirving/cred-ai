@@ -46,10 +46,13 @@ export async function proxy(request: NextRequest) {
 		request.nextUrl.pathname.match(/^\/api\/organisations\/[^/]+\/user-roles$/) ||
 		request.nextUrl.pathname.startsWith("/api/webhooks/");
 
+	// Public profile share links
+	const isPublicShareRoute = request.nextUrl.pathname.match(/^\/share\/[^/]+$/);
+
 	// PostHog analytics routes
 	const isPostHogRoute = request.nextUrl.pathname.startsWith("/ingest");
 
-	if (!user && !isAuthPage && !isPublicApi && !isPostHogRoute) {
+	if (!user && !isAuthPage && !isPublicApi && !isPublicShareRoute && !isPostHogRoute) {
 		// Redirect to login page
 		const url = request.nextUrl.clone();
 		url.pathname = "/login";

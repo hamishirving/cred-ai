@@ -131,6 +131,8 @@ When to use:
 			let browser: Awaited<
 				ReturnType<typeof chromium.connectOverCDP>
 			> | null = null;
+			let bb: Browserbase | null = null;
+			let bbSessionId: string | null = null;
 			let actionIndex = 0;
 
 			const emit = (
@@ -150,7 +152,7 @@ When to use:
 
 			try {
 				// 1. Create Browserbase session
-				const bb = new Browserbase({ apiKey });
+				bb = new Browserbase({ apiKey });
 				const session = await bb.sessions.create({
 					projectId,
 					browserSettings: {
@@ -158,6 +160,7 @@ When to use:
 					},
 				});
 				const sessionId = session.id;
+				bbSessionId = sessionId;
 
 				// 2. Get debug URL for live view
 				const debugInfo = await bb.sessions.debug(sessionId);
@@ -268,6 +271,15 @@ When to use:
 						await browser.close();
 					} catch {
 						// Ignore cleanup errors
+					}
+				}
+				// Release the BrowserBase session so the recording is finalised
+				if (bb && bbSessionId && projectId) {
+					try {
+						await bb.sessions.update(bbSessionId, { projectId, status: "REQUEST_RELEASE" });
+						console.log("[browseAndVerify] Session released");
+					} catch {
+						// Ignore release errors
 					}
 				}
 			}

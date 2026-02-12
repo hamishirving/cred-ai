@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Globe, MousePointer, Type, Navigation, Eye, Loader2, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import type { AgentStep, BrowserAction } from "@/lib/ai/agents/types";
 import { SessionReplay } from "@/components/agents/session-replay";
 
@@ -15,15 +16,26 @@ function ActionIcon({ type }: { type: string }) {
 	return <Globe className="size-3" />;
 }
 
+function actionVerb(type: string): string {
+	const lower = type.toLowerCase();
+	if (lower === "goto" || lower === "navigate") return "Navigate";
+	if (lower === "click" || lower === "act") return "Click";
+	if (lower === "type" || lower === "fillform") return "Type";
+	if (lower === "extract" || lower === "observe") return "Extract";
+	if (lower === "screenshot") return "Screenshot";
+	if (lower === "browser-ready") return "Ready";
+	return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
 function formatAction(action: BrowserAction): string {
-	if (action.type === "browser-ready") return "Browser session ready";
+	if (action.type === "browser-ready") return "Browser session initialised";
 	if (action.action) {
 		try {
 			const parsed = JSON.parse(action.action);
 			if (parsed.instruction) return parsed.instruction;
 			if (parsed.action) return parsed.action;
-			if (parsed.url) return `Navigate to ${new URL(parsed.url).hostname}`;
-			if (parsed.text) return `Type "${parsed.text}"`;
+			if (parsed.url) return new URL(parsed.url).hostname;
+			if (parsed.text) return `"${parsed.text}"`;
 		} catch {
 			if (action.action.length < 120) return action.action;
 		}
@@ -39,8 +51,9 @@ interface BrowserStepCardProps {
 }
 
 export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActive }: BrowserStepCardProps) {
-	if (step.type !== "tool-call" || step.toolName !== "browseAndVerify")
-		return null;
+	const isBrowserTool = step.type === "tool-call" &&
+		(step.toolName === "browseAndVerify" || step.toolName === "dvlaBrowseVerify" || step.toolName === "gdcBrowseVerify");
+	if (!isBrowserTool) return null;
 
 	const output = step.toolOutput as
 		| {
@@ -72,49 +85,51 @@ export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActi
 				<div className="flex flex-col gap-1.5">
 					{/* Header row */}
 					<div className="flex items-center gap-2">
-						<div className="flex items-center justify-center size-5 rounded-full bg-[#eeedf8] shrink-0">
-							<Globe className="size-3 text-[#4444cf]" />
+						<div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted">
+							<Globe className="size-3 text-muted-foreground" />
 						</div>
 						<span className="text-xs font-medium">
-							Browser Verification
+							{step.toolName === "dvlaBrowseVerify" ? "DVLA Portal Verification" : step.toolName === "gdcBrowseVerify" ? "GDC Register Verification" : "Browser Verification"}
 						</span>
 						{verified !== undefined && (
 							verified
-								? <CheckCircle2 className="size-3 text-[#3a9960] ml-auto" />
+								? <CheckCircle2 className="ml-auto size-3 text-[var(--positive)]" />
 								: <XCircle className="size-3 text-destructive ml-auto" />
 						)}
 						{hasError && (
 							<AlertCircle className="size-3 text-destructive ml-auto" />
 						)}
 						{!hasOutput && isActive && (
-							<Loader2 className="size-3 animate-spin text-[#8a857d] ml-auto" />
+							<Loader2 className="ml-auto size-3 animate-spin text-muted-foreground" />
 						)}
 					</div>
 
 					{/* Body — all aligned to ml-7 */}
 					<div className="ml-7 flex flex-col gap-1">
-						{/* Real-time browser actions */}
+						{/* Real-time browser actions — show latest only */}
 						{browserActions.length > 0 && (
-							<div className="flex flex-col gap-1">
-								{browserActions.map((action) => (
-									<div
-										key={action.index}
-										className="flex items-start gap-1.5 text-xs text-[#8a857d]"
+							<div className="relative h-5">
+								<AnimatePresence mode="wait">
+									<motion.div
+										key={browserActions[browserActions.length - 1].index}
+										initial={{ opacity: 0 }}
+										animate={{ opacity: 1 }}
+										exit={{ opacity: 0 }}
+										transition={{ duration: 0.25 }}
+										className="absolute inset-0 flex items-start gap-1.5 text-xs text-muted-foreground"
 									>
-										<div className="flex items-center justify-center size-4 rounded bg-[#eeedf8] shrink-0 mt-0.5">
-											<ActionIcon type={action.type} />
+										<div className="flex items-center justify-center size-4 shrink-0 mt-0.5">
+											<ActionIcon type={browserActions[browserActions.length - 1].type} />
 										</div>
-										<span className="leading-relaxed">
-											{formatAction(action)}
+										<span className="leading-relaxed truncate">
+											<span className="font-medium text-foreground/80">{actionVerb(browserActions[browserActions.length - 1].type)}:</span>{" "}
+											{formatAction(browserActions[browserActions.length - 1])}
 										</span>
-									</div>
-								))}
-								{isActive && !hasOutput && (
-									<div className="flex items-center gap-1.5 text-xs text-[#8a857d]">
-										<Loader2 className="size-3 animate-spin" />
-										<span>Working...</span>
-									</div>
-								)}
+										{isActive && !hasOutput && (
+											<Loader2 className="size-3 animate-spin shrink-0 ml-auto" />
+										)}
+									</motion.div>
+								</AnimatePresence>
 							</div>
 						)}
 
@@ -132,7 +147,7 @@ export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActi
 								<div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
 									{Object.entries(fields).map(([key, value]) => (
 										<div key={key} className="col-span-2 grid grid-cols-subgrid">
-											<span className="text-[#8a857d]">{key}</span>
+											<span className="text-muted-foreground">{key}</span>
 											<span className="font-medium">{value}</span>
 										</div>
 									))}
@@ -140,7 +155,7 @@ export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActi
 							)}
 							{/* Fallback raw message (only if no fields) */}
 							{agentResult?.message && (!fields || Object.keys(fields).length === 0) && (
-								<p className="text-xs text-[#8a857d] leading-relaxed">
+								<p className="text-xs leading-relaxed text-muted-foreground">
 									{agentResult.message}
 								</p>
 							)}

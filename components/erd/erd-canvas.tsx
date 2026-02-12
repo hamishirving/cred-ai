@@ -34,7 +34,7 @@ export function ErdCanvas() {
     if (domain && domain in erdConfig.domains) {
       return erdConfig.domains[domain as keyof typeof erdConfig.domains].color;
     }
-    return "#6b7280";
+    return "var(--muted-foreground)";
   }, []);
 
   return (
@@ -61,7 +61,7 @@ export function ErdCanvas() {
         />
         <MiniMap
           nodeColor={nodeColor}
-          maskColor="rgba(0,0,0,0.1)"
+          maskColor="color-mix(in srgb, var(--foreground) 10%, transparent)"
           className="!bg-card !border-border !rounded-lg"
           pannable
           zoomable

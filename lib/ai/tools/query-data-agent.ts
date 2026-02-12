@@ -4,7 +4,7 @@ import { z } from "zod";
 
 const BILLING_PROJECT =
 	process.env.GEMINI_BILLING_PROJECT ?? "arched-proton-478514-s5";
-const LOCATION = process.env.GEMINI_LOCATION ?? "europe-west2";
+const LOCATION = "global";
 const AGENT_ID =
 	process.env.GEMINI_AGENT_ID ?? "agent_55883a2d-c26d-42f9-8c67-5a675127dfcd";
 
@@ -92,7 +92,7 @@ Pass the user's question directly as the prompt.`,
 			);
 
 			const text = await res.text();
-			console.log("[queryDataAgent] Response body:", text.slice(0, 1000));
+			console.log("[queryDataAgent] Response body (full):", text);
 
 			if (!res.ok) {
 				return {

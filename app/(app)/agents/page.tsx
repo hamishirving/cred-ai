@@ -11,11 +11,11 @@ export default function AgentsPage() {
 	const agents = getAllSerializedAgents();
 
 	return (
-		<div className="flex flex-1 flex-col gap-10 p-8 bg-[#faf9f7] min-h-full">
+		<div className="flex min-h-full flex-1 flex-col gap-10 bg-background p-8">
 			{/* Header */}
 			<div>
-				<h1 className="text-4xl font-semibold tracking-tight text-balance text-[#1c1a15]">Agents</h1>
-				<p className="text-[#6b6760] text-sm mt-1">
+				<h1 className="text-balance text-4xl font-semibold tracking-tight text-foreground">Agents</h1>
+				<p className="mt-1 text-sm text-muted-foreground">
 					Autonomous AI agents for compliance automation
 				</p>
 			</div>

@@ -76,10 +76,10 @@ interface AgentExecution {
 }
 
 const statusConfig = {
-	running: { label: "Running", icon: Loader2, color: "text-[#4444cf]", bg: "bg-[#eeedf8]", iconClass: "animate-spin" },
-	completed: { label: "Completed", icon: Check, color: "text-[#3a9960]", bg: "bg-[#eef6f1]", iconClass: "" },
-	failed: { label: "Failed", icon: X, color: "text-[#c93d4e]", bg: "bg-[#fdf0f1]", iconClass: "" },
-	escalated: { label: "Escalated", icon: AlertTriangle, color: "text-[#c49332]", bg: "bg-[#faf5eb]", iconClass: "" },
+	running: { label: "Running", icon: Loader2, color: "text-primary", bg: "bg-primary/12", iconClass: "animate-spin" },
+	completed: { label: "Completed", icon: Check, color: "text-[var(--positive)]", bg: "bg-[color-mix(in_srgb,var(--positive)_14%,transparent)]", iconClass: "" },
+	failed: { label: "Failed", icon: X, color: "text-destructive", bg: "bg-destructive/12", iconClass: "" },
+	escalated: { label: "Escalated", icon: AlertTriangle, color: "text-[var(--warning)]", bg: "bg-[color-mix(in_srgb,var(--warning)_14%,transparent)]", iconClass: "" },
 };
 
 const statusOrder: Record<string, number> = {
@@ -98,7 +98,7 @@ function SortableHeader({ column, children }: { column: { toggleSorting: (desc: 
 		<Button
 			variant="ghost"
 			onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-			className="-ml-2 h-8 px-2 text-xs font-medium text-[#6b6760] hover:text-[#3d3a32] hover:bg-[#f0ede7] cursor-pointer"
+			className="-ml-2 h-8 cursor-pointer px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
 		>
 			{children}
 			<ArrowUpDown className="ml-2 h-3 w-3" />
@@ -132,7 +132,7 @@ function createRunColumns(agentId: string): ColumnDef<AgentExecution>[] {
 			accessorKey: "durationMs",
 			header: ({ column }) => <SortableHeader column={column}>Duration</SortableHeader>,
 			cell: ({ row }) => (
-				<span className="text-sm text-[#8a857d] tabular-nums">
+				<span className="text-sm tabular-nums text-muted-foreground">
 					{row.original.durationMs
 						? `${(row.original.durationMs / 1000).toFixed(1)}s`
 						: "—"}
@@ -143,7 +143,7 @@ function createRunColumns(agentId: string): ColumnDef<AgentExecution>[] {
 			accessorKey: "createdAt",
 			header: ({ column }) => <SortableHeader column={column}>When</SortableHeader>,
 			cell: ({ row }) => (
-				<span className="text-sm text-[#8a857d] whitespace-nowrap">
+				<span className="whitespace-nowrap text-sm text-muted-foreground">
 					{formatDistanceToNow(new Date(row.original.createdAt), { addSuffix: true })}
 				</span>
 			),
@@ -151,7 +151,7 @@ function createRunColumns(agentId: string): ColumnDef<AgentExecution>[] {
 		{
 			id: "chevron",
 			enableSorting: false,
-			cell: () => <ChevronRight className="h-4 w-4 text-[#a8a49c]" />,
+			cell: () => <ChevronRight className="h-4 w-4 text-muted-foreground/80" />,
 		},
 	];
 }
@@ -242,8 +242,10 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 		fetchExecutions();
 	}, [agent.id]);
 
+	// Redirect to execution detail as soon as we have an execution ID
 	useEffect(() => {
 		if (executionId && isSubmitting) {
+			setIsSubmitting(false);
 			router.push(`/agents/${agent.id}/executions/${executionId}`);
 		}
 	}, [executionId, isSubmitting, agent.id, router]);
@@ -299,10 +301,10 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 	const endRow = Math.min((pageIndex + 1) * PAGE_SIZE, totalRows);
 
 	return (
-		<div className="min-h-0 bg-[#f7f5f0]">
+		<div className="min-h-0 bg-background">
 			<div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
 				{/* Back link */}
-				<Button variant="ghost" size="sm" className="h-7 -ml-2 text-[#6b6760] hover:text-[#1c1a15]" asChild>
+				<Button variant="ghost" size="sm" className="-ml-2 h-7 text-muted-foreground hover:text-foreground" asChild>
 					<Link href="/agents">
 						<ArrowLeft className="size-3 mr-1" />
 						Agents
@@ -312,8 +314,8 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 				{/* Header */}
 				<div className="flex items-start justify-between gap-4">
 					<div>
-						<h1 className="text-2xl font-semibold text-[#1c1a15]" style={{ textWrap: "balance" }}>{agent.name}</h1>
-						<p className="text-sm text-[#6b6760] mt-1 max-w-[65ch]">
+						<h1 className="text-2xl font-semibold text-foreground" style={{ textWrap: "balance" }}>{agent.name}</h1>
+						<p className="mt-1 max-w-[65ch] text-sm text-muted-foreground">
 							{agent.description}
 						</p>
 					</div>
@@ -340,7 +342,8 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 										const isUrl = field.key.toLowerCase().includes("url");
 										const isPhoneNumber = field.key.toLowerCase().includes("phone");
 										const isBodyText = field.key.toLowerCase().includes("body");
-										const hasDefault = !!field.defaultValue && !isPhoneNumber;
+										// Only lock URL fields with defaults (e.g., pre-configured document URLs)
+										const hasDefault = isUrl && !!field.defaultValue;
 
 										return (
 											<div key={field.key} className="flex flex-col gap-1.5">
@@ -355,10 +358,10 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 													<div className="flex flex-col gap-2">
 														<div
 															className={cn(
-																"flex items-center gap-2 p-3 border border-dashed border-[#ccc8c0] rounded-md transition-colors duration-150",
+																"flex items-center gap-2 rounded-md border border-dashed border-border p-3 transition-colors duration-150",
 																hasDefault
 																	? "opacity-50 cursor-not-allowed"
-																	: "cursor-pointer hover:bg-[#f7f5f0]",
+																	: "cursor-pointer hover:bg-muted",
 															)}
 															onClick={() => !hasDefault && fileInputRef.current?.click()}
 															onKeyDown={(e) => {
@@ -379,22 +382,22 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 															/>
 															{uploadState === "uploading" ? (
 																<>
-																	<Loader2 className="size-4 animate-spin text-[#8a857d]" />
-																	<span className="text-xs text-[#8a857d]">
+																	<Loader2 className="size-4 animate-spin text-muted-foreground" />
+																	<span className="text-xs text-muted-foreground">
 																		Uploading {uploadedFileName}…
 																	</span>
 																</>
 															) : uploadState === "done" ? (
 																<>
-																	<CheckCircle2 className="size-4 text-[#3a9960]" />
-																	<span className="text-xs text-[#3a9960]">
+																	<CheckCircle2 className="size-4 text-[var(--positive)]" />
+																	<span className="text-xs text-[var(--positive)]">
 																		{uploadedFileName}
 																	</span>
 																</>
 															) : (
 																<>
-																	<Upload className="size-4 text-[#8a857d]" />
-																	<span className="text-xs text-[#8a857d]">
+																	<Upload className="size-4 text-muted-foreground" />
+																	<span className="text-xs text-muted-foreground">
 																		Upload certificate image or PDF
 																	</span>
 																</>
@@ -408,11 +411,11 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 														)}
 
 														<div className="flex items-center gap-2">
-															<div className="h-px flex-1 bg-[#e5e2db]" />
-															<span className="text-xs text-[#8a857d]">
+															<div className="h-px flex-1 bg-border" />
+															<span className="text-xs text-muted-foreground">
 																or paste URL
 															</span>
-															<div className="h-px flex-1 bg-[#e5e2db]" />
+															<div className="h-px flex-1 bg-border" />
 														</div>
 
 														<Input
@@ -481,40 +484,41 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 					</div>
 				</div>
 
+	
 				{/* Details card */}
-				<div className="bg-white border border-[#e5e2db] rounded-lg p-5">
+				<div className="rounded-lg border border-border bg-card p-5">
 					<div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
 						<div className="flex flex-col gap-1">
-							<span className="text-xs font-medium text-[#6b6760] flex items-center gap-1.5">
+							<span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
 								<Zap className="size-3" />
 								Trigger
 							</span>
-							<span className="text-sm text-[#1c1a15] capitalize">{agent.trigger.type}</span>
+							<span className="text-sm capitalize text-foreground">{agent.trigger.type}</span>
 						</div>
 						<div className="flex flex-col gap-1">
-							<span className="text-xs font-medium text-[#6b6760] flex items-center gap-1.5">
+							<span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
 								<Shield className="size-3" />
 								Oversight
 							</span>
-							<span className="text-sm text-[#1c1a15] capitalize">{agent.oversight.mode}</span>
+							<span className="text-sm capitalize text-foreground">{agent.oversight.mode}</span>
 						</div>
 						<div className="flex flex-col gap-1">
-							<span className="text-xs font-medium text-[#6b6760] flex items-center gap-1.5">
+							<span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
 								<Wrench className="size-3" />
 								Tools
 							</span>
-							<span className="text-sm text-[#1c1a15]">{agent.tools.length}</span>
+							<span className="text-sm text-foreground">{agent.tools.length}</span>
 						</div>
 						<div className="flex flex-col gap-1">
-							<span className="text-xs font-medium text-[#6b6760]">Version</span>
-							<span className="text-sm text-[#1c1a15]">v{agent.version}</span>
+							<span className="text-xs font-medium text-muted-foreground">Version</span>
+							<span className="text-sm text-foreground">v{agent.version}</span>
 						</div>
 					</div>
 				</div>
 
 				{/* Tools */}
 				<div>
-					<h2 className="text-base font-medium text-[#1c1a15] mb-3">Tools</h2>
+					<h2 className="mb-3 text-base font-medium text-foreground">Tools</h2>
 					<div className="flex flex-wrap gap-2">
 						{agent.tools.map((tool) => (
 							<Badge key={tool} variant="secondary" className="text-xs">
@@ -527,18 +531,18 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 				{/* Runs */}
 				<div>
 					<div className="flex items-center justify-between mb-3">
-						<h2 className="text-base font-medium text-[#1c1a15]">Runs</h2>
-						<span className="text-xs text-[#8a857d]">{totalRows} total</span>
+						<h2 className="text-base font-medium text-foreground">Runs</h2>
+						<span className="text-xs text-muted-foreground">{totalRows} total</span>
 					</div>
 
-					<div className="bg-white border border-[#e5e2db] rounded-lg overflow-hidden">
+					<div className="overflow-hidden rounded-lg border border-border bg-card">
 						{loadingExecs ? (
 							<TableLoader cols={4} rows={5} />
 						) : totalRows === 0 ? (
 							<div className="flex flex-col items-center justify-center py-16">
-								<Clock className="h-8 w-8 text-[#a8a49c] mb-3" />
-								<p className="text-base font-medium text-[#1c1a15]">No runs yet</p>
-								<p className="text-sm text-[#8a857d] mt-1">
+								<Clock className="mb-3 h-8 w-8 text-muted-foreground/80" />
+								<p className="text-base font-medium text-foreground">No runs yet</p>
+								<p className="mt-1 text-sm text-muted-foreground">
 									Click Test to run this agent
 								</p>
 							</div>
@@ -546,11 +550,11 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 							<Table>
 								<TableHeader>
 									{table.getHeaderGroups().map((headerGroup) => (
-										<TableRow key={headerGroup.id} className="bg-[#f0ede7] hover:bg-[#f0ede7]">
+										<TableRow key={headerGroup.id} className="bg-muted hover:bg-muted">
 											{headerGroup.headers.map((header) => (
 												<TableHead
 													key={header.id}
-													className="text-xs font-medium text-[#6b6760]"
+													className="text-xs font-medium text-muted-foreground"
 												>
 													{header.isPlaceholder
 														? null
@@ -564,7 +568,7 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 									{table.getRowModel().rows.map((row) => (
 										<TableRow
 											key={row.id}
-											className="bg-white cursor-pointer hover:bg-[#f7f5f0] border-b border-[#e5e2db]"
+											className="cursor-pointer border-b border-border bg-card hover:bg-muted"
 											onClick={() =>
 												router.push(`/agents/${agent.id}/executions/${row.original.id}`)
 											}
@@ -583,7 +587,7 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 
 					{/* Pagination */}
 					{pageCount > 1 && (
-						<div className="flex items-center justify-between mt-3 text-xs text-[#8a857d]">
+						<div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
 							<span>
 								{startRow}–{endRow} of {totalRows}
 							</span>

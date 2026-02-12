@@ -26,10 +26,10 @@ function ToolData({ label, data }: { label: string; data: unknown }) {
 
 	return (
 		<details className="text-xs">
-			<summary className="text-[#8a857d] cursor-pointer hover:text-[#1c1a15] transition-colors">
+			<summary className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground">
 				{label}
 			</summary>
-			<pre className="mt-1 p-2 bg-[#f0ede7] rounded text-xs overflow-x-auto max-h-48 overflow-y-auto">
+			<pre className="mt-1 max-h-48 overflow-y-auto overflow-x-auto rounded bg-muted p-2 text-xs">
 				{JSON.stringify(data, null, 2)}
 			</pre>
 		</details>
@@ -50,11 +50,11 @@ export function ToolStepCard({ step, allSteps }: ToolStepCardProps) {
 				<CardContent className="p-3">
 					<div className="flex flex-col gap-1.5">
 						<div className="flex items-center gap-2">
-							<div className="flex items-center justify-center size-5 rounded-full bg-[#eeedf8] shrink-0">
-								<Wrench className="size-3 text-[#4444cf]" />
+							<div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/12">
+								<Wrench className="size-3 text-primary" />
 							</div>
 							<span className="text-xs font-medium">{step.toolName}</span>
-							<CheckCircle2 className="size-3 text-[#3a9960] ml-auto" />
+							<CheckCircle2 className="ml-auto size-3 text-[var(--positive)]" />
 						</div>
 						<div className="ml-7 flex flex-col gap-1">
 							<ToolData label="Input" data={step.toolInput} />

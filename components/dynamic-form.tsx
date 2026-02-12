@@ -34,8 +34,8 @@ function StarRating({
 					className={cn(
 						"text-2xl transition-colors",
 						star <= value
-							? "text-yellow-400"
-							: "text-gray-300 hover:text-yellow-200",
+							? "text-[var(--warning)]"
+							: "text-muted-foreground/40 hover:text-[var(--warning)]/50",
 					)}
 					key={star}
 					onClick={() => onChange(star)}
@@ -215,7 +215,7 @@ export function DynamicForm({ schema, onSubmit }: DynamicFormProps) {
 		return (
 			<div className="w-[650px] max-w-full rounded-xl border bg-card p-6 shadow-sm">
 				<div className="flex flex-col items-center gap-3 text-center">
-					<div className="flex size-12 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
+					<div className="flex size-12 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--positive)_16%,transparent)] text-[var(--positive)]">
 						<CheckIcon className="size-6" />
 					</div>
 					<h3 className="font-semibold text-lg">Form Sent!</h3>
@@ -234,7 +234,7 @@ export function DynamicForm({ schema, onSubmit }: DynamicFormProps) {
 		return (
 			<div className="w-[650px] max-w-full rounded-xl border bg-card p-6 shadow-sm">
 				<div className="flex flex-col items-center gap-3 text-center">
-					<div className="flex size-12 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
+					<div className="flex size-12 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--positive)_16%,transparent)] text-[var(--positive)]">
 						<CheckIcon className="size-6" />
 					</div>
 					<h3 className="font-semibold text-lg">Form Submitted!</h3>
@@ -274,7 +274,7 @@ export function DynamicForm({ schema, onSubmit }: DynamicFormProps) {
 						<div className="space-y-2" key={field.id}>
 							<Label htmlFor={field.id}>
 								{field.label}
-								{field.required && <span className="ml-1 text-red-500">*</span>}
+								{field.required && <span className="ml-1 text-destructive">*</span>}
 							</Label>
 							<FormFieldComponent
 								field={field}

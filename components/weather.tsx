@@ -304,7 +304,7 @@ export function Weather({
 		// Check if it's an error response
 		if (weatherAtLocation && "error" in weatherAtLocation) {
 			return (
-				<div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-600 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400">
+				<div className="rounded-2xl border border-destructive/35 bg-destructive/10 p-4 text-destructive">
 					Weather Error:{" "}
 					{String((weatherAtLocation as { error: string }).error)}
 				</div>

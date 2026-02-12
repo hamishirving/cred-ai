@@ -130,22 +130,22 @@ export function TranscriptViewer({
 							)}
 						>
 							{msg.speaker === "AI" && (
-								<div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-									<Bot className="h-4 w-4 text-blue-600" />
+								<div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--primary)_16%,transparent)]">
+									<Bot className="h-4 w-4 text-primary" />
 								</div>
 							)}
 							<div
 								className={cn(
 									"max-w-[80%] rounded-lg px-4 py-2 text-sm",
 									msg.speaker === "AI"
-										? "bg-blue-50 text-blue-900"
-										: "bg-green-50 text-green-900",
+										? "bg-[color-mix(in_srgb,var(--primary)_12%,transparent)] text-foreground"
+										: "bg-[color-mix(in_srgb,var(--positive)_12%,transparent)] text-foreground",
 								)}
 							>
 								<div
 									className={cn(
 										"text-xs font-semibold mb-1",
-										msg.speaker === "AI" ? "text-blue-600" : "text-green-600",
+										msg.speaker === "AI" ? "text-primary" : "text-[var(--positive)]",
 									)}
 								>
 									{msg.speaker === "AI" ? "Assistant" : "Recipient"}
@@ -153,8 +153,8 @@ export function TranscriptViewer({
 								<div className="leading-relaxed">{msg.text}</div>
 							</div>
 							{msg.speaker === "User" && (
-								<div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-									<User className="h-4 w-4 text-green-600" />
+								<div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--positive)_16%,transparent)]">
+									<User className="h-4 w-4 text-[var(--positive)]" />
 								</div>
 							)}
 						</div>

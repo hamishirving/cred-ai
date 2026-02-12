@@ -23,6 +23,7 @@ import {
 import { useAgentExecution } from "@/hooks/use-agent-execution";
 import type { AgentStep } from "@/lib/ai/agents/types";
 import type { SerializedAgentDefinition } from "@/lib/ai/agents/types";
+import { cn } from "@/lib/utils";
 
 interface SerializedExecution {
 	id: string;
@@ -66,10 +67,10 @@ function formatDate(date: string | Date): string {
 	}).format(new Date(date));
 }
 
-const statusDotColour: Record<string, string> = {
-	completed: "#3a9960",
-	failed: "#c93d4e",
-	running: "#4444cf",
+const statusDotClass: Record<string, string> = {
+	completed: "bg-[var(--positive)]",
+	failed: "bg-destructive",
+	running: "bg-primary",
 };
 
 export function ExecutionDetail({
@@ -172,8 +173,8 @@ export function ExecutionDetail({
 	return (
 		<div className="flex h-dvh">
 			{/* Left sidebar — runs list */}
-			<div className="w-60 shrink-0 border-r border-[#e5e2db] bg-white flex flex-col">
-				<div className="p-3 border-b border-[#e5e2db]">
+			<div className="flex w-60 shrink-0 flex-col border-r border-border bg-card">
+				<div className="border-b border-border p-3">
 					<Button variant="ghost" size="sm" className="h-7 -ml-2 text-xs" asChild>
 						<Link href={`/agents/${agent.id}`}>
 							<ArrowLeft className="size-3 mr-1" />
@@ -184,7 +185,7 @@ export function ExecutionDetail({
 				<div className="flex-1 overflow-y-auto">
 					{executions.map((run) => {
 						const isActive = run.id === execution.id;
-						const dotColour = statusDotColour[run.status] || "#8a857d";
+						const dotClass = statusDotClass[run.status] || "bg-muted-foreground";
 						return (
 							<button
 								key={run.id}
@@ -196,22 +197,21 @@ export function ExecutionDetail({
 								}}
 								className={`w-full text-left px-3 py-2 flex items-center gap-2 transition-colors ${
 									isActive
-										? "bg-[#f0ede7]"
-										: "hover:bg-[#f7f5f0]"
+										? "bg-muted"
+										: "hover:bg-muted/70"
 								}`}
 							>
 								<span
-									className="size-2 rounded-full shrink-0"
-									style={{ backgroundColor: dotColour }}
+									className={cn("size-2 rounded-full shrink-0", dotClass)}
 								/>
 								<div className="min-w-0 flex-1">
-									<span className="text-xs text-[#1c1a15] block truncate">
+									<span className="block truncate text-xs text-foreground">
 										{formatDistanceToNow(new Date(run.createdAt), {
 											addSuffix: true,
 										})}
 									</span>
 									{run.durationMs != null && (
-										<span className="text-xs text-[#8a857d]">
+										<span className="text-xs text-muted-foreground">
 											{(run.durationMs / 1000).toFixed(1)}s
 										</span>
 									)}
@@ -225,7 +225,7 @@ export function ExecutionDetail({
 			{/* Right area — metadata bar + steps */}
 			<div className="flex-1 flex flex-col overflow-hidden">
 				{/* Top metadata bar */}
-				<div className="border-b border-[#e5e2db] bg-white px-4 py-3 flex items-center gap-4 text-xs">
+				<div className="flex items-center gap-4 border-b border-border bg-card px-4 py-3 text-xs">
 					<StatusBadge status={currentStatus} />
 
 					{/* Input values inline */}
@@ -233,13 +233,13 @@ export function ExecutionDetail({
 						<div className="flex items-center gap-2 min-w-0">
 							{Object.entries(execution.input).map(([key, value]) => (
 								<span key={key} className="truncate max-w-48">
-									<span className="text-[#8a857d]">{key}: </span>
+									<span className="text-muted-foreground">{key}: </span>
 									{typeof value === "string" && value.startsWith("http") ? (
 										<a
 											href={value}
 											target="_blank"
 											rel="noopener noreferrer"
-											className="text-[#4444cf] hover:underline"
+											className="text-primary hover:underline"
 										>
 											{value.length > 40 ? `${value.slice(0, 40)}...` : value}
 										</a>
@@ -252,7 +252,7 @@ export function ExecutionDetail({
 					)}
 
 					{/* Timing */}
-					<div className="flex items-center gap-1.5 text-[#8a857d] shrink-0">
+					<div className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
 						<Clock className="size-3" />
 						<span>{formatDate(execution.startedAt)}</span>
 						{execution.durationMs != null && (
@@ -262,13 +262,13 @@ export function ExecutionDetail({
 
 					{/* Usage */}
 					{execution.tokensUsed && (
-						<div className="flex items-center gap-1.5 text-[#8a857d] shrink-0">
+						<div className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
 							<Zap className="size-3" />
 							<span>{execution.tokensUsed.totalTokens.toLocaleString()} tokens</span>
 						</div>
 					)}
 					{execution.model && (
-						<div className="flex items-center gap-1.5 text-[#8a857d] shrink-0">
+						<div className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
 							<Cpu className="size-3" />
 							<span>{execution.model}</span>
 						</div>
@@ -306,9 +306,9 @@ export function ExecutionDetail({
 				</div>
 
 				{/* Main content — steps */}
-				<div className="flex-1 overflow-y-auto bg-[#faf9f7] px-6 py-4">
+				<div className="flex-1 overflow-y-auto bg-background px-6 py-4">
 					<div className="max-w-[600px] mx-auto">
-					<h2 className="text-base font-semibold tracking-tight text-[#1c1a15] mb-3">Steps</h2>
+					<h2 className="mb-3 text-base font-semibold tracking-tight text-foreground">Steps</h2>
 					<div className="flex flex-col gap-3">
 						<ExecutionTimeline
 							steps={steps}
@@ -319,13 +319,13 @@ export function ExecutionDetail({
 
 						{/* Error banner */}
 						{(isFailed || currentStatus === "failed") && (
-							<div className="flex items-start gap-3 rounded-lg border border-[#c93d4e]/20 bg-[#fdf0f1] p-3">
-								<AlertCircle className="h-5 w-5 text-[#c93d4e] shrink-0 mt-0.5" />
+							<div className="flex items-start gap-3 rounded-lg border border-destructive/25 bg-destructive/10 p-3">
+								<AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
 								<div>
-									<p className="font-semibold text-sm text-[#1c1a15]">
+									<p className="text-sm font-semibold text-foreground">
 										Agent execution failed
 									</p>
-									<p className="text-xs text-[#c93d4e] mt-1">
+									<p className="mt-1 text-xs text-destructive">
 										{errorMessage || execution.output?.summary || "An unknown error occurred"}
 									</p>
 								</div>

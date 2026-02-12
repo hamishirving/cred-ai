@@ -107,7 +107,7 @@ function PureMessages({
 			{!isAtBottom && (
 				<button
 					aria-label="Scroll to bottom"
-					className="-translate-x-1/2 absolute bottom-4 left-1/2 z-10 rounded-full border border-[#e5e2db] bg-white p-2 shadow-none transition-colors hover:bg-[#f0ede7]"
+					className="-translate-x-1/2 absolute bottom-4 left-1/2 z-10 rounded-full border border-border bg-card p-2 shadow-none transition-colors hover:bg-muted"
 					onClick={() => scrollToBottom("smooth")}
 					type="button"
 				>

@@ -18,47 +18,16 @@ import type { AgentContext, AgentInsight } from "@/lib/ai/agents/types";
  * Get communication history and preview for a candidate.
  */
 export async function GET(
-	request: NextRequest,
+	_request: NextRequest,
 	{ params }: { params: Promise<{ id: string }> },
 ) {
 	try {
 		const { id: profileId } = await params;
-		const searchParams = request.nextUrl.searchParams;
-		const organisationId = searchParams.get("organisationId");
-
-		if (!organisationId) {
-			return NextResponse.json(
-				{ error: "organisationId is required" },
-				{ status: 400 },
-			);
-		}
-
-		// Get candidate context
-		const candidate = await getCandidateContext(profileId, organisationId);
-		if (!candidate) {
-			return NextResponse.json(
-				{ error: "Candidate not found" },
-				{ status: 404 },
-			);
-		}
 
 		// Get recent email activities
 		const emailHistory = await getRecentEmailActivities(profileId, 20);
 
-		// Get org settings
-		const org = await getOrganisationSettings(organisationId);
-
 		return NextResponse.json({
-			candidate: {
-				id: candidate.profileId,
-				name: `${candidate.firstName} ${candidate.lastName}`,
-				email: candidate.email,
-				compliance: {
-					completed: candidate.compliance.completed,
-					total: candidate.compliance.total,
-					percentage: candidate.compliance.percentage,
-				},
-			},
 			history: emailHistory.map((activity) => {
 				const details = activity.details as Record<string, unknown>;
 				return {
@@ -74,7 +43,6 @@ export async function GET(
 					reasoning: activity.aiReasoning,
 				};
 			}),
-			orgSettings: org?.settings,
 		});
 	} catch (error) {
 		console.error("Failed to fetch communications:", error);

@@ -242,6 +242,10 @@ export function useAgentExecution(): UseAgentExecutionReturn {
 
 					const exec = data.execution;
 					setSteps(exec.steps || []);
+					// Fetch browser actions from database
+					if (exec.browserActions && exec.browserActions.length > 0) {
+						setBrowserActions(exec.browserActions);
+					}
 
 					if (exec.status === "completed" || exec.status === "failed") {
 						clearInterval(poll);
@@ -263,7 +267,7 @@ export function useAgentExecution(): UseAgentExecutionReturn {
 				} catch {
 					// Retry on next interval
 				}
-			}, 2000);
+			}, 1000); // Poll every 1s for real-time feel
 
 			pollRef.current = poll;
 		},

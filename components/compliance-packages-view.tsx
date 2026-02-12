@@ -118,7 +118,7 @@ export function CompliancePackagesView({
 					variant={compliantCount === totalCount ? "default" : "secondary"}
 					className={cn(
 						"text-xs",
-						compliantCount === totalCount && "bg-green-600"
+						compliantCount === totalCount && "bg-[var(--positive)]"
 					)}
 				>
 					{Math.round((compliantCount / totalCount) * 100)}%
@@ -127,7 +127,7 @@ export function CompliancePackagesView({
 			<div className="border rounded-lg overflow-hidden">
 				<Table>
 					<TableHeader>
-						<TableRow className="bg-muted/50">
+						<TableRow className="bg-[var(--table-head-surface)]">
 							<TableHead>Requirement</TableHead>
 							<TableHead className="w-24">Type</TableHead>
 							<TableHead>Package</TableHead>
@@ -171,10 +171,10 @@ export function CompliancePackagesView({
 															className={cn(
 																"text-sm",
 																isAwaiting
-																	? "text-yellow-600"
+																	? "text-[var(--warning)]"
 																	: isOk
-																		? "text-green-600"
-																		: "text-red-600"
+																		? "text-[var(--positive)]"
+																		: "text-destructive"
 															)}
 														>
 															{formatStatus(tag.key)}
@@ -186,7 +186,9 @@ export function CompliancePackagesView({
 											<span
 												className={cn(
 													"text-sm",
-													isCompliant ? "text-green-600" : "text-red-600"
+													isCompliant
+														? "text-[var(--positive)]"
+														: "text-destructive"
 												)}
 											>
 												{isCompliant ? "Compliant" : "Not compliant"}

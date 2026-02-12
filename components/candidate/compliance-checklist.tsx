@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
 	ChevronDown,
 	ChevronUp,
@@ -59,6 +59,8 @@ interface ComplianceChecklistProps {
 	showPlacementHeader?: boolean;
 	/** Default expanded sections */
 	defaultExpanded?: BlockedBy[];
+	/** Render in read-only mode for external views */
+	readOnly?: boolean;
 }
 
 interface GroupConfig {
@@ -67,7 +69,7 @@ interface GroupConfig {
 	icon: React.ReactNode;
 	color: string;
 	borderColor: string;
-	badgeClass: string;
+	badgeVariant: "neutral" | "info" | "success" | "warning";
 	dotColor: string;
 	emptyMessage: string;
 }
@@ -77,40 +79,40 @@ const GROUP_CONFIG: GroupConfig[] = [
 		key: "candidate",
 		label: "Candidate action needed",
 		icon: <AlertCircle className="h-4 w-4" />,
-		color: "text-[#c49332]",
-		borderColor: "border-[#c49332]/20",
-		badgeClass: "bg-[#faf5eb] text-[#a87c2a] border-0",
-		dotColor: "bg-[#c49332]",
+		color: "text-[var(--warning)]",
+		borderColor: "border-[var(--warning)]/20",
+		badgeVariant: "warning",
+		dotColor: "bg-[var(--warning)]",
 		emptyMessage: "No items waiting on candidate",
 	},
 	{
 		key: "admin",
 		label: "Internal review",
 		icon: <FileText className="h-4 w-4" />,
-		color: "text-[#4444cf]",
-		borderColor: "border-[#4444cf]/20",
-		badgeClass: "bg-[#eeedf8] text-[#4444cf] border-0",
-		dotColor: "bg-[#4444cf]",
+		color: "text-primary",
+		borderColor: "border-primary/20",
+		badgeVariant: "info",
+		dotColor: "bg-primary",
 		emptyMessage: "No items under review",
 	},
 	{
 		key: "third_party",
 		label: "Third party",
 		icon: <ExternalLink className="h-4 w-4" />,
-		color: "text-[#3636b8]",
-		borderColor: "border-[#3636b8]/20",
-		badgeClass: "bg-[#eeedf8] text-[#3636b8] border-0",
-		dotColor: "bg-[#3636b8]",
+		color: "text-primary",
+		borderColor: "border-primary/20",
+		badgeVariant: "info",
+		dotColor: "bg-primary",
 		emptyMessage: "No items with external providers",
 	},
 	{
 		key: "complete",
 		label: "Complete",
 		icon: <CheckCircle2 className="h-4 w-4" />,
-		color: "text-[#3a9960]",
-		borderColor: "border-[#3a9960]/20",
-		badgeClass: "bg-[#edf7f1] text-[#3a9960] border-0",
-		dotColor: "bg-[#3a9960]",
+		color: "text-[var(--positive)]",
+		borderColor: "border-[var(--positive)]/20",
+		badgeVariant: "success",
+		dotColor: "bg-[var(--positive)]",
 		emptyMessage: "No completed items",
 	},
 ];
@@ -159,18 +161,23 @@ export function ComplianceChecklist({
 	onViewEvidence,
 	showPlacementHeader = false,
 	defaultExpanded = ["candidate", "admin", "third_party"],
+	readOnly = false,
 }: ComplianceChecklistProps) {
 	const [expandedGroups, setExpandedGroups] = useState<Set<BlockedBy>>(
 		new Set(defaultExpanded)
 	);
 
 	// Group items by blocker
-	const groupedItems = GROUP_CONFIG.reduce(
-		(acc, config) => {
-			acc[config.key] = items.filter((item) => item.blockedBy === config.key);
-			return acc;
-		},
-		{} as Record<BlockedBy, ComplianceItemDisplay[]>
+	const groupedItems = useMemo(
+		() =>
+			GROUP_CONFIG.reduce(
+				(acc, config) => {
+					acc[config.key] = items.filter((item) => item.blockedBy === config.key);
+					return acc;
+				},
+				{} as Record<BlockedBy, ComplianceItemDisplay[]>
+			),
+		[items]
 	);
 
 	const toggleGroup = (key: BlockedBy) => {
@@ -197,16 +204,16 @@ export function ComplianceChecklist({
 		<div className="space-y-3">
 			{/* Placement header */}
 			{showPlacementHeader && placement && (
-				<Card className="shadow-none! bg-white">
+				<Card className="shadow-none! bg-card">
 					<CardContent className="py-4">
 						<div className="flex items-center justify-between">
 							<div>
-								<h3 className="font-semibold text-[#1c1a15]">
+								<h3 className="font-semibold text-foreground">
 									{placement.roleName && `${placement.roleName} @ `}
 									{placement.workNodeName}
 								</h3>
 								{placement.startDate && (
-									<p className="text-sm text-[#8a857d]">
+									<p className="text-sm text-muted-foreground">
 										Start: {formatDate(placement.startDate)}
 										{daysToStart !== null && daysToStart >= 0 && (
 											<span className="ml-2">
@@ -217,8 +224,8 @@ export function ComplianceChecklist({
 								)}
 							</div>
 							<div className="text-right">
-								<span className="text-2xl font-bold text-[#1c1a15]">{percentage}%</span>
-								<p className="text-sm text-[#8a857d]">
+								<span className="text-2xl font-bold text-foreground">{percentage}%</span>
+								<p className="text-sm text-muted-foreground">
 									{completeItems}/{totalItems} complete
 								</p>
 							</div>
@@ -242,7 +249,7 @@ export function ComplianceChecklist({
 					<Card
 						key={config.key}
 						className={cn(
-							"shadow-none! bg-white transition-colors",
+							"shadow-none! bg-card transition-colors",
 							!isEmpty && config.borderColor
 						)}
 					>
@@ -251,15 +258,15 @@ export function ComplianceChecklist({
 							onOpenChange={() => toggleGroup(config.key)}
 						>
 							<CollapsibleTrigger asChild>
-								<CardHeader className="py-3 cursor-pointer hover:bg-[#f0ede7]/50 transition-colors">
+								<CardHeader className="cursor-pointer py-3 transition-colors hover:bg-muted/60">
 									<div className="flex items-center justify-between">
 										<CardTitle className="text-sm font-medium flex items-center gap-2">
 											<span className={config.color}>{config.icon}</span>
 											{config.label}
 											{!isEmpty && (
 												<Badge
-													variant="secondary"
-													className={cn("ml-1", config.badgeClass)}
+													variant={config.badgeVariant}
+													className="ml-1"
 												>
 													{groupItems.length}
 												</Badge>
@@ -267,11 +274,11 @@ export function ComplianceChecklist({
 										</CardTitle>
 										<div className="flex items-center gap-2">
 											{/* Quick action for group */}
-											{config.key === "candidate" && groupItems.length > 0 && onChaseCandidate && (
+											{!readOnly && config.key === "candidate" && groupItems.length > 0 && onChaseCandidate && (
 												<Button
 													variant="ghost"
 													size="sm"
-													className="h-7 text-xs text-[#6b6760]"
+													className="h-7 text-xs text-muted-foreground"
 													onClick={(e) => {
 														e.stopPropagation();
 													}}
@@ -281,9 +288,9 @@ export function ComplianceChecklist({
 												</Button>
 											)}
 											{isExpanded ? (
-												<ChevronUp className="h-4 w-4 text-[#a8a49c]" />
+												<ChevronUp className="h-4 w-4 text-muted-foreground/80" />
 											) : (
-												<ChevronDown className="h-4 w-4 text-[#a8a49c]" />
+												<ChevronDown className="h-4 w-4 text-muted-foreground/80" />
 											)}
 										</div>
 									</div>
@@ -293,7 +300,7 @@ export function ComplianceChecklist({
 							<CollapsibleContent>
 								<CardContent className="pt-0 pb-3">
 									{isEmpty ? (
-										<p className="text-sm text-[#8a857d] py-2">
+										<p className="py-2 text-sm text-muted-foreground">
 											{config.emptyMessage}
 										</p>
 									) : (
@@ -303,6 +310,7 @@ export function ComplianceChecklist({
 													key={item.elementId}
 													item={item}
 													config={config}
+													readOnly={readOnly}
 													onChase={
 														config.key === "candidate"
 															? onChaseCandidate
@@ -332,12 +340,14 @@ export function ComplianceChecklist({
 function ComplianceItem({
 	item,
 	config,
+	readOnly = false,
 	onChase,
 	onReview,
 	onViewEvidence,
 }: {
 	item: ComplianceItemDisplay;
 	config: GroupConfig;
+	readOnly?: boolean;
 	onChase?: (itemId: string) => void;
 	onReview?: (itemId: string) => void;
 	onViewEvidence?: (itemId: string) => void;
@@ -381,7 +391,7 @@ function ComplianceItem({
 		item.expiresAt && daysUntil(item.expiresAt) !== null && daysUntil(item.expiresAt)! <= 30;
 
 	return (
-		<li className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-[#f0ede7]/50 transition-colors group">
+		<li className="group flex items-center justify-between rounded-md px-3 py-2 transition-colors hover:bg-muted/60">
 			<div className="flex items-center gap-3 min-w-0 flex-1">
 				{/* Status indicator */}
 				<div
@@ -393,14 +403,14 @@ function ComplianceItem({
 
 				{/* Name and status */}
 				<div className="min-w-0 flex-1">
-					<p className="text-sm font-medium truncate text-[#1c1a15]">{item.elementName}</p>
-					<p className="text-xs text-[#8a857d] flex items-center gap-1">
+					<p className="truncate text-sm font-medium text-foreground">{item.elementName}</p>
+					<p className="flex items-center gap-1 text-xs text-muted-foreground">
 						{item.blockedBy !== "complete" && (
 							<Clock className="h-3 w-3" />
 						)}
 						{getStatusText()}
 						{isExpiringSoon && item.blockedBy === "complete" && (
-							<Badge variant="outline" className="ml-2 text-xs py-0 h-5 text-[#c49332] border-[#c49332]/30">
+							<Badge variant="warning" className="ml-2 h-5 py-0 text-xs">
 								Expiring
 							</Badge>
 						)}
@@ -409,13 +419,14 @@ function ComplianceItem({
 			</div>
 
 			{/* Actions */}
-			<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+			{!readOnly && (
+				<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
 				{/* Primary action based on status */}
 				{onChase && item.blockedBy === "candidate" && (
 					<Button
 						variant="ghost"
 						size="sm"
-						className="h-7 text-xs text-[#6b6760]"
+						className="h-7 text-xs text-muted-foreground"
 						onClick={() => onChase(item.elementId)}
 					>
 						Chase
@@ -425,7 +436,7 @@ function ComplianceItem({
 					<Button
 						variant="ghost"
 						size="sm"
-						className="h-7 text-xs text-[#6b6760]"
+						className="h-7 text-xs text-muted-foreground"
 						onClick={() => onReview(item.elementId)}
 					>
 						Review
@@ -435,7 +446,7 @@ function ComplianceItem({
 					<Button
 						variant="ghost"
 						size="sm"
-						className="h-7 text-xs text-[#6b6760]"
+						className="h-7 text-xs text-muted-foreground"
 						onClick={() => onChase(item.elementId)}
 					>
 						Chase
@@ -459,7 +470,8 @@ function ComplianceItem({
 						<DropdownMenuItem>View history</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
-			</div>
+				</div>
+			)}
 		</li>
 	);
 }

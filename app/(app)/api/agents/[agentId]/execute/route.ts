@@ -15,7 +15,7 @@ import { executeAgent } from "@/lib/ai/agents/runner";
 import { getOrganisationById } from "@/lib/db/queries";
 import type { AgentStep } from "@/lib/ai/agents/types";
 
-export const maxDuration = 60;
+export const maxDuration = 120; // Increased to handle longer-running agents like DVLA
 
 export async function POST(
 	request: Request,

@@ -36,37 +36,32 @@ interface PositionedActivity {
 
 const ACTOR_CONFIG = {
 	ai: {
-		bg: "bg-[#4444cf]",
-		text: "text-[#4444cf]",
-		bgLight: "bg-[#eeedf8]",
+		bg: "bg-primary",
+		badgeVariant: "info",
 		label: "AI",
 		Icon: Bot,
 	},
 	admin: {
-		bg: "bg-[#3636b8]",
-		text: "text-[#3636b8]",
-		bgLight: "bg-[#eeedf8]",
+		bg: "bg-chart-5",
+		badgeVariant: "info",
 		label: "Admin",
 		Icon: Users,
 	},
 	candidate: {
-		bg: "bg-[#3a9960]",
-		text: "text-[#3a9960]",
-		bgLight: "bg-[#edf7f1]",
+		bg: "bg-chart-2",
+		badgeVariant: "success",
 		label: "Candidate",
 		Icon: User,
 	},
 	system: {
-		bg: "bg-[#8a857d]",
-		text: "text-[#8a857d]",
-		bgLight: "bg-[#f0ede7]",
+		bg: "bg-muted-foreground",
+		badgeVariant: "neutral",
 		label: "System",
 		Icon: Cog,
 	},
 	integration: {
-		bg: "bg-[#8a857d]",
-		text: "text-[#8a857d]",
-		bgLight: "bg-[#f0ede7]",
+		bg: "bg-muted-foreground",
+		badgeVariant: "neutral",
 		label: "Integration",
 		Icon: Link2,
 	},
@@ -135,7 +130,7 @@ function ActivityDot({ positioned }: { positioned: PositionedActivity }) {
 			<TooltipTrigger asChild>
 				<motion.div
 					className={cn(
-						"absolute rounded-full cursor-help ring-2 ring-white",
+						"absolute cursor-help rounded-full ring-2 ring-card",
 						config.bg
 					)}
 					style={{
@@ -152,12 +147,12 @@ function ActivityDot({ positioned }: { positioned: PositionedActivity }) {
 					<p className="font-medium text-sm">{activity.summary}</p>
 					<div className="flex items-center gap-2 mt-1">
 						<Badge
-							variant="secondary"
-							className={cn("text-[10px] px-1.5 py-0", config.bgLight, config.text)}
+							variant={config.badgeVariant}
+							className="px-1.5 py-0 text-[10px]"
 						>
 							{config.label}
 						</Badge>
-						<span className="text-[10px] text-[#8a857d]">
+						<span className="text-[10px] text-muted-foreground">
 							{format(activity.createdAt, "d MMM, HH:mm")}
 						</span>
 					</div>
@@ -174,9 +169,14 @@ function ActivityDot({ positioned }: { positioned: PositionedActivity }) {
 interface ActivityTimelineProps {
 	data: TimelineData;
 	profileId: string;
+	showViewAllLink?: boolean;
 }
 
-export function ActivityTimeline({ data, profileId }: ActivityTimelineProps) {
+export function ActivityTimeline({
+	data,
+	profileId,
+	showViewAllLink = true,
+}: ActivityTimelineProps) {
 	const scrollRef = useRef<HTMLDivElement>(null);
 	const { activities, startDate, endDate } = data;
 
@@ -208,41 +208,43 @@ export function ActivityTimeline({ data, profileId }: ActivityTimelineProps) {
 
 	return (
 		<TooltipProvider delayDuration={0} disableHoverableContent>
-			<Card className="shadow-none! bg-white">
+			<Card className="shadow-none! bg-card">
 				<CardContent className="p-4">
 					<div className="flex items-center justify-between mb-3">
 						<div>
-							<h3 className="text-sm font-medium text-[#1c1a15]">Activity Timeline</h3>
-							<p className="text-xs text-[#8a857d]">
+							<h3 className="text-sm font-medium text-foreground">Activity Timeline</h3>
+							<p className="text-xs text-muted-foreground">
 								{activities.length} activit{activities.length === 1 ? "y" : "ies"} in the last 7 days
 							</p>
 						</div>
-						<a
-							href={`/candidates/${profileId}/timeline`}
-							className="text-xs text-[#8a857d] hover:text-[#3d3a32] flex items-center gap-1 transition-colors"
-						>
-							View all <ChevronRight className="h-3 w-3" />
-						</a>
+						{showViewAllLink && (
+							<a
+								href={`/candidates/${profileId}/timeline`}
+								className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+							>
+								View all <ChevronRight className="h-3 w-3" />
+							</a>
+						)}
 					</div>
 
 					{/* Scrollable timeline wrapper */}
 					<div className="relative">
 						{/* Fade gradients */}
-						<div className="pointer-events-none absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-white to-transparent z-10" />
-						<div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white to-transparent z-10" />
+						<div className="pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-16 bg-gradient-to-r from-card to-transparent" />
+						<div className="pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-16 bg-gradient-to-l from-card to-transparent" />
 
 						{/* Scrollable container */}
 						<div ref={scrollRef} className="overflow-x-auto scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
 							{/* Wide timeline content */}
 							<div className="relative px-6" style={{ width: "150%", minWidth: "600px" }}>
 								{/* Main timeline line */}
-								<div className="absolute left-6 right-6 top-[12px] h-px bg-[#e5e2db]" />
+								<div className="absolute left-6 right-6 top-[12px] h-px bg-border" />
 
 								{/* Day tick marks - small ticks down from line */}
 								{tickPositions.map(({ date, xPercent }) => (
 									<div
 										key={date.toISOString()}
-										className="absolute w-px h-2 bg-[#e5e2db]/50"
+										className="absolute h-2 w-px bg-border/60"
 										style={{ left: `calc(${xPercent}% + 24px - ${xPercent * 48 / 100}px)`, top: 12 }}
 									/>
 								))}
@@ -271,7 +273,7 @@ export function ActivityTimeline({ data, profileId }: ActivityTimelineProps) {
 										.map(({ date, xPercent }) => (
 											<span
 												key={date.toISOString()}
-												className="absolute text-[10px] text-[#a8a49c] transform -translate-x-1/2"
+												className="absolute transform -translate-x-1/2 text-[10px] text-muted-foreground/80"
 												style={{ left: `${xPercent}%` }}
 											>
 												{formatTickLabel(date, endDate)}

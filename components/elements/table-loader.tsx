@@ -14,7 +14,7 @@ export function TableLoader({ cols, rows }: { cols: number; rows: number }) {
 	return (
 		<Table>
 			<TableHeader>
-				<TableRow className="bg-[#faf9f7] hover:bg-[#faf9f7]">
+				<TableRow className="bg-[var(--table-head-surface)] hover:bg-[var(--hover-surface)]">
 					{Array.from({ length: cols }).map((_, i) => (
 						<TableHead key={i}>
 							<Skeleton className="h-3 w-16" />
@@ -24,7 +24,7 @@ export function TableLoader({ cols, rows }: { cols: number; rows: number }) {
 			</TableHeader>
 			<TableBody>
 				{Array.from({ length: rows }).map((_, rowIdx) => (
-					<TableRow key={rowIdx} className="bg-white">
+					<TableRow key={rowIdx} className="bg-card">
 						{Array.from({ length: cols }).map((_, colIdx) => (
 							<TableCell key={colIdx}>
 								<Skeleton

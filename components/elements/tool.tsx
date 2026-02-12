@@ -24,7 +24,7 @@ export type ToolProps = ComponentProps<typeof Collapsible>;
 export const Tool = ({ className, ...props }: ToolProps) => (
 	<Collapsible
 		className={cn(
-			"not-prose mb-4 w-full rounded-md border bg-white transition-all dark:bg-card",
+			"not-prose mb-4 w-full rounded-md border bg-card transition-all",
 			className,
 		)}
 		{...props}
@@ -56,12 +56,12 @@ const getStatusBadge = (status: ToolUIPart["state"] | string) => {
 		"input-available": <ClockIcon className="size-4 animate-spin" />,
 		"partial-call": <ClockIcon className="size-4 animate-spin" />,
 		call: <ClockIcon className="size-4 animate-spin" />,
-		"approval-requested": <ClockIcon className="size-4 text-yellow-600" />,
-		"approval-responded": <CheckCircleIcon className="size-4 text-blue-600" />,
-		"output-available": <CheckCircleIcon className="size-4 text-green-600" />,
-		result: <CheckCircleIcon className="size-4 text-green-600" />,
-		"output-error": <XCircleIcon className="size-4 text-red-600" />,
-		"output-denied": <XCircleIcon className="size-4 text-orange-600" />,
+		"approval-requested": <ClockIcon className="size-4 text-[var(--warning)]" />,
+		"approval-responded": <CheckCircleIcon className="size-4 text-primary" />,
+		"output-available": <CheckCircleIcon className="size-4 text-[var(--positive)]" />,
+		result: <CheckCircleIcon className="size-4 text-[var(--positive)]" />,
+		"output-error": <XCircleIcon className="size-4 text-destructive" />,
+		"output-denied": <XCircleIcon className="size-4 text-[var(--warning)]" />,
 	};
 
 	const isRunning =
@@ -77,7 +77,7 @@ const getStatusBadge = (status: ToolUIPart["state"] | string) => {
 			className={cn(
 				"flex items-center gap-1 rounded-full text-xs",
 				isRunning &&
-					"bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+					"bg-[color-mix(in_srgb,var(--primary)_16%,transparent)] text-primary",
 			)}
 			variant={isRunning ? "default" : "secondary"}
 		>
@@ -99,7 +99,8 @@ export const ToolHeader = ({
 		<CollapsibleTrigger
 			className={cn(
 				"flex w-full min-w-0 items-center justify-between gap-2 p-3 transition-colors",
-				isRunning && "bg-blue-50/50 dark:bg-blue-950/20",
+				isRunning &&
+					"bg-[color-mix(in_srgb,var(--primary)_10%,transparent)]",
 				className,
 			)}
 			{...props}
@@ -108,7 +109,7 @@ export const ToolHeader = ({
 				<WrenchIcon
 					className={cn(
 						"size-4 shrink-0 text-muted-foreground",
-						isRunning && "text-blue-600 dark:text-blue-400",
+						isRunning && "text-primary",
 					)}
 				/>
 				<span className="truncate font-medium text-sm">{type}</span>

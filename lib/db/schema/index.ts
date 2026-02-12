@@ -41,6 +41,7 @@ export * from "./skill-requirements";
 
 // People Domain
 export * from "./profiles";
+export * from "./profile-share-links";
 export * from "./reference-contacts";
 
 // Work Domain (ATS Expansion Path)

@@ -33,12 +33,13 @@ interface TaskOutput {
 	error?: string;
 }
 
-const priorityColors: Record<string, string> = {
-	low: "bg-slate-100 text-slate-700",
-	medium: "bg-blue-100 text-blue-700",
-	high: "bg-orange-100 text-orange-700",
-	urgent: "bg-red-100 text-red-700",
-};
+const priorityVariant: Record<string, "neutral" | "info" | "warning" | "danger"> =
+	{
+		low: "neutral",
+		medium: "info",
+		high: "warning",
+		urgent: "danger",
+	};
 
 function formatDueDate(dateString: string): string {
 	const date = new Date(dateString);
@@ -90,7 +91,7 @@ export function TaskTool({
 	const { title, description, priority, dueAt, assignee } = output.data;
 
 	return (
-		<div className="w-[400px] max-w-full rounded-lg border bg-white p-3 dark:bg-card">
+		<div className="w-[400px] max-w-full rounded-lg border bg-card p-3">
 			<div className="flex items-start gap-3">
 				<div className="mt-0.5 rounded-full bg-primary/10 p-1.5">
 					<CheckCircle2 className="h-4 w-4 text-primary" />
@@ -99,8 +100,8 @@ export function TaskTool({
 					<div className="flex items-center gap-2 mb-1">
 						<span className="font-medium text-sm truncate">{title}</span>
 						<Badge
-							variant="secondary"
-							className={`text-[10px] px-1.5 py-0 ${priorityColors[priority]}`}
+							variant={priorityVariant[priority] ?? "neutral"}
+							className="px-1.5 py-0 text-[10px]"
 						>
 							{priority}
 						</Badge>

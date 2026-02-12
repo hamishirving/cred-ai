@@ -34,7 +34,9 @@ export function EntityTooltip({
           >
             <div
               className="px-3 py-2 text-white text-sm font-semibold"
-              style={{ backgroundColor: domainConfig?.color || "#6b7280" }}
+              style={{
+                backgroundColor: domainConfig?.color || "var(--muted-foreground)",
+              }}
             >
               {meta.displayName}
             </div>
@@ -51,7 +53,7 @@ export function EntityTooltip({
                   <ul className="mt-1 space-y-0.5 text-muted-foreground">
                     {meta.enables.map((item, i) => (
                       <li key={i} className="flex items-start gap-1">
-                        <span className="text-green-500">•</span>
+                        <span className="text-[var(--positive)]">•</span>
                         {item}
                       </li>
                     ))}

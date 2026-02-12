@@ -50,6 +50,13 @@
       "when": 1769942144749,
       "tag": "0006_pink_cerebro",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1770371584829,
+      "tag": "0007_quick_peter_parker",
+      "breakpoints": true
     }
   ]
 }
