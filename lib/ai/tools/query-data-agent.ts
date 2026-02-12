@@ -15,6 +15,10 @@ const auth = new GoogleAuth({
 	scopes: ["https://www.googleapis.com/auth/cloud-platform"],
 });
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
+}
+
 async function getAccessToken(): Promise<string> {
 	const client = await auth.getClient();
 	const token = await client.getAccessToken();
@@ -31,8 +35,12 @@ Use this tool when the user asks about:
 - Data reports or dashboards
 - Aggregations, counts, or statistics from the data warehouse
 - Questions that require SQL queries against BigQuery
+- Charts, graphs, visualisations, trend lines, pie charts, bar charts, or time-series views
 
-Pass the user's question directly as the prompt.`,
+For chart requests:
+- Include chart intent in the prompt (for example pie, bar, line)
+- Ask for chart metadata/config so the UI can render the chart type correctly
+- Still return the underlying table data and generated SQL`,
 
 	inputSchema: z.object({
 		prompt: z
@@ -53,12 +61,22 @@ Pass the user's question directly as the prompt.`,
 			const accessToken = await getAccessToken();
 			console.log("[queryDataAgent] Got access token");
 
+			const enrichedPrompt = `${prompt}
+
+Return structured analytics output. Always include:
+1) generated SQL
+2) tabular result data with schema
+
+If the request asks for a chart/graph/visualisation/dashboard/trend, also include:
+3) chart query intent
+4) chart result config (for example Vega config) with explicit chart type and field mappings.`;
+
 			const payload = {
 				parent: `projects/${BILLING_PROJECT}/locations/global`,
 				messages: [
 					{
 						userMessage: {
-							text: prompt,
+							text: enrichedPrompt,
 						},
 					},
 				],
@@ -130,7 +148,18 @@ function extractDataAgentResponse(response: unknown): unknown {
 		text?: string;
 		sql?: string;
 		data?: unknown;
-		chart?: unknown;
+		chart?: {
+			type?: "pie" | "bar" | "line";
+			title?: string;
+			dataResultName?: string;
+			instructions?: string;
+			vegaConfig?: unknown;
+			data?: unknown[];
+			xField?: string;
+			yField?: string;
+			categoryField?: string;
+			valueField?: string;
+		};
 	} = {};
 
 	for (const item of response) {
@@ -146,8 +175,89 @@ function extractDataAgentResponse(response: unknown): unknown {
 			if (msg.data?.result) {
 				result.data = msg.data.result;
 			}
+
+			if (msg.chart?.query) {
+				const chartQuery = msg.chart.query;
+				result.chart = {
+					...result.chart,
+					dataResultName:
+						typeof chartQuery.dataResultName === "string"
+							? chartQuery.dataResultName
+							: result.chart?.dataResultName,
+					instructions:
+						typeof chartQuery.instructions === "string"
+							? chartQuery.instructions
+							: result.chart?.instructions,
+				};
+			}
+
 			if (msg.chart?.result) {
-				result.chart = msg.chart.result;
+				const chartResult = msg.chart.result;
+				const vegaConfig = isRecord(chartResult)
+					? chartResult.vegaConfig
+					: undefined;
+
+				const mark = isRecord(vegaConfig) ? vegaConfig.mark : undefined;
+				const markType = isRecord(mark)
+					? mark.type
+					: typeof mark === "string"
+						? mark
+						: undefined;
+
+				const encoding = isRecord(vegaConfig) ? vegaConfig.encoding : undefined;
+				const thetaField =
+					isRecord(encoding) && isRecord(encoding.theta)
+						? encoding.theta.field
+						: undefined;
+				const colorField =
+					isRecord(encoding) && isRecord(encoding.color)
+						? encoding.color.field
+						: undefined;
+				const xField =
+					isRecord(encoding) && isRecord(encoding.x)
+						? encoding.x.field
+						: undefined;
+				const yField =
+					isRecord(encoding) && isRecord(encoding.y)
+						? encoding.y.field
+						: undefined;
+
+				const chartValues =
+					isRecord(vegaConfig) &&
+					isRecord(vegaConfig.data) &&
+					Array.isArray(vegaConfig.data.values)
+						? vegaConfig.data.values
+						: undefined;
+
+				const type =
+					markType === "arc"
+						? "pie"
+						: markType === "line"
+							? "line"
+							: markType === "bar"
+								? "bar"
+								: undefined;
+
+				result.chart = {
+					...result.chart,
+					type,
+					title:
+						isRecord(vegaConfig) && typeof vegaConfig.title === "string"
+							? vegaConfig.title
+							: result.chart?.title,
+					vegaConfig,
+					data: chartValues,
+					xField: typeof xField === "string" ? xField : result.chart?.xField,
+					yField: typeof yField === "string" ? yField : result.chart?.yField,
+					categoryField:
+						typeof colorField === "string"
+							? colorField
+							: result.chart?.categoryField,
+					valueField:
+						typeof thetaField === "string"
+							? thetaField
+							: result.chart?.valueField,
+				};
 			}
 		}
 	}

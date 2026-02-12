@@ -8,13 +8,13 @@ import { listTemplates } from "@/lib/voice";
 // ============================================
 
 export async function GET() {
-	try {
-		// 1. Check authentication
-		const session = await auth();
-		if (!session?.user) {
-			return new ChatSDKError("unauthorized:chat").toResponse();
-		}
+	// Keep request-bound APIs outside try/catch so Next can handle prerender bailouts.
+	const session = await auth();
+	if (!session?.user) {
+		return new ChatSDKError("unauthorized:chat").toResponse();
+	}
 
+	try {
 		// 2. Get all templates
 		const templates = listTemplates();
 

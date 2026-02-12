@@ -50,7 +50,7 @@ End with a summary: licence status, key categories (C, C+E, D), total points, an
 		candidateEmail: z
 			.string()
 			.email()
-			.default("hamish.irving+spencer@credentially.io")
+			.default("dean@credentially.io")
 			.describe("Email address of the candidate whose licence to verify"),
 		licenceNumber: z
 			.string()
