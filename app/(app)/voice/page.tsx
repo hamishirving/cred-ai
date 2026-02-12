@@ -54,47 +54,47 @@ export default async function VoiceDashboardPage() {
 
 			{/* Stats */}
 			<div className="grid gap-3 md:grid-cols-4">
-				<Card className="border-l-4 border-l-blue-500">
+				<Card className="border-l-4 border-l-primary">
 					<CardContent className="p-3">
 						<div className="flex items-center justify-between">
 							<div>
 								<p className="text-xs text-muted-foreground">Total Calls</p>
 								<p className="text-xl font-bold">{stats.total}</p>
 							</div>
-							<Phone className="h-6 w-6 text-blue-500 opacity-50" />
+							<Phone className="h-6 w-6 text-primary opacity-50" />
 						</div>
 					</CardContent>
 				</Card>
-				<Card className="border-l-4 border-l-green-500">
+				<Card className="border-l-4 border-l-[var(--positive)]">
 					<CardContent className="p-3">
 						<div className="flex items-center justify-between">
 							<div>
 								<p className="text-xs text-muted-foreground">Completed</p>
 								<p className="text-xl font-bold">{stats.completed}</p>
 							</div>
-							<Check className="h-6 w-6 text-green-500 opacity-50" />
+							<Check className="h-6 w-6 text-[var(--positive)] opacity-50" />
 						</div>
 					</CardContent>
 				</Card>
-				<Card className="border-l-4 border-l-red-500">
+				<Card className="border-l-4 border-l-destructive">
 					<CardContent className="p-3">
 						<div className="flex items-center justify-between">
 							<div>
 								<p className="text-xs text-muted-foreground">Failed</p>
 								<p className="text-xl font-bold">{stats.failed}</p>
 							</div>
-							<PhoneOff className="h-6 w-6 text-red-500 opacity-50" />
+							<PhoneOff className="h-6 w-6 text-destructive opacity-50" />
 						</div>
 					</CardContent>
 				</Card>
-				<Card className="border-l-4 border-l-yellow-500">
+				<Card className="border-l-4 border-l-[var(--warning)]">
 					<CardContent className="p-3">
 						<div className="flex items-center justify-between">
 							<div>
 								<p className="text-xs text-muted-foreground">In Progress</p>
 								<p className="text-xl font-bold">{stats.inProgress}</p>
 							</div>
-							<Clock className="h-6 w-6 text-yellow-500 opacity-50" />
+							<Clock className="h-6 w-6 text-[var(--warning)] opacity-50" />
 						</div>
 					</CardContent>
 				</Card>

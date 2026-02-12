@@ -85,20 +85,20 @@ interface Task {
 }
 
 const priorityConfig = {
-	urgent: { label: "Urgent", color: "bg-[#c93d4e]", textColor: "text-[#c93d4e]", bgColor: "bg-[#fdf0f1]" },
-	high: { label: "High", color: "bg-[#c49332]", textColor: "text-[#a87c2a]", bgColor: "bg-[#faf5eb]" },
-	medium: { label: "Medium", color: "bg-[#c49332]/60", textColor: "text-[#a87c2a]", bgColor: "bg-[#faf5eb]" },
-	low: { label: "Low", color: "bg-[#a8a49c]", textColor: "text-[#6b6760]", bgColor: "bg-[#f0ede7]" },
+	urgent: { label: "Urgent", color: "bg-destructive", badgeVariant: "danger" as const },
+	high: { label: "High", color: "bg-chart-3", badgeVariant: "warning" as const },
+	medium: { label: "Medium", color: "bg-chart-3/70", badgeVariant: "warning" as const },
+	low: { label: "Low", color: "bg-muted-foreground/70", badgeVariant: "neutral" as const },
 };
 
 const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
 
 const statusConfig = {
-	pending: { label: "Pending", icon: Clock, color: "text-[#c49332]" },
-	in_progress: { label: "In Progress", icon: ArrowUpRight, color: "text-[#4444cf]" },
-	completed: { label: "Completed", icon: Check, color: "text-[#3a9960]" },
-	dismissed: { label: "Dismissed", icon: X, color: "text-[#8a857d]" },
-	snoozed: { label: "Snoozed", icon: Bell, color: "text-[#8a7e6b]" },
+	pending: { label: "Pending", icon: Clock, color: "text-[var(--warning)]" },
+	in_progress: { label: "In Progress", icon: ArrowUpRight, color: "text-primary" },
+	completed: { label: "Completed", icon: Check, color: "text-[var(--positive)]" },
+	dismissed: { label: "Dismissed", icon: X, color: "text-muted-foreground" },
+	snoozed: { label: "Snoozed", icon: Bell, color: "text-muted-foreground" },
 };
 
 const statusOrder = { pending: 0, in_progress: 1, snoozed: 2, completed: 3, dismissed: 4 };
@@ -113,12 +113,12 @@ function getInitials(name: string): string {
 }
 
 const avatarColors = [
-	"bg-[#4444cf]",
-	"bg-[#3a9960]",
-	"bg-[#c49332]",
-	"bg-[#c93d4e]",
-	"bg-[#6b6760]",
-	"bg-[#3636b8]",
+	"bg-primary",
+	"bg-chart-2",
+	"bg-chart-3",
+	"bg-destructive",
+	"bg-muted-foreground",
+	"bg-chart-5",
 ];
 
 function getAvatarColor(name: string): string {
@@ -129,7 +129,7 @@ function getAvatarColor(name: string): string {
 function PriorityBadge({ priority }: { priority: Task["priority"] }) {
 	const config = priorityConfig[priority];
 	return (
-		<Badge variant="outline" className={cn("text-xs font-medium", config.bgColor, config.textColor, "border-0")}>
+		<Badge variant={config.badgeVariant} className="text-xs font-medium">
 			{config.label}
 		</Badge>
 	);
@@ -138,7 +138,7 @@ function PriorityBadge({ priority }: { priority: Task["priority"] }) {
 function AIBadge() {
 	return (
 		<span className="inline-flex items-center" title="AI generated">
-			<Sparkles className="h-3 w-3 text-[#4444cf]/50" />
+			<Sparkles className="h-3 w-3 text-primary/60" />
 		</span>
 	);
 }
@@ -168,7 +168,7 @@ function createColumns(
 				<Button
 					variant="ghost"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-					className="-ml-2 h-8 px-2 text-xs font-medium text-[#6b6760] hover:text-[#3d3a32] hover:bg-[#f0ede7] cursor-pointer"
+					className="-ml-2 h-8 cursor-pointer px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
 				>
 					Task
 					<ArrowUpDown className="ml-2 h-3 w-3" />
@@ -198,7 +198,7 @@ function createColumns(
 				<Button
 					variant="ghost"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-					className="-ml-2 h-8 px-2 text-xs font-medium text-[#6b6760] hover:text-[#3d3a32] hover:bg-[#f0ede7] cursor-pointer"
+					className="-ml-2 h-8 cursor-pointer px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
 				>
 					Subject
 					<ArrowUpDown className="ml-2 h-3 w-3" />
@@ -230,7 +230,7 @@ function createColumns(
 				<Button
 					variant="ghost"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-					className="-ml-2 h-8 px-2 text-xs font-medium text-[#6b6760] hover:text-[#3d3a32] hover:bg-[#f0ede7] cursor-pointer"
+					className="-ml-2 h-8 cursor-pointer px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
 				>
 					Priority
 					<ArrowUpDown className="ml-2 h-3 w-3" />
@@ -255,7 +255,7 @@ function createColumns(
 				<Button
 					variant="ghost"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-					className="-ml-2 h-8 px-2 text-xs font-medium text-[#6b6760] hover:text-[#3d3a32] hover:bg-[#f0ede7] cursor-pointer"
+					className="-ml-2 h-8 cursor-pointer px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
 				>
 					Status
 					<ArrowUpDown className="ml-2 h-3 w-3" />
@@ -284,7 +284,7 @@ function createColumns(
 				<Button
 					variant="ghost"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-					className="-ml-2 h-8 px-2 text-xs font-medium text-[#6b6760] hover:text-[#3d3a32] hover:bg-[#f0ede7] cursor-pointer"
+					className="-ml-2 h-8 cursor-pointer px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
 				>
 					Due
 					<ArrowUpDown className="ml-2 h-3 w-3" />
@@ -298,7 +298,7 @@ function createColumns(
 					return (
 						<span className={cn(
 							"text-sm tabular-nums",
-							isOverdue ? "text-[#c93d4e] font-medium" : "text-foreground"
+							isOverdue ? "font-medium text-destructive" : "text-foreground"
 						)}>
 							{format(new Date(task.dueAt), "MMM d")}
 						</span>
@@ -306,7 +306,7 @@ function createColumns(
 				}
 				if (task.snoozedUntil && task.status === "snoozed") {
 					return (
-						<span className="text-sm text-[#8a7e6b] flex items-center gap-1">
+						<span className="flex items-center gap-1 text-sm text-muted-foreground">
 							<Bell className="h-3 w-3" />
 							{format(new Date(task.snoozedUntil), "MMM d")}
 						</span>
@@ -321,7 +321,7 @@ function createColumns(
 				<Button
 					variant="ghost"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-					className="-ml-2 h-8 px-2 text-xs font-medium text-[#6b6760] hover:text-[#3d3a32] hover:bg-[#f0ede7] cursor-pointer"
+					className="-ml-2 h-8 cursor-pointer px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
 				>
 					Created
 					<ArrowUpDown className="ml-2 h-3 w-3" />
@@ -525,11 +525,11 @@ export default function TasksPage() {
 	};
 
 	return (
-		<div className="flex flex-1 flex-col gap-10 p-8 bg-[#faf9f7] min-h-full">
+		<div className="flex min-h-full flex-1 flex-col gap-10 bg-background p-8">
 			{/* Header */}
 			<div>
-				<h1 className="text-4xl font-semibold tracking-tight text-balance text-[#1c1a15]">Tasks</h1>
-				<p className="text-[#6b6760] text-sm mt-1">
+				<h1 className="text-balance text-4xl font-semibold tracking-tight text-foreground">Tasks</h1>
+				<p className="mt-1 text-sm text-muted-foreground">
 					Compliance actions and follow-ups requiring attention
 				</p>
 			</div>
@@ -537,7 +537,7 @@ export default function TasksPage() {
 			{/* Filters */}
 			<div className="flex items-center justify-between gap-4">
 				{/* Status tabs */}
-				<div className="flex items-center gap-1 border-b border-[#eeeae4]">
+				<div className="flex items-center gap-1 border-b border-border">
 					{statusTabs.map((tab) => {
 						const isSelected = statusFilter === tab.value;
 						const count = tab.value === "active" ? counts.active : counts.status[tab.value] ?? 0;
@@ -548,14 +548,14 @@ export default function TasksPage() {
 								className={cn(
 									"px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer whitespace-nowrap outline-none",
 									isSelected
-										? "border-[#4444cf] text-[#4444cf]"
-										: "border-transparent text-[#8a857d] hover:text-[#3d3a32] hover:border-[#ccc8c0]"
+										? "border-primary text-primary"
+										: "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
 								)}
 							>
 								{tab.label}
 								<span className={cn(
 									"ml-1.5 tabular-nums text-xs",
-									isSelected ? "text-[#4444cf]/60" : "text-[#a8a49c]"
+									isSelected ? "text-primary/70" : "text-muted-foreground/80"
 								)}>
 									{count}
 								</span>
@@ -569,13 +569,13 @@ export default function TasksPage() {
 					{hasActiveFilters && (
 						<button
 							onClick={resetFilters}
-							className="text-xs text-[#8a857d] hover:text-[#3d3a32] underline underline-offset-2 transition-colors duration-150 cursor-pointer mr-1"
+							className="mr-1 cursor-pointer text-xs text-muted-foreground underline underline-offset-2 transition-colors duration-150 hover:text-foreground"
 						>
 							Reset
 						</button>
 					)}
 					<Select value={priorityFilter} onValueChange={setPriorityFilter}>
-						<SelectTrigger className="h-8 w-[130px] text-xs cursor-pointer border-[#e0dcd4] bg-white text-[#3d3a32] focus:ring-[#ccc8c0]">
+						<SelectTrigger className="h-8 w-[130px] cursor-pointer border-input bg-card text-xs text-foreground focus:ring-ring/30">
 							<SelectValue placeholder="Priority" />
 						</SelectTrigger>
 						<SelectContent>
@@ -587,7 +587,7 @@ export default function TasksPage() {
 						</SelectContent>
 					</Select>
 					<Select value={sourceFilter} onValueChange={setSourceFilter}>
-						<SelectTrigger className="h-8 w-[120px] text-xs cursor-pointer border-[#e0dcd4] bg-white text-[#3d3a32] focus:ring-[#ccc8c0]">
+						<SelectTrigger className="h-8 w-[120px] cursor-pointer border-input bg-card text-xs text-foreground focus:ring-ring/30">
 							<SelectValue placeholder="Source" />
 						</SelectTrigger>
 						<SelectContent>
@@ -608,19 +608,19 @@ export default function TasksPage() {
 			)}
 
 			{/* Tasks table */}
-			<Card className="shadow-none! bg-white">
+			<Card className="shadow-none! bg-card">
 				{isLoading ? (
 					<TableLoader cols={7} rows={10} />
 				) : (
 				<Table>
 					<TableHeader>
 						{table.getHeaderGroups().map((headerGroup) => (
-							<TableRow key={headerGroup.id} className="bg-[#faf9f7] hover:bg-[#faf9f7]">
+							<TableRow key={headerGroup.id} className="bg-muted hover:bg-muted">
 								{headerGroup.headers.map((header) => (
 									<TableHead
 										key={header.id}
 										className={cn(
-											"text-xs font-medium text-[#6b6760]",
+											"text-xs font-medium text-muted-foreground",
 											header.id === "title" && "w-[350px]",
 											header.id === "subject" && "w-[180px]",
 											header.id === "priority" && "w-[150px]",
@@ -644,7 +644,7 @@ export default function TasksPage() {
 								<TableRow
 									key={row.id}
 									className={cn(
-										"bg-white",
+										"bg-card",
 										row.original.status === "completed" && "opacity-60",
 										row.original.status === "dismissed" && "opacity-50",
 									)}
@@ -657,12 +657,12 @@ export default function TasksPage() {
 								</TableRow>
 							))
 						) : (
-							<TableRow className="bg-white">
+							<TableRow className="bg-card">
 								<TableCell colSpan={columns.length} className="h-32 text-center">
 									<div className="flex flex-col items-center justify-center">
-										<Check className="h-8 w-8 text-[#a8a49c] mb-3" aria-hidden="true" />
-										<h3 className="text-xl font-semibold text-[#1c1a15]">No tasks found</h3>
-										<p className="text-sm text-[#8a857d] max-w-[40ch] mt-1">
+										<Check className="mb-3 h-8 w-8 text-muted-foreground/80" aria-hidden="true" />
+										<h3 className="text-xl font-semibold text-foreground">No tasks found</h3>
+										<p className="mt-1 max-w-[40ch] text-sm text-muted-foreground">
 											{statusFilter === "active"
 												? "All caught up! No active tasks requiring attention."
 												: "No tasks match your current filters."}
@@ -677,7 +677,7 @@ export default function TasksPage() {
 
 				{/* Pagination */}
 				{!isLoading && table.getPageCount() > 1 && (
-					<div className="flex items-center justify-between px-4 py-2 border-t border-[#e5e2db] text-xs text-[#8a857d]">
+					<div className="flex items-center justify-between border-t border-border px-4 py-2 text-xs text-muted-foreground">
 						<span>
 							{table.getState().pagination.pageIndex * 10 + 1}–{Math.min((table.getState().pagination.pageIndex + 1) * 10, filteredTasks.length)} of {filteredTasks.length}
 						</span>

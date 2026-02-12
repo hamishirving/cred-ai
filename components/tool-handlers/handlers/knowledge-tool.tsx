@@ -109,7 +109,7 @@ function SourceItem({ chunk }: { chunk: KnowledgeChunk }) {
 
 	return (
 		<Collapsible open={isOpen} onOpenChange={setIsOpen}>
-			<div className="rounded-md border bg-white px-2.5 py-1.5 dark:bg-card">
+			<div className="rounded-md border bg-card px-2.5 py-1.5">
 				<CollapsibleTrigger className="flex items-center gap-1.5 text-xs w-full text-left">
 					{isOpen ? (
 						<ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />

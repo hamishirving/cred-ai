@@ -39,13 +39,13 @@ function ColumnRow({
 					<KeyRound className="h-3 w-3 text-amber-500" />
 				)}
 				{column.isForeignKey && !column.isPrimaryKey && (
-					<Link2 className="h-3 w-3 text-blue-500" />
+					<Link2 className="h-3 w-3 text-primary" />
 				)}
 				<span
 					className={cn(
 						"font-mono",
 						column.isPrimaryKey && "font-semibold",
-						column.isForeignKey && "text-blue-600 dark:text-blue-400",
+						column.isForeignKey && "text-primary",
 					)}
 				>
 					{column.name}
@@ -62,7 +62,7 @@ function ColumnRow({
 					type="source"
 					position={Position.Right}
 					id={`${tableName}-${column.name}-source`}
-					className="!w-2 !h-2 !bg-blue-500 !border !border-background !right-0"
+					className="!w-2 !h-2 !bg-primary !border !border-background !right-0"
 				/>
 			)}
 		</div>
@@ -82,7 +82,7 @@ function ColumnRow({
 							sideOffset={8}
 							className="max-w-64 p-2 rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 z-50"
 						>
-							<div className="flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 flex-wrap">
+							<div className="flex flex-wrap items-center gap-1 text-primary text-xs font-medium">
 								<span className="font-mono break-all">{column.name}</span>
 								<ArrowRight className="h-3 w-3 shrink-0" />
 								<span className="font-mono break-all">{relationshipInfo.target}.id</span>

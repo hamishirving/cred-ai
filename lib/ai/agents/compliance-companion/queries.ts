@@ -88,7 +88,12 @@ export async function getOrganisationSettings(
 export async function getCandidateContext(
 	profileId: string,
 	organisationId: string,
+	options?: {
+		includeRecentActivity?: boolean;
+	},
 ): Promise<CandidateContext | null> {
+	const includeRecentActivity = options?.includeRecentActivity ?? true;
+
 	// Get profile
 	const [profile] = await db
 		.select()
@@ -138,26 +143,24 @@ export async function getCandidateContext(
 	const total = complianceItems.length;
 	const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-	// Get recent activities
-	const recentActivities = await db
-		.select({
-			id: activities.id,
-			activityType: activities.activityType,
-			channel: activities.channel,
-			createdAt: activities.createdAt,
-		})
-		.from(activities)
-		.where(eq(activities.profileId, profileId))
-		.orderBy(desc(activities.createdAt))
-		.limit(10);
+	let daysSinceLastActivity = 999;
+	if (includeRecentActivity) {
+		const recentActivities = await db
+			.select({
+				createdAt: activities.createdAt,
+			})
+			.from(activities)
+			.where(eq(activities.profileId, profileId))
+			.orderBy(desc(activities.createdAt))
+			.limit(1);
 
-	// Calculate days since last activity
-	const lastActivity = recentActivities[0];
-	const daysSinceLastActivity = lastActivity
-		? Math.floor(
-				(Date.now() - lastActivity.createdAt.getTime()) / (1000 * 60 * 60 * 24),
-			)
-		: 999;
+		const lastActivity = recentActivities[0];
+		daysSinceLastActivity = lastActivity
+			? Math.floor(
+					(Date.now() - lastActivity.createdAt.getTime()) / (1000 * 60 * 60 * 24),
+				)
+			: 999;
+	}
 
 	// Calculate days in onboarding
 	const daysInOnboarding = Math.floor(
@@ -251,6 +254,30 @@ async function getComplianceItemsForProfile(
 			),
 		);
 
+	// Pull all relevant evidence in one query to avoid N+1 per compliance element.
+	const evidenceRecords = await db
+		.select()
+		.from(evidence)
+		.where(
+			and(
+				eq(evidence.profileId, profileId),
+				placementId
+					? or(
+							isNull(evidence.placementId),
+							eq(evidence.placementId, placementId),
+						)
+					: isNull(evidence.placementId),
+			),
+		)
+		.orderBy(desc(evidence.createdAt));
+
+	const latestEvidenceByElement = new Map<string, (typeof evidenceRecords)[number]>();
+	for (const record of evidenceRecords) {
+		if (!latestEvidenceByElement.has(record.complianceElementId)) {
+			latestEvidenceByElement.set(record.complianceElementId, record);
+		}
+	}
+
 	const items: ComplianceItemContext[] = [];
 
 	for (const element of elements) {
@@ -259,21 +286,7 @@ async function getComplianceItemsForProfile(
 			continue;
 		}
 
-		// Get evidence for this element
-		const [evidenceRecord] = await db
-			.select()
-			.from(evidence)
-			.where(
-				and(
-					eq(evidence.complianceElementId, element.id),
-					eq(evidence.profileId, profileId),
-					element.scope === "placement" && placementId
-						? eq(evidence.placementId, placementId)
-						: isNull(evidence.placementId),
-				),
-			)
-			.orderBy(desc(evidence.createdAt))
-			.limit(1);
+		const evidenceRecord = latestEvidenceByElement.get(element.id);
 
 		// Analyze blocking status
 		const analysis = analyzeBlocking(

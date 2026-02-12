@@ -14,7 +14,7 @@ export function SessionReplay({ sessionId }: SessionReplayProps) {
 			href={dashboardUrl}
 			target="_blank"
 			rel="noopener noreferrer"
-			className="inline-flex items-center gap-1.5 text-xs text-[#4444cf] hover:underline"
+			className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
 		>
 			<ExternalLink className="size-3" />
 			Watch session replay

@@ -38,12 +38,12 @@ export function DocumentsTable({ documents }: DocumentsTableProps) {
 					{documents.map((doc) => {
 						const statusColor =
 							doc.statusType === "verified"
-								? "text-green-600"
+								? "text-[var(--positive)]"
 								: doc.statusType === "expired"
-									? "text-red-600"
+									? "text-destructive"
 									: doc.statusType === "pending"
-										? "text-yellow-600"
-										: "text-gray-600";
+										? "text-[var(--warning)]"
+										: "text-muted-foreground";
 
 						return (
 							<TableRow key={doc.id}>

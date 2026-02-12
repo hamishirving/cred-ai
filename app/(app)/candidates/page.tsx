@@ -51,12 +51,12 @@ interface Candidate {
 
 // Avatar colours matching dashboard/tasks hex system
 const avatarColors = [
-	"bg-[#4444cf]",
-	"bg-[#3a9960]",
-	"bg-[#c49332]",
-	"bg-[#c93d4e]",
-	"bg-[#6b6760]",
-	"bg-[#3636b8]",
+	"bg-primary",
+	"bg-chart-2",
+	"bg-chart-3",
+	"bg-destructive",
+	"bg-muted-foreground",
+	"bg-chart-5",
 ];
 
 function getAvatarColor(name: string): string {
@@ -81,14 +81,14 @@ function getStageCount(stageId: string | null, candidates: Candidate[]): number 
 function AlertBadge({ alertStatus }: { alertStatus: Candidate["alertStatus"] }) {
 	if (alertStatus === "overdue") {
 		return (
-			<Badge variant="outline" className="text-xs font-medium bg-[#fdf0f1] text-[#c93d4e] border-0">
+			<Badge variant="danger" className="text-xs font-medium">
 				Overdue
 			</Badge>
 		);
 	}
 	if (alertStatus === "action_required") {
 		return (
-			<Badge variant="outline" className="text-xs font-medium bg-[#eeedf8] text-[#4444cf] border-0">
+			<Badge variant="info" className="text-xs font-medium">
 				Review
 			</Badge>
 		);
@@ -98,9 +98,9 @@ function AlertBadge({ alertStatus }: { alertStatus: Candidate["alertStatus"] }) 
 
 function ComplianceIndicator({ percentage }: { percentage: number }) {
 	const color =
-		percentage >= 80 ? "text-[#3a9960]" :
-		percentage >= 50 ? "text-[#c49332]" :
-		"text-[#c93d4e]";
+		percentage >= 80 ? "text-[var(--positive)]" :
+		percentage >= 50 ? "text-[var(--warning)]" :
+		"text-destructive";
 
 	return (
 		<span className={cn("text-sm tabular-nums font-medium", color)}>
@@ -114,7 +114,7 @@ function CandidateTableSkeleton() {
 	return (
 		<>
 			{Array.from({ length: 8 }).map((_, i) => (
-				<TableRow key={i} className="bg-white">
+				<TableRow key={i} className="bg-card">
 					<TableCell>
 						<div className="flex items-center gap-3">
 							<Skeleton className="h-8 w-8 rounded-full" />
@@ -142,7 +142,7 @@ function createColumns(candidateLabel: string): ColumnDef<Candidate>[] {
 				<Button
 					variant="ghost"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-					className="-ml-2 h-8 px-2 text-xs font-medium text-[#6b6760] hover:text-[#3d3a32] hover:bg-[#f0ede7] cursor-pointer"
+					className="-ml-2 h-8 cursor-pointer px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
 				>
 					{candidateLabel}
 					<ArrowUpDown className="ml-2 h-3 w-3" />
@@ -159,7 +159,7 @@ function createColumns(candidateLabel: string): ColumnDef<Candidate>[] {
 						</Avatar>
 						<div>
 							<p className="font-medium text-sm">{candidate.name}</p>
-							<p className="text-xs text-[#8a857d]">{candidate.email}</p>
+							<p className="text-xs text-muted-foreground">{candidate.email}</p>
 						</div>
 					</div>
 				);
@@ -171,7 +171,7 @@ function createColumns(candidateLabel: string): ColumnDef<Candidate>[] {
 				<Button
 					variant="ghost"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-					className="-ml-2 h-8 px-2 text-xs font-medium text-[#6b6760] hover:text-[#3d3a32] hover:bg-[#f0ede7] cursor-pointer"
+					className="-ml-2 h-8 cursor-pointer px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
 				>
 					Status
 					<ArrowUpDown className="ml-2 h-3 w-3" />
@@ -185,7 +185,7 @@ function createColumns(candidateLabel: string): ColumnDef<Candidate>[] {
 				<Button
 					variant="ghost"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-					className="-ml-2 h-8 px-2 text-xs font-medium text-[#6b6760] hover:text-[#3d3a32] hover:bg-[#f0ede7] cursor-pointer"
+					className="-ml-2 h-8 cursor-pointer px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
 				>
 					Compliance
 					<ArrowUpDown className="ml-2 h-3 w-3" />
@@ -199,14 +199,14 @@ function createColumns(candidateLabel: string): ColumnDef<Candidate>[] {
 				<Button
 					variant="ghost"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-					className="-ml-2 h-8 px-2 text-xs font-medium text-[#6b6760] hover:text-[#3d3a32] hover:bg-[#f0ede7] cursor-pointer"
+					className="-ml-2 h-8 cursor-pointer px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
 				>
 					In Stage
 					<ArrowUpDown className="ml-2 h-3 w-3" />
 				</Button>
 			),
 			cell: ({ row }) => (
-				<span className="text-sm text-[#8a857d]">
+				<span className="text-sm text-muted-foreground">
 					{formatDistanceToNow(row.original.enteredStageAt, { addSuffix: false })}
 				</span>
 			),
@@ -333,17 +333,17 @@ export default function CandidatesPage() {
 	const isLoading = orgLoading || loading;
 
 	return (
-		<div className="flex flex-1 flex-col gap-10 p-8 bg-[#faf9f7] min-h-full">
+		<div className="flex min-h-full flex-1 flex-col gap-10 bg-background p-8">
 			{/* Header */}
 			<div>
-				<h1 className="text-4xl font-semibold tracking-tight text-balance text-[#1c1a15]">{terminology.candidates}</h1>
-				<p className="text-[#6b6760] text-sm mt-1">
+				<h1 className="text-balance text-4xl font-semibold tracking-tight text-foreground">{terminology.candidates}</h1>
+				<p className="mt-1 text-sm text-muted-foreground">
 					Manage {terminology.candidates.toLowerCase()} through the compliance pipeline
 				</p>
 			</div>
 
 			{/* Stage tabs - inline border-b-2 pattern matching tasks */}
-			<div className="flex items-center gap-1 border-b border-[#eeeae4]">
+			<div className="flex items-center gap-1 border-b border-border">
 				{tabs.map((tab) => {
 					const isSelected = selectedStageId === tab.value;
 					return (
@@ -353,14 +353,14 @@ export default function CandidatesPage() {
 							className={cn(
 								"px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer whitespace-nowrap outline-none",
 								isSelected
-									? "border-[#4444cf] text-[#4444cf]"
-									: "border-transparent text-[#8a857d] hover:text-[#3d3a32] hover:border-[#ccc8c0]"
+									? "border-primary text-primary"
+									: "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
 							)}
 						>
 							{tab.label}
 							<span className={cn(
 								"ml-1.5 tabular-nums text-xs",
-								isSelected ? "text-[#4444cf]/60" : "text-[#a8a49c]"
+								isSelected ? "text-primary/70" : "text-muted-foreground/80"
 							)}>
 								{tab.count}
 							</span>
@@ -377,16 +377,16 @@ export default function CandidatesPage() {
 			)}
 
 			{/* Data Table */}
-			<Card className="shadow-none! bg-white">
+			<Card className="shadow-none! bg-card">
 				<Table>
 					<TableHeader>
 						{table.getHeaderGroups().map((headerGroup) => (
-							<TableRow key={headerGroup.id} className="bg-[#faf9f7] hover:bg-[#faf9f7]">
+							<TableRow key={headerGroup.id} className="bg-muted hover:bg-muted">
 								{headerGroup.headers.map((header) => (
 									<TableHead
 										key={header.id}
 										className={cn(
-											"text-xs font-medium text-[#6b6760]",
+											"text-xs font-medium text-muted-foreground",
 											header.id === "name" && "w-[300px]",
 											header.id === "alertStatus" && "w-[120px]",
 											header.id === "compliancePercentage" && "w-[120px]",
@@ -415,11 +415,11 @@ export default function CandidatesPage() {
 
 									return (
 										<Fragment key={stageId}>
-											<TableRow className="bg-[#faf9f7] hover:bg-[#faf9f7]">
+											<TableRow className="bg-[var(--table-head-surface)] hover:bg-[var(--hover-surface)]">
 												<TableCell colSpan={columns.length} className="py-2">
-													<span className="font-medium text-sm text-[#3d3a32]">
+													<span className="text-sm font-medium text-foreground">
 														{stageInfo?.name ?? "Unknown"}{" "}
-														<span className="text-[#a8a49c]">
+														<span className="text-muted-foreground/80">
 															{stageCandidates.length}
 														</span>
 													</span>
@@ -428,7 +428,7 @@ export default function CandidatesPage() {
 											{stageRows.map((row) => (
 												<TableRow
 													key={row.id}
-													className="bg-white cursor-pointer hover:bg-[#f0ede7]/50 transition-colors"
+													className="bg-card cursor-pointer transition-colors hover:bg-muted/60"
 													onClick={() => router.push(`/candidates/${row.original.id}`)}
 												>
 													{row.getVisibleCells().map((cell) => (
@@ -442,12 +442,12 @@ export default function CandidatesPage() {
 									);
 								})
 							) : (
-								<TableRow className="bg-white">
+								<TableRow className="bg-card">
 									<TableCell colSpan={columns.length} className="h-32 text-center">
 										<div className="flex flex-col items-center justify-center">
-											<Users className="h-8 w-8 text-[#a8a49c] mb-3" aria-hidden="true" />
-											<h3 className="text-xl font-semibold text-[#1c1a15]">No {terminology.candidates.toLowerCase()} found</h3>
-											<p className="text-sm text-[#8a857d] max-w-[40ch] mt-1">
+											<Users className="mb-3 h-8 w-8 text-muted-foreground/80" aria-hidden="true" />
+											<h3 className="text-xl font-semibold text-foreground">No {terminology.candidates.toLowerCase()} found</h3>
+											<p className="mt-1 max-w-[40ch] text-sm text-muted-foreground">
 												No {terminology.candidates.toLowerCase()} have been added yet.
 											</p>
 										</div>
@@ -459,7 +459,7 @@ export default function CandidatesPage() {
 							table.getRowModel().rows.map((row) => (
 								<TableRow
 									key={row.id}
-									className="bg-white cursor-pointer hover:bg-[#f0ede7]/50 transition-colors"
+									className="bg-card cursor-pointer transition-colors hover:bg-muted/60"
 									onClick={() => router.push(`/candidates/${row.original.id}`)}
 								>
 									{row.getVisibleCells().map((cell) => (
@@ -470,12 +470,12 @@ export default function CandidatesPage() {
 								</TableRow>
 							))
 						) : (
-							<TableRow className="bg-white">
+							<TableRow className="bg-card">
 								<TableCell colSpan={columns.length} className="h-32 text-center">
 									<div className="flex flex-col items-center justify-center">
-										<Users className="h-8 w-8 text-[#a8a49c] mb-3" aria-hidden="true" />
-										<h3 className="text-xl font-semibold text-[#1c1a15]">No {terminology.candidates.toLowerCase()} found</h3>
-										<p className="text-sm text-[#8a857d] max-w-[40ch] mt-1">
+										<Users className="mb-3 h-8 w-8 text-muted-foreground/80" aria-hidden="true" />
+										<h3 className="text-xl font-semibold text-foreground">No {terminology.candidates.toLowerCase()} found</h3>
+										<p className="mt-1 max-w-[40ch] text-sm text-muted-foreground">
 											No {terminology.candidates.toLowerCase()} in this stage.
 										</p>
 									</div>
@@ -487,8 +487,8 @@ export default function CandidatesPage() {
 
 				{/* Pagination */}
 				{!isLoading && table.getPageCount() > 1 && (
-					<div className="flex items-center justify-between border-t border-[#eeeae4] px-4 py-3">
-						<p className="text-xs text-[#8a857d]">
+					<div className="flex items-center justify-between border-t border-border px-4 py-3">
+						<p className="text-xs text-muted-foreground">
 							{filteredCandidates.length} {terminology.candidate.toLowerCase()}{filteredCandidates.length !== 1 ? "s" : ""} · page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
 						</p>
 						<div className="flex items-center gap-1">
@@ -497,7 +497,7 @@ export default function CandidatesPage() {
 								size="sm"
 								onClick={() => table.previousPage()}
 								disabled={!table.getCanPreviousPage()}
-								className="h-7 px-2 text-xs text-[#6b6760]"
+								className="h-7 px-2 text-xs text-muted-foreground"
 							>
 								<ChevronLeft className="h-3.5 w-3.5 mr-1" />
 								Previous
@@ -507,7 +507,7 @@ export default function CandidatesPage() {
 								size="sm"
 								onClick={() => table.nextPage()}
 								disabled={!table.getCanNextPage()}
-								className="h-7 px-2 text-xs text-[#6b6760]"
+								className="h-7 px-2 text-xs text-muted-foreground"
 							>
 								Next
 								<ChevronRight className="h-3.5 w-3.5 ml-1" />

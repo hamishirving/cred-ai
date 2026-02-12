@@ -219,7 +219,7 @@ export default function VerifyWorkHistoryPage({ params }: VerifyPageProps) {
 						</CardHeader>
 						<CardContent className="p-4 pt-0">
 							<div className="flex items-center gap-2">
-								<Phone className="h-4 w-4 text-green-600" />
+								<Phone className="h-4 w-4 text-[var(--positive)]" />
 								<span className="font-medium">
 									{workHistory.reference?.name}
 								</span>
@@ -270,7 +270,7 @@ export default function VerifyWorkHistoryPage({ params }: VerifyPageProps) {
 										</p>
 									</div>
 									{pollingError && (
-										<p className="text-sm text-red-600">{pollingError}</p>
+										<p className="text-sm text-destructive">{pollingError}</p>
 									)}
 								</div>
 							) : isCallEnded ? (
@@ -303,7 +303,7 @@ export default function VerifyWorkHistoryPage({ params }: VerifyPageProps) {
 									</div>
 
 									{error && (
-										<p className="text-sm text-red-600">{error}</p>
+										<p className="text-sm text-destructive">{error}</p>
 									)}
 
 									<Button

@@ -27,34 +27,34 @@ export default async function ReportDetailPage({
 	const meta = reportMeta[slug];
 
 	return (
-		<div className="flex flex-1 flex-col gap-8 p-8 bg-[#faf9f7] min-h-full">
+		<div className="flex min-h-full flex-1 flex-col gap-8 bg-background p-8">
 			{/* Back link + header */}
 			<div>
 				<Button
 					variant="ghost"
 					size="sm"
 					asChild
-					className="text-[#8a857d] hover:text-[#3d3a32] -ml-2 mb-2"
+					className="-mb-2 -ml-2 text-muted-foreground hover:text-foreground"
 				>
 					<Link href="/reports">
 						<ChevronLeft className="h-4 w-4 mr-1" />
 						Back to Reports
 					</Link>
 				</Button>
-				<h1 className="text-4xl font-semibold tracking-tight text-balance text-[#1c1a15]">
+				<h1 className="text-balance text-4xl font-semibold tracking-tight text-foreground">
 					{meta?.title ?? slug}
 				</h1>
-				<p className="text-[#6b6760] text-sm mt-1">
+				<p className="mt-1 text-sm text-muted-foreground">
 					{meta?.description ?? `Report: ${slug}`}
 				</p>
 			</div>
 
 			{/* Placeholder content */}
-			<Card className="shadow-none! bg-white">
+			<Card className="shadow-none! bg-card">
 				<CardContent className="flex flex-col items-center justify-center py-16">
-					<BarChart3 className="h-10 w-10 text-[#a8a49c] mb-3" />
-					<h3 className="text-xl font-semibold text-[#1c1a15]">Coming soon</h3>
-					<p className="text-sm text-[#8a857d] max-w-[40ch] mt-1 text-center">
+					<BarChart3 className="mb-3 h-10 w-10 text-muted-foreground/80" />
+					<h3 className="text-xl font-semibold text-foreground">Coming soon</h3>
+					<p className="mt-1 max-w-[40ch] text-center text-sm text-muted-foreground">
 						Detailed report views are being built. Head back to the overview for current analytics.
 					</p>
 					<Button variant="outline" size="sm" asChild className="mt-4">

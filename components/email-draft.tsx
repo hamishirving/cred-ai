@@ -40,9 +40,9 @@ export function EmailDraftComponent({ email }: EmailDraftProps) {
 
 	if (sent) {
 		return (
-			<div className="w-[600px] max-w-full rounded-xl border bg-white p-6 dark:bg-card">
+			<div className="w-[600px] max-w-full rounded-xl border bg-card p-6">
 				<div className="flex flex-col items-center gap-3 text-center">
-					<div className="flex size-12 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400">
+					<div className="flex size-12 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--positive)_16%,transparent)] text-[var(--positive)]">
 						<CheckIcon className="size-6" />
 					</div>
 					<h3 className="font-semibold text-lg">Email Sent!</h3>
@@ -55,7 +55,7 @@ export function EmailDraftComponent({ email }: EmailDraftProps) {
 	}
 
 	return (
-		<div className="w-[600px] max-w-full overflow-hidden rounded-xl border bg-white dark:bg-card">
+		<div className="w-[600px] max-w-full overflow-hidden rounded-xl border bg-card">
 			{/* Email Header */}
 			<div className="border-b bg-muted/30 px-4 py-3">
 				<div className="space-y-1.5 text-sm">

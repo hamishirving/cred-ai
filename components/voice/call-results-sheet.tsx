@@ -246,9 +246,9 @@ export function CallResultsSheet({
 													<TableCell>
 														{row.original !== "-" &&
 															(isMatch ? (
-																<CheckCircle2 className="h-4 w-4 text-green-600" />
+																<CheckCircle2 className="h-4 w-4 text-[var(--positive)]" />
 															) : (
-																<XCircle className="h-4 w-4 text-amber-600" />
+																<XCircle className="h-4 w-4 text-[var(--warning)]" />
 															))}
 													</TableCell>
 												</TableRow>
@@ -274,8 +274,8 @@ export function CallResultsSheet({
 											<div
 												className={`text-xs font-semibold ${
 													msg.speaker === "AI"
-														? "text-blue-600"
-														: "text-green-600"
+														? "text-primary"
+														: "text-[var(--positive)]"
 												}`}
 											>
 												{msg.speaker === "AI" ? "Assistant" : "Reference"}

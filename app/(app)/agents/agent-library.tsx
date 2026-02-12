@@ -68,10 +68,10 @@ interface AgentExecution {
 // =============================================================================
 
 const statusConfig = {
-	running: { label: "Running", icon: Loader2, color: "text-[#4444cf]", iconClass: "animate-spin" },
-	completed: { label: "Completed", icon: Check, color: "text-[#3a9960]", iconClass: "" },
-	failed: { label: "Failed", icon: X, color: "text-[#c93d4e]", iconClass: "" },
-	escalated: { label: "Escalated", icon: AlertTriangle, color: "text-[#c49332]", iconClass: "" },
+	running: { label: "Running", icon: Loader2, color: "text-primary", iconClass: "animate-spin" },
+	completed: { label: "Completed", icon: Check, color: "text-[var(--positive)]", iconClass: "" },
+	failed: { label: "Failed", icon: X, color: "text-destructive", iconClass: "" },
+	escalated: { label: "Escalated", icon: AlertTriangle, color: "text-[var(--warning)]", iconClass: "" },
 };
 
 const statusOrder: Record<string, number> = {
@@ -103,7 +103,7 @@ function SortableHeader({ column, children }: { column: { toggleSorting: (desc: 
 		<Button
 			variant="ghost"
 			onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-			className="-ml-2 h-8 px-2 text-xs font-medium text-[#6b6760] hover:text-[#3d3a32] hover:bg-[#f0ede7] cursor-pointer"
+			className="-ml-2 h-8 cursor-pointer px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
 		>
 			{children}
 			<ArrowUpDown className="ml-2 h-3 w-3" />
@@ -123,10 +123,10 @@ const agentColumns: ColumnDef<SerializedAgentDefinition>[] = [
 			const agent = row.original;
 			return (
 				<div className="min-w-0">
-					<div className="font-medium text-sm text-[#1c1a15] truncate">
+					<div className="truncate text-sm font-medium text-foreground">
 						{agent.name}
 					</div>
-					<div className="text-xs text-[#8a857d] truncate max-w-[200px]">
+					<div className="max-w-[200px] truncate text-xs text-muted-foreground">
 						{agent.description}
 					</div>
 				</div>
@@ -158,7 +158,7 @@ const agentColumns: ColumnDef<SerializedAgentDefinition>[] = [
 	{
 		id: "chevron",
 		enableSorting: false,
-		cell: () => <ChevronRight className="h-4 w-4 text-[#a8a49c]" />,
+			cell: () => <ChevronRight className="h-4 w-4 text-muted-foreground/80" />,
 	},
 ];
 
@@ -173,7 +173,7 @@ function createRunColumns(agentNameMap: Record<string, string>): ColumnDef<Agent
 			id: "agent",
 			header: ({ column }) => <SortableHeader column={column}>Agent</SortableHeader>,
 			cell: ({ row }) => (
-				<span className="text-sm font-medium text-[#1c1a15] truncate block max-w-[160px]">
+				<span className="block max-w-[160px] truncate text-sm font-medium text-foreground">
 					{agentNameMap[row.original.agentId] || row.original.agentId}
 				</span>
 			),
@@ -198,7 +198,7 @@ function createRunColumns(agentNameMap: Record<string, string>): ColumnDef<Agent
 			accessorKey: "durationMs",
 			header: ({ column }) => <SortableHeader column={column}>Duration</SortableHeader>,
 			cell: ({ row }) => (
-				<span className="text-sm text-[#8a857d] tabular-nums">
+				<span className="text-sm tabular-nums text-muted-foreground">
 					{row.original.durationMs
 						? `${(row.original.durationMs / 1000).toFixed(1)}s`
 						: "—"}
@@ -209,7 +209,7 @@ function createRunColumns(agentNameMap: Record<string, string>): ColumnDef<Agent
 			accessorKey: "createdAt",
 			header: ({ column }) => <SortableHeader column={column}>When</SortableHeader>,
 			cell: ({ row }) => (
-				<span className="text-sm text-[#8a857d] whitespace-nowrap">
+				<span className="whitespace-nowrap text-sm text-muted-foreground">
 					{formatDistanceToNow(new Date(row.original.createdAt), { addSuffix: true })}
 				</span>
 			),
@@ -217,7 +217,7 @@ function createRunColumns(agentNameMap: Record<string, string>): ColumnDef<Agent
 		{
 			id: "chevron",
 			enableSorting: false,
-			cell: () => <ChevronRight className="h-4 w-4 text-[#a8a49c]" />,
+			cell: () => <ChevronRight className="h-4 w-4 text-muted-foreground/80" />,
 		},
 	];
 }
@@ -312,52 +312,52 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 		<div className="flex flex-col gap-6">
 			{/* Stats */}
 			<div className="grid gap-4 md:grid-cols-4">
-				<Card className="shadow-none! bg-white border-l-4 border-l-[#4444cf]">
+				<Card className="shadow-none! bg-card border-l-4 border-l-primary">
 					<CardContent className="p-3">
 						<div className="flex items-center justify-between">
 							<div>
-								<p className="text-xs text-[#8a857d]">Active Agents</p>
-								<p className="text-xl font-semibold text-[#1c1a15]">{stats.totalAgents}</p>
+								<p className="text-xs text-muted-foreground">Active Agents</p>
+								<p className="text-xl font-semibold text-foreground">{stats.totalAgents}</p>
 							</div>
-							<Bot className="h-6 w-6 text-[#a8a49c]" />
+							<Bot className="h-6 w-6 text-muted-foreground/80" />
 						</div>
 					</CardContent>
 				</Card>
-				<Card className="shadow-none! bg-white border-l-4 border-l-[#8a7e6b]">
+				<Card className="shadow-none! bg-card border-l-4 border-l-chart-5">
 					<CardContent className="p-3">
 						<div className="flex items-center justify-between">
 							<div>
-								<p className="text-xs text-[#8a857d]">Total Runs</p>
-								<p className="text-xl font-semibold text-[#1c1a15]">{stats.totalRuns}</p>
+								<p className="text-xs text-muted-foreground">Total Runs</p>
+								<p className="text-xl font-semibold text-foreground">{stats.totalRuns}</p>
 							</div>
-							<Activity className="h-6 w-6 text-[#a8a49c]" />
+							<Activity className="h-6 w-6 text-muted-foreground/80" />
 						</div>
 					</CardContent>
 				</Card>
-				<Card className="shadow-none! bg-white border-l-4 border-l-[#c49332]">
+				<Card className="shadow-none! bg-card border-l-4 border-l-chart-3">
 					<CardContent className="p-3">
 						<div className="flex items-center justify-between">
 							<div>
-								<p className="text-xs text-[#8a857d]">Hours Saved</p>
-								<p className="text-xl font-semibold text-[#1c1a15]">{stats.hoursSaved}</p>
+								<p className="text-xs text-muted-foreground">Hours Saved</p>
+								<p className="text-xl font-semibold text-foreground">{stats.hoursSaved}</p>
 							</div>
-							<Timer className="h-6 w-6 text-[#a8a49c]" />
+							<Timer className="h-6 w-6 text-muted-foreground/80" />
 						</div>
 					</CardContent>
 				</Card>
-				<Card className="shadow-none! bg-white border-l-4 border-l-[#3a9960]">
+				<Card className="shadow-none! bg-card border-l-4 border-l-chart-2">
 					<CardContent className="p-3">
 						<div className="flex items-center justify-between">
 							<div>
-								<p className="text-xs text-[#8a857d]">Money Saved</p>
-								<p className="text-xl font-semibold text-[#1c1a15]">
+								<p className="text-xs text-muted-foreground">Money Saved</p>
+								<p className="text-xl font-semibold text-foreground">
 									{currency.symbol}{stats.moneySaved.toLocaleString()}
 								</p>
 							</div>
 							{currency.symbol === "$" ? (
-								<DollarSign className="h-6 w-6 text-[#a8a49c]" />
+								<DollarSign className="h-6 w-6 text-muted-foreground/80" />
 							) : (
-								<PoundSterling className="h-6 w-6 text-[#a8a49c]" />
+								<PoundSterling className="h-6 w-6 text-muted-foreground/80" />
 							)}
 						</div>
 					</CardContent>
@@ -369,24 +369,24 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 				{/* Agents table */}
 				<div>
 					<div className="flex items-center justify-between mb-2 px-1">
-						<h2 className="text-base font-semibold tracking-tight text-[#1c1a15] flex items-center gap-2">
-							<Bot className="h-4 w-4 text-[#6b6760]" />
+						<h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
+							<Bot className="h-4 w-4 text-muted-foreground" />
 							Agents
 						</h2>
 						<Badge variant="secondary" className="text-xs tabular-nums">
 							{agents.length}
 						</Badge>
 					</div>
-					<Card className="shadow-none! bg-white">
+					<Card className="shadow-none! bg-card">
 						<Table>
 							<TableHeader>
 								{agentTable.getHeaderGroups().map((headerGroup) => (
-									<TableRow key={headerGroup.id} className="bg-[#faf9f7] hover:bg-[#faf9f7]">
+									<TableRow key={headerGroup.id} className="bg-muted hover:bg-muted">
 										{headerGroup.headers.map((header) => (
 											<TableHead
 												key={header.id}
 												className={cn(
-													"text-xs font-medium text-[#6b6760]",
+													"text-xs font-medium text-muted-foreground",
 													header.id === "trigger" && "w-[90px]",
 													header.id === "tools" && "w-[80px]",
 													header.id === "chevron" && "w-[40px]",
@@ -405,7 +405,7 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 									agentTable.getRowModel().rows.map((row) => (
 										<TableRow
 											key={row.id}
-											className="bg-white cursor-pointer hover:bg-[#f7f5f0]"
+											className="cursor-pointer bg-card hover:bg-muted"
 											onClick={() => window.location.href = `/agents/${row.original.id}`}
 										>
 											{row.getVisibleCells().map((cell) => (
@@ -416,11 +416,11 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 										</TableRow>
 									))
 								) : (
-									<TableRow className="bg-white">
+									<TableRow className="bg-card">
 										<TableCell colSpan={agentColumns.length} className="h-24 text-center">
 											<div className="flex flex-col items-center">
-												<Bot className="h-8 w-8 text-[#a8a49c] mb-2" />
-												<p className="text-sm text-[#8a857d]">No agents registered</p>
+												<Bot className="mb-2 h-8 w-8 text-muted-foreground/80" />
+												<p className="text-sm text-muted-foreground">No agents registered</p>
 											</div>
 										</TableCell>
 									</TableRow>
@@ -433,27 +433,27 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 				{/* Recent runs table */}
 				<div>
 					<div className="flex items-center justify-between mb-2 px-1">
-						<h2 className="text-base font-semibold tracking-tight text-[#1c1a15] flex items-center gap-2">
-							<Activity className="h-4 w-4 text-[#6b6760]" />
+						<h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
+							<Activity className="h-4 w-4 text-muted-foreground" />
 							Recent Runs
 						</h2>
 						<Badge variant="secondary" className="text-xs tabular-nums">
 							{executions.length}
 						</Badge>
 					</div>
-					<Card className="shadow-none! bg-white">
+					<Card className="shadow-none! bg-card">
 						{loadingExecs ? (
 							<TableLoader cols={5} rows={10} />
 						) : (
 							<Table>
 								<TableHeader>
 									{runTable.getHeaderGroups().map((headerGroup) => (
-										<TableRow key={headerGroup.id} className="bg-[#faf9f7] hover:bg-[#faf9f7]">
+										<TableRow key={headerGroup.id} className="bg-muted hover:bg-muted">
 											{headerGroup.headers.map((header) => (
 												<TableHead
 													key={header.id}
 													className={cn(
-														"text-xs font-medium text-[#6b6760]",
+														"text-xs font-medium text-muted-foreground",
 														header.id === "agent" && "w-[35%]",
 														header.id === "status" && "w-[20%]",
 														header.id === "durationMs" && "w-[18%]",
@@ -474,7 +474,7 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 										runTable.getRowModel().rows.map((row) => (
 											<TableRow
 												key={row.id}
-												className="bg-white cursor-pointer hover:bg-[#f7f5f0]"
+												className="cursor-pointer bg-card hover:bg-muted"
 												onClick={() => window.location.href = `/agents/${row.original.agentId}/executions/${row.original.id}`}
 											>
 												{row.getVisibleCells().map((cell) => (
@@ -485,12 +485,12 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 											</TableRow>
 										))
 									) : (
-										<TableRow className="bg-white">
+										<TableRow className="bg-card">
 											<TableCell colSpan={runColumns.length} className="h-24 text-center">
 												<div className="flex flex-col items-center">
-													<Clock className="h-8 w-8 text-[#a8a49c] mb-2" />
-													<p className="text-sm text-[#8a857d]">No runs yet</p>
-													<p className="text-xs text-[#8a857d]">Run an agent to see results here</p>
+													<Clock className="mb-2 h-8 w-8 text-muted-foreground/80" />
+													<p className="text-sm text-muted-foreground">No runs yet</p>
+													<p className="text-xs text-muted-foreground">Run an agent to see results here</p>
 												</div>
 											</TableCell>
 										</TableRow>
@@ -499,7 +499,7 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 								</Table>
 						)}
 						{runPageCount > 1 && (
-							<div className="flex items-center justify-between px-4 py-2 border-t border-[#e5e2db] text-xs text-[#8a857d]">
+							<div className="flex items-center justify-between border-t border-border px-4 py-2 text-xs text-muted-foreground">
 								<span>
 									{runStartRow}–{runEndRow} of {runTotalRows}
 								</span>

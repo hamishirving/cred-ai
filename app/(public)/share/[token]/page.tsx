@@ -1,44 +1,51 @@
-import { notFound } from "next/navigation";
-import { User, Calendar, Briefcase, Clock, Mail, MapPin, Building2 } from "lucide-react";
-import { cookies } from "next/headers";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar, Briefcase, Clock, Mail, MapPin, Building2, ShieldAlert, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ActivityTimeline } from "@/components/candidate/activity-timeline";
-import { CandidateCommunications } from "@/components/candidate/communications";
 import { ComplianceChecklist } from "@/components/candidate/compliance-checklist";
-import { ShareProfileDialog } from "@/components/candidate/share-profile-dialog";
 import { getCandidateContext, getOrganisationSettings } from "@/lib/ai/agents/compliance-companion/queries";
 import { getProfileTimeline } from "@/lib/db/queries";
+import { getActiveProfileShareLinkByToken } from "@/lib/share-links/profile-share-links";
 
-export default async function CandidateDetailPage({
+function InvalidLinkState() {
+	return (
+		<div className="flex min-h-dvh w-full items-center justify-center bg-background p-8">
+			<Card className="max-w-xl w-full shadow-none! bg-card">
+				<CardContent className="py-12 text-center">
+					<div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/12">
+						<ShieldAlert className="h-6 w-6 text-destructive" />
+					</div>
+					<h1 className="text-2xl font-semibold text-foreground">This share link is invalid or expired</h1>
+					<p className="mx-auto mt-2 max-w-[45ch] text-sm text-muted-foreground">
+						Ask the sender to generate a new profile share link.
+					</p>
+				</CardContent>
+			</Card>
+		</div>
+	);
+}
+
+export default async function SharedProfilePage({
 	params,
 }: {
-	params: Promise<{ id: string }>;
+	params: Promise<{ token: string }>;
 }) {
-	const { id } = await params;
+	const { token } = await params;
 
-	// Get organisation ID from cookie (set by org switcher)
-	const cookieStore = await cookies();
-	const organisationId = cookieStore.get("selectedOrgId")?.value;
-
-	if (!organisationId) {
-		return (
-			<div className="flex flex-1 flex-col items-center justify-center gap-4 bg-background p-8">
-				<p className="text-muted-foreground">Please select an organisation first.</p>
-			</div>
-		);
+	const shareLink = await getActiveProfileShareLinkByToken(token);
+	if (!shareLink) {
+		return <InvalidLinkState />;
 	}
 
-	// Get candidate data
 	const [candidate, org, timeline] = await Promise.all([
-		getCandidateContext(id, organisationId, { includeRecentActivity: false }),
-		getOrganisationSettings(organisationId),
-		getProfileTimeline({ profileId: id, days: 7 }),
+		getCandidateContext(shareLink.profileId, shareLink.organisationId, { includeRecentActivity: false }),
+		getOrganisationSettings(shareLink.organisationId),
+		getProfileTimeline({ profileId: shareLink.profileId, days: 7 }),
 	]);
 
 	if (!candidate) {
-		notFound();
+		return <InvalidLinkState />;
 	}
 
 	const { compliance } = candidate;
@@ -50,12 +57,22 @@ export default async function CandidateDetailPage({
 		: 999;
 
 	return (
-		<div className="flex min-h-full flex-1 flex-col gap-6 bg-background p-8">
-			{/* Header with candidate info and overview */}
+		<div className="flex min-h-dvh flex-1 flex-col gap-6 bg-background p-8">
+			<div className="flex items-center justify-between">
+				<div>
+					<h1 className="text-balance text-4xl font-semibold tracking-tight text-foreground">
+						Candidate Profile
+					</h1>
+					<p className="mt-1 text-sm text-muted-foreground">
+						Shared by {org?.name || "Credentially organisation"}
+					</p>
+				</div>
+				<Badge variant="info">Shared view</Badge>
+			</div>
+
 			<Card className="shadow-none! bg-card">
 				<CardContent className="p-4">
 					<div className="flex items-start justify-between">
-						{/* Left: Avatar and basic info */}
 						<div className="flex items-start gap-4">
 							<div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/12">
 								<User className="h-7 w-7 text-primary" />
@@ -63,9 +80,9 @@ export default async function CandidateDetailPage({
 							<div className="space-y-3">
 								<div>
 									<div className="flex items-center gap-2">
-										<h1 className="text-xl font-semibold text-foreground">
+										<h2 className="text-xl font-semibold text-foreground">
 											{candidate.firstName} {candidate.lastName}
-										</h1>
+										</h2>
 										{candidate.role && (
 											<Badge variant="outline" className="text-xs text-muted-foreground">
 												{candidate.role.name}
@@ -74,7 +91,6 @@ export default async function CandidateDetailPage({
 									</div>
 									<p className="text-sm text-muted-foreground">{candidate.email}</p>
 								</div>
-								{/* Overview details inline */}
 								<div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
 									<div className="flex items-center gap-1.5 text-muted-foreground">
 										<Mail className="h-3.5 w-3.5" />
@@ -91,10 +107,8 @@ export default async function CandidateDetailPage({
 								</div>
 							</div>
 						</div>
-						<ShareProfileDialog profileId={id} />
 					</div>
 
-					{/* Quick stats row */}
 					<div className="mt-4 grid grid-cols-4 gap-4 border-t border-border pt-4">
 						<div className="flex items-center gap-2">
 							<Calendar className="h-4 w-4 text-muted-foreground/80" />
@@ -141,12 +155,9 @@ export default async function CandidateDetailPage({
 				</CardContent>
 			</Card>
 
-			{/* Activity Timeline */}
-			<ActivityTimeline data={timeline} profileId={id} />
+			<ActivityTimeline data={timeline} profileId={shareLink.profileId} showViewAllLink={false} />
 
-			{/* Two column layout: Compliance and Communications */}
-			<div className="grid gap-6 lg:grid-cols-2 flex-1">
-				{/* Left: Compliance */}
+			<div className="grid gap-6 lg:grid-cols-1">
 				<div className="flex flex-col gap-4">
 					<Card className="shadow-none! bg-card">
 						<CardHeader className="pb-3">
@@ -170,15 +181,7 @@ export default async function CandidateDetailPage({
 						} : undefined}
 						showPlacementHeader={false}
 						defaultExpanded={["candidate", "admin", "third_party"]}
-					/>
-				</div>
-
-				{/* Right: Communications */}
-				<div className="flex flex-col">
-					<CandidateCommunications
-						profileId={id}
-						organisationId={organisationId}
-						candidateName={`${candidate.firstName} ${candidate.lastName}`}
+						readOnly
 					/>
 				</div>
 			</div>

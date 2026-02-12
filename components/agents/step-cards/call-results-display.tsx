@@ -195,8 +195,8 @@ export function CallResultsDisplay({ data, originalContext }: CallResultsDisplay
 											<TableCell>
 												{row.hasOriginal && (
 													row.isMatch
-														? <CheckCircle2 className="size-4 text-green-600" />
-														: <XCircle className="size-4 text-amber-600" />
+													? <CheckCircle2 className="size-4 text-[var(--positive)]" />
+													: <XCircle className="size-4 text-[var(--warning)]" />
 												)}
 											</TableCell>
 										)}
@@ -220,7 +220,7 @@ export function CallResultsDisplay({ data, originalContext }: CallResultsDisplay
 							<div key={`${msg.speaker}-${i}`} className="space-y-0.5">
 								<div
 									className={`text-xs font-semibold ${
-										msg.speaker === "AI" ? "text-blue-600" : "text-green-600"
+										msg.speaker === "AI" ? "text-primary" : "text-[var(--positive)]"
 									}`}
 								>
 									{msg.speaker === "AI" ? "Assistant" : "Reference"}

@@ -2083,6 +2083,31 @@ This enables dashboards showing "candidates with expiring items this month" or "
 
 ---
 
+## Current State Discovery and Requirement Intelligence
+
+This data model supports deterministic requirement generation from context. Full onboarding approach, baseline template strategy, source hierarchy and governance are documented in:
+
+- `cred-product/docs/projects/compliance-engine/REQUIREMENTS-INTELLIGENCE-PLAYBOOK.md`
+
+Model-level expectation for requirements intelligence:
+
+- Store requirement provenance, not just requirement outcomes
+- Keep generation explainable, each requirement should be traceable to its source rule
+- Add predictive behaviour only after deterministic generation is stable
+
+Suggested extension for explicit provenance and precedence metadata:
+
+```ts
+interface PolicyRuleRef {
+  sourceType: 'regulation' | 'vertical_template' | 'org_policy' | 'facility_policy' | 'deal_override';
+  sourceRef: string;
+  policyVersion?: string;
+  rationale?: string;
+}
+```
+
+---
+
 ## Future Ideas
 
 ### AI Regulatory & Policy Monitoring

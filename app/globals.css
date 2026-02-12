@@ -39,7 +39,7 @@
 	--warning-dark: #a07828;
 	--warning-bg: #faf5eb;
 
-	--background: #ffffff;
+	--background: #fdfcfb;
 	--foreground: #1c1a15;
 	--card: #ffffff;
 	--card-foreground: #1c1a15;
@@ -53,6 +53,8 @@
 	--muted-foreground: #6b6760;
 	--accent: #f0ede7;
 	--accent-foreground: #1c1a15;
+	--hover-surface: #fcfbf8;
+	--table-head-surface: #faf9f7;
 	--destructive: #c93d4e;
 	--destructive-foreground: #ffffff;
 	--border: #e5e2db;
@@ -92,6 +94,8 @@
 	--muted-foreground: #abafbf;
 	--accent: #32354a;
 	--accent-foreground: #8888e8;
+	--hover-surface: #32354a;
+	--table-head-surface: #2a2c36;
 	--destructive: #da0c46;
 	--destructive-foreground: #ffffff;
 	--border: #3a3d4a;
@@ -144,6 +148,8 @@
 
 	--color-accent: var(--accent);
 	--color-accent-foreground: var(--accent-foreground);
+	--color-hover-surface: var(--hover-surface);
+	--color-table-head-surface: var(--table-head-surface);
 
 	--color-destructive: var(--destructive);
 	--color-destructive-foreground: var(--destructive-foreground);
@@ -347,6 +353,62 @@
 [data-role="user"] a {
 	color: inherit;
 	text-decoration: underline;
+}
+
+/* Badge variants */
+.badge-neutral {
+	border-color: transparent;
+	background-color: var(--muted);
+	color: var(--muted-foreground);
+}
+
+.badge-info {
+	border-color: transparent;
+	background-color: var(--brand-light-blue);
+	color: var(--brand-blue);
+}
+
+.badge-success {
+	border-color: transparent;
+	background-color: var(--positive-bg);
+	color: var(--positive);
+}
+
+.badge-warning {
+	border-color: transparent;
+	background-color: var(--warning-bg);
+	color: var(--warning-dark);
+}
+
+.badge-danger {
+	border-color: transparent;
+	background-color: var(--negative-bg);
+	color: var(--negative);
+}
+
+.dark .badge-neutral {
+	background-color: color-mix(in srgb, var(--muted) 70%, var(--background) 30%);
+	color: var(--muted-foreground);
+}
+
+.dark .badge-info {
+	background-color: color-mix(in srgb, var(--primary) 20%, transparent);
+	color: color-mix(in srgb, var(--primary) 75%, white);
+}
+
+.dark .badge-success {
+	background-color: color-mix(in srgb, var(--positive) 20%, transparent);
+	color: color-mix(in srgb, var(--positive) 82%, white);
+}
+
+.dark .badge-warning {
+	background-color: color-mix(in srgb, var(--warning) 20%, transparent);
+	color: color-mix(in srgb, var(--warning) 85%, white);
+}
+
+.dark .badge-danger {
+	background-color: color-mix(in srgb, var(--destructive) 18%, transparent);
+	color: color-mix(in srgb, var(--destructive) 82%, white);
 }
 
 /* =============================================================================

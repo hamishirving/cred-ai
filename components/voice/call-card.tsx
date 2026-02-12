@@ -45,7 +45,13 @@ export function CallCard({
 	const isActive = status === "ringing" || status === "in-progress";
 
 	return (
-		<Card className={isActive ? "border-green-200 bg-green-50/30" : undefined}>
+		<Card
+			className={
+				isActive
+					? "border-[var(--positive)]/35 bg-[color-mix(in_srgb,var(--positive)_12%,transparent)]"
+					: undefined
+			}
+		>
 			<CardHeader className="pb-2">
 				<div className="flex items-start justify-between">
 					<div className="space-y-1">

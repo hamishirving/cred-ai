@@ -13,10 +13,10 @@ export function ReasoningStepCard({ step }: ReasoningStepCardProps) {
 
 	return (
 		<div className="flex items-start gap-2 pl-3 py-2">
-			<div className="flex items-center justify-center size-5 rounded-full bg-[#f0ede7] shrink-0 mt-0.5">
-				<MessageSquare className="size-3 text-[#8a7e6b]" />
+			<div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted">
+				<MessageSquare className="size-3 text-muted-foreground" />
 			</div>
-			<div className="min-w-0 flex-1 text-xs text-[#8a857d] leading-relaxed prose prose-xs dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_hr]:hidden [&_h1]:text-xs [&_h2]:text-xs [&_h3]:text-xs [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0">
+			<div className="min-w-0 max-w-none flex-1 text-xs leading-relaxed text-muted-foreground prose prose-xs dark:prose-invert [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_h1]:text-xs [&_h2]:text-xs [&_h3]:text-xs [&_hr]:hidden [&_li]:my-0 [&_p]:my-1 [&_ul]:my-1">
 				<Response>{step.content}</Response>
 			</div>
 		</div>

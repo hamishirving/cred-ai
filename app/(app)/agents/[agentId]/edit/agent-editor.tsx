@@ -81,17 +81,17 @@ export function AgentEditor({ agent, availableTools }: AgentEditorProps) {
 	}
 
 	return (
-		<div className="flex flex-col h-full bg-[#f7f5f0]">
+		<div className="flex h-full flex-col bg-background">
 			{/* Header */}
-			<div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e2db] bg-white">
+			<div className="flex items-center justify-between border-b border-border bg-card px-6 py-4">
 				<div className="flex items-center gap-3">
-					<Button variant="ghost" size="sm" className="text-[#6b6760] hover:text-[#1c1a15]" asChild>
+					<Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" asChild>
 						<Link href={`/agents/${agent.code}`}>
 							<ArrowLeft className="size-3 mr-1" />
 							Back
 						</Link>
 					</Button>
-					<h1 className="text-2xl font-semibold text-[#1c1a15]" style={{ textWrap: "balance" }}>
+					<h1 className="text-2xl font-semibold text-foreground" style={{ textWrap: "balance" }}>
 						Edit Agent
 					</h1>
 				</div>
@@ -99,12 +99,7 @@ export function AgentEditor({ agent, availableTools }: AgentEditorProps) {
 					{error && (
 						<span className="text-xs text-destructive">{error}</span>
 					)}
-					<Button
-						size="sm"
-						onClick={handleSave}
-						disabled={saving}
-						className="bg-blue-600 hover:bg-blue-700 text-white"
-					>
+					<Button size="sm" onClick={handleSave} disabled={saving}>
 						{saving ? (
 							<Loader2 className="size-3 mr-1 animate-spin" />
 						) : (
@@ -120,28 +115,28 @@ export function AgentEditor({ agent, availableTools }: AgentEditorProps) {
 				{/* Left panel — settings */}
 				<div className="w-1/2 overflow-y-auto flex flex-col gap-4">
 					{/* Basic info card */}
-					<div className="bg-white border border-[#e5e2db] rounded-lg p-5 space-y-4">
-						<h2 className="text-base font-medium text-[#1c1a15]">Basic Info</h2>
+					<div className="space-y-4 rounded-lg border border-border bg-card p-5">
+						<h2 className="text-base font-medium text-foreground">Basic Info</h2>
 						<div className="flex flex-col gap-1.5">
-							<label className="text-xs font-medium text-[#6b6760]">Name</label>
+							<label className="text-xs font-medium text-muted-foreground">Name</label>
 							<Input
-								className="h-8 text-sm border-[#ccc8c0]"
+								className="h-8 border-input text-sm"
 								value={name}
 								onChange={(e) => setName(e.target.value)}
 							/>
 						</div>
 						<div className="flex flex-col gap-1.5">
-							<label className="text-xs font-medium text-[#6b6760]">Description</label>
+							<label className="text-xs font-medium text-muted-foreground">Description</label>
 							<Textarea
-								className="text-sm min-h-[60px] resize-none border-[#ccc8c0]"
+								className="min-h-[60px] resize-none border-input text-sm"
 								value={description}
 								onChange={(e) => setDescription(e.target.value)}
 							/>
 						</div>
 						<div className="flex flex-col gap-1.5">
-							<label className="text-xs font-medium text-[#6b6760]">Version</label>
+							<label className="text-xs font-medium text-muted-foreground">Version</label>
 							<Input
-								className="h-8 text-sm w-24 border-[#ccc8c0]"
+								className="h-8 w-24 border-input text-sm"
 								value={version}
 								onChange={(e) => setVersion(e.target.value)}
 							/>
@@ -149,29 +144,29 @@ export function AgentEditor({ agent, availableTools }: AgentEditorProps) {
 					</div>
 
 					{/* Trigger card */}
-					<div className="bg-white border border-[#e5e2db] rounded-lg p-5 space-y-4">
-						<h2 className="text-base font-medium text-[#1c1a15]">Trigger</h2>
+					<div className="space-y-4 rounded-lg border border-border bg-card p-5">
+						<h2 className="text-base font-medium text-foreground">Trigger</h2>
 						<TriggerConfig trigger={trigger} onChange={setTrigger} />
 					</div>
 
 					{/* Conditions card */}
-					<div className="bg-white border border-[#e5e2db] rounded-lg p-5 space-y-4">
-						<h2 className="text-base font-medium text-[#1c1a15]">Conditions</h2>
+					<div className="space-y-4 rounded-lg border border-border bg-card p-5">
+						<h2 className="text-base font-medium text-foreground">Conditions</h2>
 						<ConditionBuilder groups={conditions} onChange={setConditions} />
 					</div>
 
 					{/* Oversight card */}
-					<div className="bg-white border border-[#e5e2db] rounded-lg p-5 space-y-4">
-						<h2 className="text-base font-medium text-[#1c1a15]">Oversight</h2>
+					<div className="space-y-4 rounded-lg border border-border bg-card p-5">
+						<h2 className="text-base font-medium text-foreground">Oversight</h2>
 						<div className="flex flex-col gap-1.5">
-							<label className="text-xs font-medium text-[#6b6760]">Mode</label>
+							<label className="text-xs font-medium text-muted-foreground">Mode</label>
 							<Select
 								value={oversight.mode}
 								onValueChange={(v) =>
 									setOversight({ mode: v as AgentOversight["mode"] })
 								}
 							>
-								<SelectTrigger className="h-8 text-sm border-[#ccc8c0]">
+								<SelectTrigger className="h-8 border-input text-sm">
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -184,20 +179,20 @@ export function AgentEditor({ agent, availableTools }: AgentEditorProps) {
 					</div>
 
 					{/* Tools card */}
-					<div className="bg-white border border-[#e5e2db] rounded-lg p-5 space-y-4">
-						<h2 className="text-base font-medium text-[#1c1a15]">Tools</h2>
+					<div className="space-y-4 rounded-lg border border-border bg-card p-5">
+						<h2 className="text-base font-medium text-foreground">Tools</h2>
 						<ToolSelector selected={tools} onChange={setTools} availableTools={availableTools} />
 					</div>
 
 					{/* Constraints card */}
-					<div className="bg-white border border-[#e5e2db] rounded-lg p-5 space-y-4">
-						<h2 className="text-base font-medium text-[#1c1a15]">Constraints</h2>
+					<div className="space-y-4 rounded-lg border border-border bg-card p-5">
+						<h2 className="text-base font-medium text-foreground">Constraints</h2>
 						<div className="flex gap-3">
 							<div className="flex flex-col gap-1.5">
-								<label className="text-xs font-medium text-[#6b6760]">Max steps</label>
+								<label className="text-xs font-medium text-muted-foreground">Max steps</label>
 								<Input
 									type="number"
-									className="h-8 text-sm w-20 border-[#ccc8c0]"
+									className="h-8 w-20 border-input text-sm"
 									value={constraints.maxSteps}
 									onChange={(e) =>
 										setConstraints({
@@ -208,10 +203,10 @@ export function AgentEditor({ agent, availableTools }: AgentEditorProps) {
 								/>
 							</div>
 							<div className="flex flex-col gap-1.5">
-								<label className="text-xs font-medium text-[#6b6760]">Timeout (ms)</label>
+								<label className="text-xs font-medium text-muted-foreground">Timeout (ms)</label>
 								<Input
 									type="number"
-									className="h-8 text-sm w-28 border-[#ccc8c0]"
+									className="h-8 w-28 border-input text-sm"
 									value={constraints.maxExecutionTime}
 									onChange={(e) =>
 										setConstraints({
@@ -227,10 +222,10 @@ export function AgentEditor({ agent, availableTools }: AgentEditorProps) {
 
 				{/* Right panel — system prompt */}
 				<div className="w-1/2 flex flex-col min-h-0">
-					<div className="bg-white border border-[#e5e2db] rounded-lg p-5 flex flex-col flex-1 min-h-0 gap-4">
-						<h2 className="text-base font-medium text-[#1c1a15]">System Prompt</h2>
+					<div className="flex min-h-0 flex-1 flex-col gap-4 rounded-lg border border-border bg-card p-5">
+						<h2 className="text-base font-medium text-foreground">System Prompt</h2>
 						<Textarea
-							className="flex-1 font-mono text-sm min-h-[500px] resize-none border-[#ccc8c0]"
+							className="min-h-[500px] flex-1 resize-none border-input font-mono text-sm"
 							value={systemPrompt}
 							onChange={(e) => setSystemPrompt(e.target.value)}
 						/>

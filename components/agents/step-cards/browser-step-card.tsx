@@ -85,22 +85,22 @@ export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActi
 				<div className="flex flex-col gap-1.5">
 					{/* Header row */}
 					<div className="flex items-center gap-2">
-						<div className="flex items-center justify-center size-5 rounded-full bg-[#f0efeb] shrink-0">
-							<Globe className="size-3 text-[#6b6760]" />
+						<div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted">
+							<Globe className="size-3 text-muted-foreground" />
 						</div>
 						<span className="text-xs font-medium">
 							{step.toolName === "dvlaBrowseVerify" ? "DVLA Portal Verification" : step.toolName === "gdcBrowseVerify" ? "GDC Register Verification" : "Browser Verification"}
 						</span>
 						{verified !== undefined && (
 							verified
-								? <CheckCircle2 className="size-3 text-[#3a9960] ml-auto" />
+								? <CheckCircle2 className="ml-auto size-3 text-[var(--positive)]" />
 								: <XCircle className="size-3 text-destructive ml-auto" />
 						)}
 						{hasError && (
 							<AlertCircle className="size-3 text-destructive ml-auto" />
 						)}
 						{!hasOutput && isActive && (
-							<Loader2 className="size-3 animate-spin text-[#8a857d] ml-auto" />
+							<Loader2 className="ml-auto size-3 animate-spin text-muted-foreground" />
 						)}
 					</div>
 
@@ -116,13 +116,13 @@ export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActi
 										animate={{ opacity: 1 }}
 										exit={{ opacity: 0 }}
 										transition={{ duration: 0.25 }}
-										className="absolute inset-0 flex items-start gap-1.5 text-xs text-[#8a857d]"
+										className="absolute inset-0 flex items-start gap-1.5 text-xs text-muted-foreground"
 									>
 										<div className="flex items-center justify-center size-4 shrink-0 mt-0.5">
 											<ActionIcon type={browserActions[browserActions.length - 1].type} />
 										</div>
 										<span className="leading-relaxed truncate">
-											<span className="font-medium text-[#6b6760]">{actionVerb(browserActions[browserActions.length - 1].type)}:</span>{" "}
+											<span className="font-medium text-foreground/80">{actionVerb(browserActions[browserActions.length - 1].type)}:</span>{" "}
 											{formatAction(browserActions[browserActions.length - 1])}
 										</span>
 										{isActive && !hasOutput && (
@@ -147,7 +147,7 @@ export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActi
 								<div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
 									{Object.entries(fields).map(([key, value]) => (
 										<div key={key} className="col-span-2 grid grid-cols-subgrid">
-											<span className="text-[#8a857d]">{key}</span>
+											<span className="text-muted-foreground">{key}</span>
 											<span className="font-medium">{value}</span>
 										</div>
 									))}
@@ -155,7 +155,7 @@ export function BrowserStepCard({ step, liveViewUrl, browserActions = [], isActi
 							)}
 							{/* Fallback raw message (only if no fields) */}
 							{agentResult?.message && (!fields || Object.keys(fields).length === 0) && (
-								<p className="text-xs text-[#8a857d] leading-relaxed">
+								<p className="text-xs leading-relaxed text-muted-foreground">
 									{agentResult.message}
 								</p>
 							)}

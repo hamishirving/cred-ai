@@ -30,7 +30,7 @@ export const SignOutForm = () => {
 			className="w-full"
 		>
 			<button
-				className="w-full px-1 py-0.5 text-left text-red-500"
+				className="w-full px-1 py-0.5 text-left text-destructive"
 				type="submit"
 			>
 				Sign out

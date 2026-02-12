@@ -32,7 +32,7 @@ function hasCvDocument(
 export function BackendResponse({ output }: BackendResponseProps) {
 	if (output.error) {
 		return (
-			<div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-600 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400">
+			<div className="rounded-xl border border-destructive/35 bg-destructive/10 p-4 text-destructive">
 				<div className="font-medium">Error</div>
 				<div className="text-sm">{output.error}</div>
 			</div>

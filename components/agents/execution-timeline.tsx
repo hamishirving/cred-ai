@@ -148,9 +148,9 @@ export function ExecutionTimeline({
 
 			{/* Browser actions preview before the tool step has completed */}
 			{status === "running" && browserActions.length > 0 && !steps.some((s) => s.type === "tool-call" && (s.toolName === "browseAndVerify" || s.toolName === "dvlaBrowseVerify" || s.toolName === "gdcBrowseVerify")) && (
-				<div className="flex flex-col gap-1 p-3 rounded-lg border border-border/50 bg-white">
-					<div className="flex items-center gap-2 text-xs font-medium text-[#1c1a15]">
-						<Loader2 className="size-3 animate-spin text-[#8a857d]" />
+				<div className="flex flex-col gap-1 rounded-lg border border-border/50 bg-card p-3">
+					<div className="flex items-center gap-2 text-xs font-medium text-foreground">
+						<Loader2 className="size-3 animate-spin text-muted-foreground" />
 						Browser working...
 					</div>
 					<div className="ml-5 relative h-5">
@@ -162,13 +162,13 @@ export function ExecutionTimeline({
 									animate={{ opacity: 1 }}
 									exit={{ opacity: 0 }}
 									transition={{ duration: 0.25 }}
-									className="absolute inset-0 flex items-start gap-1.5 text-xs text-[#8a857d]"
+									className="absolute inset-0 flex items-start gap-1.5 text-xs text-muted-foreground"
 								>
 									<div className="flex items-center justify-center size-4 shrink-0 mt-0.5">
 										<PreviewActionIcon type={browserActions[browserActions.length - 1].type} />
 									</div>
 									<span className="leading-relaxed truncate">
-										<span className="font-medium text-[#6b6760]">{previewActionVerb(browserActions[browserActions.length - 1].type)}:</span>{" "}
+										<span className="font-medium text-foreground/80">{previewActionVerb(browserActions[browserActions.length - 1].type)}:</span>{" "}
 										{formatPreviewAction(browserActions[browserActions.length - 1])}
 									</span>
 								</motion.div>
@@ -179,7 +179,7 @@ export function ExecutionTimeline({
 			)}
 
 			{status === "running" && (
-				<div className="flex items-center gap-2 text-xs text-[#8a857d] p-2">
+				<div className="flex items-center gap-2 p-2 text-xs text-muted-foreground">
 					<Loader2 className="size-3 animate-spin" />
 					<span>Thinking...</span>
 				</div>
