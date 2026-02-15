@@ -9,6 +9,9 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
+	metadataBase: new URL(
+		process.env.NEXT_PUBLIC_APP_URL ?? "https://credentially-v2.vercel.app",
+	),
 	title: "Credentially | AI Onboarding & Compliance",
 	description:
 		"Workforce compliance platform for healthcare organisations. Streamline onboarding, manage credentials and ensure regulatory compliance.",

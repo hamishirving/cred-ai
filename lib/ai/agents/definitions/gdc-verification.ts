@@ -47,7 +47,7 @@ End with a summary: registration status, registration type, qualifications, regi
 		candidateEmail: z
 			.string()
 			.email()
-			.default("hamish.irving+spencer@credentially.io")
+			.default("irving.moosh@gmail.com")
 			.describe("Email address of the candidate whose GDC registration to verify"),
 		registrationNumber: z
 			.string()

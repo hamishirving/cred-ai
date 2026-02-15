@@ -1,5 +1,7 @@
 import { tool } from "ai";
 import { GoogleAuth } from "google-auth-library";
+import fs from "node:fs";
+import path from "node:path";
 import { z } from "zod";
 
 const BILLING_PROJECT =
@@ -9,11 +11,124 @@ const AGENT_ID =
 	process.env.GEMINI_AGENT_ID ?? "agent_55883a2d-c26d-42f9-8c67-5a675127dfcd";
 
 const BASE_URL = "https://geminidataanalytics.googleapis.com/v1beta";
+const CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform";
 
-// Initialize Google Auth - uses GOOGLE_APPLICATION_CREDENTIALS env var
-const auth = new GoogleAuth({
-	scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-});
+type ServiceAccountCredentials = {
+	client_email?: string;
+	private_key?: string;
+};
+
+function parseServiceAccountJson(
+	rawServiceAccountJson: string,
+): ServiceAccountCredentials {
+	let value = rawServiceAccountJson.trim();
+
+	// Some env managers wrap JSON in quotes.
+	if (
+		(value.startsWith('"') && value.endsWith('"')) ||
+		(value.startsWith("'") && value.endsWith("'"))
+	) {
+		value = value.slice(1, -1).trim();
+	}
+
+	const candidates = [value];
+
+	// Support base64-encoded credentials in env.
+	if (!value.startsWith("{")) {
+		try {
+			const decoded = Buffer.from(value, "base64").toString("utf8").trim();
+			if (decoded.startsWith("{")) {
+				candidates.push(decoded);
+			}
+		} catch {
+			// Ignore decode failures and fall through to JSON parse errors.
+		}
+	}
+
+	// Some env tools store JSON as an escaped JSON object string:
+	// {\"type\":\"service_account\",...}
+	if (value.includes('\\"')) {
+		candidates.push(value.replace(/\\"/g, '"'));
+	}
+
+	// Last-resort compatibility for single-quoted pseudo-JSON often pasted in .env files.
+	// This is intentionally narrow and only used if valid JSON parsing fails.
+	if (value.includes("'")) {
+		const singleQuotedJsonLike = value
+			.replace(/([{,]\s*)'([^']+?)'(\s*:)/g, '$1"$2"$3')
+			.replace(/(:\s*)'([^']*?)'(\s*[,}])/g, '$1"$2"$3');
+		if (singleQuotedJsonLike !== value) {
+			candidates.push(singleQuotedJsonLike);
+		}
+	}
+
+	let lastError: unknown;
+	for (const candidate of candidates) {
+		try {
+			return JSON.parse(candidate) as ServiceAccountCredentials;
+		} catch (error) {
+			lastError = error;
+		}
+	}
+
+	throw lastError ?? new Error("Failed to parse service account JSON");
+}
+
+function createGoogleAuth(): GoogleAuth {
+	const googleApplicationCredentials =
+		process.env.GOOGLE_APPLICATION_CREDENTIALS;
+	if (googleApplicationCredentials) {
+		const resolvedPath = path.isAbsolute(googleApplicationCredentials)
+			? googleApplicationCredentials
+			: path.resolve(process.cwd(), googleApplicationCredentials);
+
+		if (fs.existsSync(resolvedPath)) {
+			return new GoogleAuth({
+				keyFilename: resolvedPath,
+				scopes: [CLOUD_PLATFORM_SCOPE],
+			});
+		}
+
+		console.error(
+			`[queryDataAgent] GOOGLE_APPLICATION_CREDENTIALS file not found at: ${resolvedPath}. Falling back to GOOGLE_SERVICE_ACCOUNT_JSON/ADC.`,
+		);
+	}
+
+	const rawServiceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+
+	if (rawServiceAccountJson) {
+		try {
+			const parsed = parseServiceAccountJson(rawServiceAccountJson);
+
+			// Some platforms store multiline private keys with escaped newlines.
+			const privateKey = parsed.private_key?.replace(/\\n/g, "\n");
+
+			return new GoogleAuth({
+				credentials: {
+					...parsed,
+					private_key: privateKey,
+				},
+				scopes: [CLOUD_PLATFORM_SCOPE],
+			});
+		} catch (error) {
+			console.error(
+				"[queryDataAgent] Invalid GOOGLE_SERVICE_ACCOUNT_JSON. Falling back to GOOGLE_APPLICATION_CREDENTIALS/ADC.",
+				error,
+			);
+		}
+	}
+
+	// Final fallback: ADC from environment/runtime
+	return new GoogleAuth({
+		scopes: [CLOUD_PLATFORM_SCOPE],
+	});
+}
+
+const auth = createGoogleAuth();
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
+}
 
 async function getAccessToken(): Promise<string> {
 	const client = await auth.getClient();
@@ -31,8 +146,12 @@ Use this tool when the user asks about:
 - Data reports or dashboards
 - Aggregations, counts, or statistics from the data warehouse
 - Questions that require SQL queries against BigQuery
+- Charts, graphs, visualisations, trend lines, pie charts, bar charts, or time-series views
 
-Pass the user's question directly as the prompt.`,
+For chart requests:
+- Include chart intent in the prompt (for example pie, bar, line)
+- Ask for chart metadata/config so the UI can render the chart type correctly
+- Still return the underlying table data and generated SQL`,
 
 	inputSchema: z.object({
 		prompt: z
@@ -53,12 +172,22 @@ Pass the user's question directly as the prompt.`,
 			const accessToken = await getAccessToken();
 			console.log("[queryDataAgent] Got access token");
 
+			const enrichedPrompt = `${prompt}
+
+Return structured analytics output. Always include:
+1) generated SQL
+2) tabular result data with schema
+
+If the request asks for a chart/graph/visualisation/dashboard/trend, also include:
+3) chart query intent
+4) chart result config (for example Vega config) with explicit chart type and field mappings.`;
+
 			const payload = {
 				parent: `projects/${BILLING_PROJECT}/locations/global`,
 				messages: [
 					{
 						userMessage: {
-							text: prompt,
+							text: enrichedPrompt,
 						},
 					},
 				],
@@ -130,7 +259,18 @@ function extractDataAgentResponse(response: unknown): unknown {
 		text?: string;
 		sql?: string;
 		data?: unknown;
-		chart?: unknown;
+		chart?: {
+			type?: "pie" | "bar" | "line";
+			title?: string;
+			dataResultName?: string;
+			instructions?: string;
+			vegaConfig?: unknown;
+			data?: unknown[];
+			xField?: string;
+			yField?: string;
+			categoryField?: string;
+			valueField?: string;
+		};
 	} = {};
 
 	for (const item of response) {
@@ -146,8 +286,89 @@ function extractDataAgentResponse(response: unknown): unknown {
 			if (msg.data?.result) {
 				result.data = msg.data.result;
 			}
+
+			if (msg.chart?.query) {
+				const chartQuery = msg.chart.query;
+				result.chart = {
+					...result.chart,
+					dataResultName:
+						typeof chartQuery.dataResultName === "string"
+							? chartQuery.dataResultName
+							: result.chart?.dataResultName,
+					instructions:
+						typeof chartQuery.instructions === "string"
+							? chartQuery.instructions
+							: result.chart?.instructions,
+				};
+			}
+
 			if (msg.chart?.result) {
-				result.chart = msg.chart.result;
+				const chartResult = msg.chart.result;
+				const vegaConfig = isRecord(chartResult)
+					? chartResult.vegaConfig
+					: undefined;
+
+				const mark = isRecord(vegaConfig) ? vegaConfig.mark : undefined;
+				const markType = isRecord(mark)
+					? mark.type
+					: typeof mark === "string"
+						? mark
+						: undefined;
+
+				const encoding = isRecord(vegaConfig) ? vegaConfig.encoding : undefined;
+				const thetaField =
+					isRecord(encoding) && isRecord(encoding.theta)
+						? encoding.theta.field
+						: undefined;
+				const colorField =
+					isRecord(encoding) && isRecord(encoding.color)
+						? encoding.color.field
+						: undefined;
+				const xField =
+					isRecord(encoding) && isRecord(encoding.x)
+						? encoding.x.field
+						: undefined;
+				const yField =
+					isRecord(encoding) && isRecord(encoding.y)
+						? encoding.y.field
+						: undefined;
+
+				const chartValues =
+					isRecord(vegaConfig) &&
+					isRecord(vegaConfig.data) &&
+					Array.isArray(vegaConfig.data.values)
+						? vegaConfig.data.values
+						: undefined;
+
+				const type =
+					markType === "arc"
+						? "pie"
+						: markType === "line"
+							? "line"
+							: markType === "bar"
+								? "bar"
+								: undefined;
+
+				result.chart = {
+					...result.chart,
+					type,
+					title:
+						isRecord(vegaConfig) && typeof vegaConfig.title === "string"
+							? vegaConfig.title
+							: result.chart?.title,
+					vegaConfig,
+					data: chartValues,
+					xField: typeof xField === "string" ? xField : result.chart?.xField,
+					yField: typeof yField === "string" ? yField : result.chart?.yField,
+					categoryField:
+						typeof colorField === "string"
+							? colorField
+							: result.chart?.categoryField,
+					valueField:
+						typeof thetaField === "string"
+							? thetaField
+							: result.chart?.valueField,
+				};
 			}
 		}
 	}
