@@ -14,6 +14,7 @@ import { KnowledgeTool } from "./handlers/knowledge-tool";
 import { SuggestionsTool } from "./handlers/suggestions-tool";
 import { TaskTool } from "./handlers/task-tool";
 import { PlacementComplianceTool } from "./handlers/placement-compliance-tool";
+import { FAScreeningTool } from "./handlers/fa-screening-tool";
 import type { ToolHandlerProps } from "./types";
 
 // Type for tool handler components with any input/output
@@ -35,6 +36,7 @@ const toolRegistry: Record<string, ToolHandler> = {
 	"tool-searchKnowledge": KnowledgeTool as ToolHandler,
 	"tool-createTask": TaskTool as ToolHandler,
 	"tool-getPlacementCompliance": PlacementComplianceTool as ToolHandler,
+	"tool-faCheckScreening": FAScreeningTool as ToolHandler,
 };
 
 /**

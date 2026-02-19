@@ -13,6 +13,8 @@ import { onboardingCompanionAgent } from "./definitions/onboarding-companion";
 import { referenceCheckAgent } from "./definitions/reference-check";
 import { inboundEmailResponderAgent } from "./definitions/inbound-email-responder";
 import { complianceGapAnalyzerAgent } from "./definitions/compliance-gap-analyzer";
+import { backgroundScreeningAgent } from "./definitions/background-screening";
+import { screeningStatusMonitorAgent } from "./definitions/screening-status-monitor";
 
 /** All registered agents */
 const agents: Record<string, AgentDefinition> = {
@@ -23,6 +25,8 @@ const agents: Record<string, AgentDefinition> = {
 	[referenceCheckAgent.id]: referenceCheckAgent,
 	[inboundEmailResponderAgent.id]: inboundEmailResponderAgent,
 	[complianceGapAnalyzerAgent.id]: complianceGapAnalyzerAgent,
+	[backgroundScreeningAgent.id]: backgroundScreeningAgent,
+	[screeningStatusMonitorAgent.id]: screeningStatusMonitorAgent,
 };
 
 /**
