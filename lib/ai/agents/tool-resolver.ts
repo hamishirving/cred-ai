@@ -30,6 +30,8 @@ import { getLocalProfile } from "@/lib/ai/tools/get-local-profile";
 import { getLocalCompliance } from "@/lib/ai/tools/get-local-compliance";
 import { searchLocalCandidates } from "@/lib/ai/tools/search-local-candidates";
 import { searchKnowledge } from "@/lib/ai/tools/search-knowledge";
+import { resolvePlacementRequirementsTool } from "@/lib/ai/tools/resolve-placement-requirements";
+import { getPlacementComplianceTool } from "@/lib/ai/tools/get-placement-compliance";
 
 /**
  * Registry of all tools available to agents, keyed by name.
@@ -57,6 +59,8 @@ const toolRegistry: Record<string, Tool> = {
 	getLocalCompliance: getLocalCompliance as Tool,
 	searchLocalCandidates: searchLocalCandidates as Tool,
 	searchKnowledge: searchKnowledge as Tool,
+	resolvePlacementRequirements: resolvePlacementRequirementsTool as Tool,
+	getPlacementCompliance: getPlacementComplianceTool as Tool,
 };
 
 /** Optional callbacks for context-aware tool resolution */

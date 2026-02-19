@@ -163,6 +163,51 @@ export const usComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		},
 	},
 
+	// OIG/SAM Exclusion Checks (First Advantage handles these)
+	{
+		name: "OIG Exclusion Check",
+		slug: "oig-exclusion-check",
+		description: "Office of Inspector General excluded individuals check",
+		category: "identity",
+		scope: "candidate",
+		evidenceType: "check",
+		expiryDays: 30,
+		expiryWarningDays: 7,
+		verificationRules: {
+			validationMode: "external",
+			externalIntegration: "first-advantage",
+		},
+	},
+	{
+		name: "SAM Exclusion Check",
+		slug: "sam-exclusion-check",
+		description: "System for Award Management debarment check",
+		category: "identity",
+		scope: "candidate",
+		evidenceType: "check",
+		expiryDays: 30,
+		expiryWarningDays: 7,
+		verificationRules: {
+			validationMode: "external",
+			externalIntegration: "first-advantage",
+		},
+	},
+	{
+		name: "Florida Level 2 Background Check",
+		slug: "florida-level2-background",
+		description: "Florida FDLE Level 2 fingerprint-based background check",
+		category: "identity",
+		scope: "candidate",
+		evidenceType: "check",
+		expiryDays: 365,
+		expiryWarningDays: 60,
+		onlyJurisdictions: ["florida"],
+		verificationRules: {
+			validationMode: "external",
+			externalIntegration: "first-advantage",
+		},
+	},
+
 	// Training & Certifications
 	{
 		name: "BLS Certification",
@@ -381,6 +426,12 @@ export const usPackageTemplates: Omit<NewCompliancePackage, "organisationId">[] 
 		description: "Hospital facility requirements",
 		category: "facility",
 	},
+	{
+		name: "Exclusion Checks Package",
+		slug: "exclusion-checks-package",
+		description: "OIG/SAM exclusion screening",
+		category: "screening",
+	},
 ];
 
 /**
@@ -415,6 +466,11 @@ export const usPackageContents: Record<string, string[]> = {
 	],
 	"florida-package": [
 		"florida-rn-license",
+		"florida-level2-background",
+	],
+	"exclusion-checks-package": [
+		"oig-exclusion-check",
+		"sam-exclusion-check",
 	],
 	"hospital-package": [
 		"hospital-credentialing",
@@ -458,3 +514,45 @@ export const usRoles: Omit<NewRole, "organisationId">[] = [
 		description: "Advanced Practice Nurse - CNS",
 	},
 ];
+
+/**
+ * Which packages a role requires (role slug -> package slugs).
+ */
+export const usRolePackages: Record<string, string[]> = {
+	"travel-rn": ["federal-core-package", "rn-package"],
+	"travel-icu-rn": ["federal-core-package", "rn-package", "icu-package"],
+	"travel-er-rn": ["federal-core-package", "rn-package"],
+	"staff-rn": ["federal-core-package", "rn-package"],
+	"charge-nurse": ["federal-core-package", "rn-package"],
+	"clinical-nurse-specialist": ["federal-core-package", "rn-package"],
+};
+
+/**
+ * Which package a state requires (jurisdiction -> package slug).
+ */
+export const usStatePackages: Record<string, string> = {
+	california: "california-package",
+	texas: "texas-package",
+	florida: "florida-package",
+};
+
+/**
+ * Which package a facility type requires (facility type -> package slug).
+ */
+export const usFacilityPackages: Record<string, string> = {
+	hospital: "hospital-package",
+};
+
+/**
+ * Elements that First Advantage handles (background checks, drug screens, exclusions).
+ */
+export const faHandledElements = new Set([
+	"federal-background-check",
+	"state-background-check",
+	"california-background-check",
+	"texas-background-check",
+	"florida-level2-background",
+	"drug-screen",
+	"oig-exclusion-check",
+	"sam-exclusion-check",
+]);

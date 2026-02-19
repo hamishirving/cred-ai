@@ -276,6 +276,115 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			notes: "Highly experienced. 5+ years travel nursing. All certifications current.",
 		},
 	},
+	// === FA DEMO CANDIDATES ===
+	// These three candidates map to the Medsol demo scenarios.
+
+	// Scenario 1: New clinician — first FL placement, partial compliance
+	{
+		profile: {
+			email: "ashlyn.torres@email.com",
+			firstName: "Ashlyn",
+			lastName: "Torres",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1995-06-12"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("COMPACT"),
+			address: {
+				line1: "422 Magnolia Avenue",
+				city: "Nashville",
+				postcode: "37203",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-icu-rn",
+		state: {
+			status: "in_progress",
+			missingElements: [
+				"federal-background-check",
+				"florida-level2-background",
+				"florida-rn-license",
+				"drug-screen",
+				"hospital-credentialing",
+				"hospital-orientation",
+				"unit-competency",
+			],
+			daysSinceActivity: 1,
+			notes: "New travel ICU RN. First Florida placement. Has compact license, BLS, ACLS, PALS, health records from Tennessee assignment. Needs background screening and FL-specific items. Standard deal — Package #1, no OIG/SAM.",
+		},
+	},
+
+	// Scenario 2: Reassignment — moving from TX to CA, most items carry forward
+	{
+		profile: {
+			email: "lexie.chen@email.com",
+			firstName: "Lexie",
+			lastName: "Chen",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1990-03-28"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("COMPACT"),
+			address: {
+				line1: "1800 Main Street",
+				city: "Dallas",
+				postcode: "75201",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-rn",
+		state: {
+			status: "near_complete",
+			missingElements: [
+				"california-rn-license",
+				"california-background-check",
+				"hospital-credentialing",
+				"hospital-orientation",
+				"unit-competency",
+			],
+			startDateDays: 21,
+			daysSinceActivity: 2,
+			notes: "Reassignment from Texas to California. Compact license holder. Federal background, drug screen, BLS, ACLS, health records all carry forward from TX assignment. Only needs CA-specific items and facility onboarding.",
+		},
+	},
+
+	// Scenario 3: Lapse deal — inactive 6 months, many items expired
+	{
+		profile: {
+			email: "peter.walsh@email.com",
+			firstName: "Peter",
+			lastName: "Walsh",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1983-11-15"),
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("FL"),
+			address: {
+				line1: "890 Beach Boulevard",
+				city: "Jacksonville",
+				postcode: "32250",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-rn",
+		state: {
+			status: "non_compliant",
+			missingElements: [
+				"federal-background-check",
+				"florida-level2-background",
+				"drug-screen",
+				"oig-exclusion-check",
+				"sam-exclusion-check",
+				"hospital-credentialing",
+				"hospital-orientation",
+				"unit-competency",
+			],
+			expiringElements: ["bls-certification", "tb-test"],
+			daysSinceActivity: 0,
+			notes: "Lapse deal. Inactive for 6 months. Background check expired, drug screen expired, BLS expiring. Needs full re-screening with OIG/SAM package (Package #2 — tier-2 trigger: lapse deal). Has FL license (still current).",
+		},
+	},
+
 	{
 		profile: {
 			email: "brian.anderson@email.com",
