@@ -12,6 +12,7 @@ import { gdcVerificationAgent } from "./definitions/gdc-verification";
 import { onboardingCompanionAgent } from "./definitions/onboarding-companion";
 import { referenceCheckAgent } from "./definitions/reference-check";
 import { inboundEmailResponderAgent } from "./definitions/inbound-email-responder";
+import { complianceGapAnalyzerAgent } from "./definitions/compliance-gap-analyzer";
 
 /** All registered agents */
 const agents: Record<string, AgentDefinition> = {
@@ -21,6 +22,7 @@ const agents: Record<string, AgentDefinition> = {
 	[onboardingCompanionAgent.id]: onboardingCompanionAgent,
 	[referenceCheckAgent.id]: referenceCheckAgent,
 	[inboundEmailResponderAgent.id]: inboundEmailResponderAgent,
+	[complianceGapAnalyzerAgent.id]: complianceGapAnalyzerAgent,
 };
 
 /**

@@ -32,6 +32,12 @@ import { searchLocalCandidates } from "@/lib/ai/tools/search-local-candidates";
 import { searchKnowledge } from "@/lib/ai/tools/search-knowledge";
 import { resolvePlacementRequirementsTool } from "@/lib/ai/tools/resolve-placement-requirements";
 import { getPlacementComplianceTool } from "@/lib/ai/tools/get-placement-compliance";
+import { faGetPackages } from "@/lib/ai/tools/fa-get-packages";
+import { faCreateCandidate } from "@/lib/ai/tools/fa-create-candidate";
+import { faInitiateScreening } from "@/lib/ai/tools/fa-initiate-screening";
+import { faCheckScreening } from "@/lib/ai/tools/fa-check-screening";
+import { faGetReport } from "@/lib/ai/tools/fa-get-report";
+import { faSelectPackage } from "@/lib/ai/tools/fa-select-package";
 
 /**
  * Registry of all tools available to agents, keyed by name.
@@ -61,6 +67,12 @@ const toolRegistry: Record<string, Tool> = {
 	searchKnowledge: searchKnowledge as Tool,
 	resolvePlacementRequirements: resolvePlacementRequirementsTool as Tool,
 	getPlacementCompliance: getPlacementComplianceTool as Tool,
+	faGetPackages: faGetPackages as Tool,
+	faCreateCandidate: faCreateCandidate as Tool,
+	faInitiateScreening: faInitiateScreening as Tool,
+	faCheckScreening: faCheckScreening as Tool,
+	faGetReport: faGetReport as Tool,
+	faSelectPackage: faSelectPackage as Tool,
 };
 
 /** Optional callbacks for context-aware tool resolution */
