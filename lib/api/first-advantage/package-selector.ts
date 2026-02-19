@@ -14,7 +14,6 @@ const PACKAGE_1_ID = "539147"; // Sample Standard + FACIS -- good match
 const PACKAGE_2_ID = "539150"; // Standard + D&HS -- demo stand-in for Standard + OIG/SAM
 
 const STATES_REQUIRING_STATEWIDE_CRIMINAL = [
-  "florida",
   "california",
   "new_york",
   "illinois",

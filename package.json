@@ -13,7 +13,8 @@
 		"db:studio": "drizzle-kit studio",
 		"db:seed": "npx tsx lib/db/seed/index.ts",
 		"db:clear": "npx tsx -e \"require('./lib/db/seed/clear').clearAllData().then(() => process.exit(0))\"",
-		"db:assign-admin": "npx tsx lib/db/scripts/assign-admin.ts"
+		"db:assign-admin": "npx tsx lib/db/scripts/assign-admin.ts",
+		"fa:smoke": "tsx scripts/fa-smoke.ts"
 	},
 	"dependencies": {
 		"@ai-sdk/anthropic": "^3.0.1",
