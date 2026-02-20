@@ -71,6 +71,7 @@ Be methodical. Explain each decision briefly so the audience understands why thi
 	inputSchema: z.object({
 		candidateSearch: z
 			.string()
+			.default("Ashlyn Torres")
 			.describe("Candidate name, email, or profile ID"),
 		targetState: z
 			.string()
@@ -82,12 +83,13 @@ Be methodical. Explain each decision briefly so the audience understands why thi
 			.describe("Facility name"),
 		dealType: z
 			.enum(["standard", "lapse", "quickstart", "reassignment"])
-			.default("standard"),
+			.default("standard")
+			.describe("Type of deal — affects package selection and OIG/SAM requirements"),
 	}),
 
 	constraints: {
 		maxSteps: 15,
-		maxExecutionTime: 45000,
+		maxExecutionTime: 60000,
 	},
 
 	trigger: {

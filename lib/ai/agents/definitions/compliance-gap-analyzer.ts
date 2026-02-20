@@ -52,19 +52,19 @@ STEP 5 — PRESENT THE ANALYSIS:
 Group the output by requirement source, not just status. For each group, show:
 
 FEDERAL CORE (X of Y complete)
-  ✓ Item — status, evidence source
-  ✗ Item — what's needed, who handles it (FA / candidate / Credentially)
+  [DONE] Item — status, evidence source
+  [MISSING] Item — what's needed, who handles it (FA / candidate / Credentially)
 
 STATE: FLORIDA (X of Y complete)
-  ✓ Item — carries forward from [previous state] OR new for this state
-  ✗ Item — what's needed
+  [DONE] Item — carries forward from [previous state] OR new for this state
+  [MISSING] Item — what's needed
 
 ROLE: ICU RN (X of Y complete)
-  ✓ Item — carries forward, expiry date
-  ✗ Item — what's needed
+  [DONE] Item — carries forward, expiry date
+  [MISSING] Item — what's needed
 
 FACILITY: MEMORIAL HOSPITAL (X of Y complete)
-  ✗ Item — placement-scoped, must be completed fresh
+  [MISSING] Item — placement-scoped, must be completed fresh
 
 Then summarise:
 1. Overall compliance: X of Y items (Z%)
@@ -91,6 +91,7 @@ The grouped output is the key demo moment. It shows the audience that Credential
 	inputSchema: z.object({
 		candidateSearch: z
 			.string()
+			.default("Ashlyn Torres")
 			.describe("Candidate name, email, or profile ID"),
 		targetState: z
 			.string()
@@ -112,7 +113,7 @@ The grouped output is the key demo moment. It shows the audience that Credential
 
 	constraints: {
 		maxSteps: 12,
-		maxExecutionTime: 45000,
+		maxExecutionTime: 60000,
 	},
 
 	trigger: {
