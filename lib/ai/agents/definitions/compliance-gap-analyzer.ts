@@ -48,30 +48,8 @@ Use getPlacementCompliance to check which requirements the candidate already ful
 STEP 4 — GET FA PACKAGES:
 Use faGetPackages to see what screening packages First Advantage offers. Each package has a "title", "components" (list of screening types), and "products" (with codes like CRST, EXOIG, SSV1). Match the outstanding background check items to the right FA package based on components.
 
-STEP 5 — POPULATE THE STRUCTURED OUTPUT:
-Your response will be structured automatically. Fill in every field accurately:
-
-- candidateName, roleName, facilityName, targetState: from the lookup
-- overall: total completed/total/percentage across ALL groups
-- groups: one per source category (federal, state, role, facility). Each group has:
-  - source: "federal" | "state" | "role" | "facility"
-  - label: display name (e.g. "FEDERAL CORE", "STATE: FLORIDA", "ROLE: ICU RN", "FACILITY: MEMORIAL HOSPITAL")
-  - completed/total: count for this group
-  - items: each compliance item with:
-    - name: item name
-    - status: "done" (current and valid), "missing" (not present), "expired" (was valid, now expired)
-    - detail: context (e.g. "carries forward, expires 30 Jan 2027", "FA-handled, requires screening", "placement-scoped, must complete on-site")
-    - handler: who handles it — "fa" (First Advantage screening), "candidate" (they must provide), "facility" (on-site), "credentially" (platform handles)
-- recommendation: the FA package to use (faPackageId, faPackageName, reason)
-- workerPassportCount: how many items carry forward from previous assignments
-- newItemCount: how many new items are needed for this placement
-- estimatedTimeToCompliance: realistic estimate (e.g. "2-4 weeks")
-- blockers: things that must be resolved before placement can start
-- immediateActions: things that can start right away
-
-Be specific about state requirements. Florida requires Level 2 fingerprinting. Texas requires state DPS check. California requires DOJ LiveScan.
-
-The grouped output is the key demo moment. It shows the audience that Credentially understands WHERE requirements come from — role, state, facility, federal — not just what they are. FA doesn't know any of this. That's the intelligence layer.`,
+STEP 5 — FINISH:
+After completing all tool calls, write a single short sentence like "Analysis complete." and stop. Do NOT write out the results as text — the data will be automatically structured into a visual report from your tool results. Do NOT create tables, lists, or summaries of the compliance items.`,
 
 	tools: [
 		"getLocalProfile",
@@ -128,11 +106,11 @@ The grouped output is the key demo moment. It shows the audience that Credential
 			.describe("US state for the placement (e.g. florida, texas, california)"),
 		facilityName: z
 			.string()
-			.optional()
-			.describe("Facility name (e.g. Memorial Hospital)"),
+			.default("Memorial Hospital Jacksonville")
+			.describe("Facility name (e.g. Memorial Hospital Jacksonville)"),
 		roleName: z
 			.string()
-			.optional()
+			.default("Travel ICU RN")
 			.describe("Role name (e.g. Travel ICU RN)"),
 		dealType: z
 			.enum(["standard", "lapse", "quickstart", "reassignment"])

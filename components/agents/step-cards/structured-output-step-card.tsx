@@ -3,6 +3,7 @@
 import { BarChart3 } from "lucide-react";
 import type { AgentStep } from "@/lib/ai/agents/types";
 import { GapAnalysisDisplay } from "./gap-analysis-display";
+import { ScreeningStatusDisplay } from "./screening-status-display";
 
 interface StructuredOutputStepCardProps {
 	step: AgentStep;
@@ -14,11 +15,21 @@ function isGapAnalysis(data: unknown): boolean {
 	return "groups" in d && "overall" in d && "candidateName" in d;
 }
 
+function isScreeningStatus(data: unknown): boolean {
+	if (!data || typeof data !== "object") return false;
+	const d = data as Record<string, unknown>;
+	return "screeningId" in d && "reportItems" in d && "overallStatus" in d;
+}
+
 export function StructuredOutputStepCard({ step }: StructuredOutputStepCardProps) {
 	if (step.type !== "structured-output" || !step.structuredOutput) return null;
 
 	if (isGapAnalysis(step.structuredOutput)) {
 		return <GapAnalysisDisplay data={step.structuredOutput} />;
+	}
+
+	if (isScreeningStatus(step.structuredOutput)) {
+		return <ScreeningStatusDisplay data={step.structuredOutput} />;
 	}
 
 	// Fallback: render as formatted JSON

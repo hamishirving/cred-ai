@@ -6,7 +6,7 @@
  * Persists executions to the database for audit trails.
  */
 
-import { Output, stepCountIs, streamText } from "ai";
+import { generateObject, stepCountIs, streamText } from "ai";
 import { myProvider } from "@/lib/ai/providers";
 import {
 	createAgentExecution,
@@ -123,6 +123,7 @@ export async function executeAgent(
 	const browserActions: BrowserAction[] = [];
 	let stepIndex = 0;
 	let executionId = "";
+	let streamUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
 
 	try {
 		// Create DB record for this execution
@@ -167,27 +168,17 @@ export async function executeAgent(
 		// Build invocation message
 		const userMessage = buildInvocationMessage(agent, ctx.input);
 
-		// Structured output: when agent defines an outputSchema, constrain final response
-		const outputOption = agent.outputSchema
-			? { output: Output.object({ schema: agent.outputSchema }) }
-			: {};
-		// Structured output counts as a step, so bump maxSteps by 1
-		const maxSteps = agent.outputSchema
-			? agent.constraints.maxSteps + 1
-			: agent.constraints.maxSteps;
-
 		const result = streamText({
 			model: myProvider.languageModel("chat-model"),
 			system,
 			messages: [{ role: "user", content: userMessage }],
 			tools,
-			...outputOption,
 			maxRetries: 2,
 			timeout: {
 				totalMs: agent.constraints.maxExecutionTime,
 				chunkMs: 120_000, // Increased for long-running browser tools
 			},
-			stopWhen: stepCountIs(maxSteps),
+			stopWhen: stepCountIs(agent.constraints.maxSteps),
 			onStepFinish: async (event) => {
 				stepIndex++;
 				console.log(`[agent-runner] onStepFinish #${stepIndex}, toolCalls:`, event.toolCalls?.length || 0);
@@ -251,55 +242,34 @@ export async function executeAgent(
 			},
 			onFinish: async ({ usage }) => {
 				console.log("[agent-runner] onFinish called, steps:", steps.length);
-				const durationMs = Date.now() - startTime;
-				const usageData = {
+				// Store usage for later — onComplete is called after structured output phase
+				streamUsage = {
 					inputTokens: usage.inputTokens ?? 0,
 					outputTokens: usage.outputTokens ?? 0,
 					totalTokens: usage.totalTokens ?? 0,
 				};
-
-				// Finalise DB record (structured output added after consumeStream below)
-				try {
-					await updateAgentExecution({
-						id: executionId,
-						status: "completed",
-						steps,
-						output: {
-							summary:
-								steps
-									.filter((s) => s.type === "text")
-									.map((s) => s.content)
-									.pop() || "Agent execution completed.",
-						},
-						tokensUsed: usageData,
-						durationMs,
-					});
-				} catch (err) {
-					console.warn("[agent-runner] Failed to finalise execution:", err);
-				}
-
-				callbacks.onComplete({
-					status: "completed",
-					summary:
-						steps
-							.filter((s) => s.type === "text")
-							.map((s) => s.content)
-							.pop() || "Agent execution completed.",
-					steps,
-					usage: usageData,
-					durationMs,
-					executionId,
-				});
 			},
 		});
 
 		// Consume the stream to trigger execution
 		await result.consumeStream();
 
-		// After stream is consumed, check for structured output
+		// Phase 2: If agent has outputSchema, make a separate generateObject call
+		// to structure the collected tool results into the desired shape.
+		// This is separate from streamText so tool calling isn't skipped.
 		if (agent.outputSchema) {
 			try {
-				const structuredOutput = (result as unknown as { output?: unknown }).output;
+				const toolSummary = steps
+					.filter((s) => s.type === "tool-call")
+					.map((s) => `Tool: ${s.toolName}\nInput: ${JSON.stringify(s.toolInput)}\nOutput: ${JSON.stringify(s.toolOutput)}`)
+					.join("\n\n");
+
+				const { object: structuredOutput } = await generateObject({
+					model: myProvider.languageModel("chat-model"),
+					schema: agent.outputSchema,
+					prompt: `Based on the following tool results from the "${agent.name}" agent, produce the structured output.\n\nAgent system prompt:\n${agent.systemPrompt}\n\nTool results:\n${toolSummary}`,
+				});
+
 				if (structuredOutput) {
 					stepIndex++;
 					const structuredStep: AgentStep = {
@@ -310,27 +280,42 @@ export async function executeAgent(
 					};
 					steps.push(structuredStep);
 					callbacks.onStep(structuredStep);
-
-					// Update DB with structured output
-					updateAgentExecution({
-						id: executionId,
-						steps: [...steps],
-						output: {
-							summary:
-								steps
-									.filter((s) => s.type === "text")
-									.map((s) => s.content)
-									.pop() || "Agent execution completed.",
-							structuredOutput,
-						},
-					}).catch((err) =>
-						console.warn("[agent-runner] Failed to save structured output:", err),
-					);
 				}
 			} catch (err) {
-				console.warn("[agent-runner] Failed to extract structured output:", err);
+				console.warn("[agent-runner] Failed to generate structured output:", err);
 			}
 		}
+
+		// Now finalise: send onComplete and update DB
+		const durationMs = Date.now() - startTime;
+		const usageData = streamUsage;
+		const summary = steps
+			.filter((s) => s.type === "text")
+			.map((s) => s.content)
+			.pop() || "Agent execution completed.";
+		const structuredOutput = steps.find((s) => s.type === "structured-output")?.structuredOutput;
+
+		try {
+			await updateAgentExecution({
+				id: executionId,
+				status: "completed",
+				steps,
+				output: { summary, ...(structuredOutput ? { structuredOutput } : {}) },
+				tokensUsed: usageData,
+				durationMs,
+			});
+		} catch (err) {
+			console.warn("[agent-runner] Failed to finalise execution:", err);
+		}
+
+		callbacks.onComplete({
+			status: "completed",
+			summary,
+			steps,
+			usage: usageData,
+			durationMs,
+			executionId,
+		});
 	} catch (error) {
 		// Mark as failed in DB
 		if (executionId) {

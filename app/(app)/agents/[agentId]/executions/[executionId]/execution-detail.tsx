@@ -307,7 +307,7 @@ export function ExecutionDetail({
 
 				{/* Main content — steps */}
 				<div className="flex-1 overflow-y-auto bg-background px-6 py-4">
-					<div className="max-w-[600px] mx-auto">
+					<div className="max-w-[600px] mx-auto pb-12">
 					<h2 className="mb-3 text-base font-semibold tracking-tight text-foreground">Steps</h2>
 					<div className="flex flex-col gap-3">
 						<ExecutionTimeline

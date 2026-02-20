@@ -88,7 +88,7 @@ Be methodical. Explain each decision briefly so the audience understands why thi
 			.describe("US state for the placement"),
 		facilityName: z
 			.string()
-			.optional()
+			.default("Memorial Hospital Jacksonville")
 			.describe("Facility name"),
 		dealType: z
 			.enum(["standard", "lapse", "quickstart", "reassignment"])
