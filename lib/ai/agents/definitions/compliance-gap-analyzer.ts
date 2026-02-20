@@ -46,33 +46,28 @@ Use getPlacementCompliance to check which requirements the candidate already ful
 - Items that have expired since last assignment
 
 STEP 4 — GET FA PACKAGES:
-Use faGetPackages to see what screening packages First Advantage offers. Match the outstanding background check items to the right FA package.
+Use faGetPackages to see what screening packages First Advantage offers. Each package has a "title", "components" (list of screening types), and "products" (with codes like CRST, EXOIG, SSV1). Match the outstanding background check items to the right FA package based on components.
 
-STEP 5 — PRESENT THE ANALYSIS:
-Group the output by requirement source, not just status. For each group, show:
+STEP 5 — POPULATE THE STRUCTURED OUTPUT:
+Your response will be structured automatically. Fill in every field accurately:
 
-FEDERAL CORE (X of Y complete)
-  [DONE] Item — status, evidence source
-  [MISSING] Item — what's needed, who handles it (FA / candidate / Credentially)
-
-STATE: FLORIDA (X of Y complete)
-  [DONE] Item — carries forward from [previous state] OR new for this state
-  [MISSING] Item — what's needed
-
-ROLE: ICU RN (X of Y complete)
-  [DONE] Item — carries forward, expiry date
-  [MISSING] Item — what's needed
-
-FACILITY: MEMORIAL HOSPITAL (X of Y complete)
-  [MISSING] Item — placement-scoped, must be completed fresh
-
-Then summarise:
-1. Overall compliance: X of Y items (Z%)
-2. Items carrying forward from previous assignments (the worker passport value)
-3. New items for this placement
-4. Recommended FA screening package (#1 Standard or #2 Standard + OIG/SAM) and why
-5. Estimated time to full compliance
-6. What can start immediately vs what's blocked
+- candidateName, roleName, facilityName, targetState: from the lookup
+- overall: total completed/total/percentage across ALL groups
+- groups: one per source category (federal, state, role, facility). Each group has:
+  - source: "federal" | "state" | "role" | "facility"
+  - label: display name (e.g. "FEDERAL CORE", "STATE: FLORIDA", "ROLE: ICU RN", "FACILITY: MEMORIAL HOSPITAL")
+  - completed/total: count for this group
+  - items: each compliance item with:
+    - name: item name
+    - status: "done" (current and valid), "missing" (not present), "expired" (was valid, now expired)
+    - detail: context (e.g. "carries forward, expires 30 Jan 2027", "FA-handled, requires screening", "placement-scoped, must complete on-site")
+    - handler: who handles it — "fa" (First Advantage screening), "candidate" (they must provide), "facility" (on-site), "credentially" (platform handles)
+- recommendation: the FA package to use (faPackageId, faPackageName, reason)
+- workerPassportCount: how many items carry forward from previous assignments
+- newItemCount: how many new items are needed for this placement
+- estimatedTimeToCompliance: realistic estimate (e.g. "2-4 weeks")
+- blockers: things that must be resolved before placement can start
+- immediateActions: things that can start right away
 
 Be specific about state requirements. Florida requires Level 2 fingerprinting. Texas requires state DPS check. California requires DOJ LiveScan.
 
@@ -87,6 +82,40 @@ The grouped output is the key demo moment. It shows the audience that Credential
 		"getAgentMemory",
 		"saveAgentMemory",
 	],
+
+	outputSchema: z.object({
+		candidateName: z.string().describe("Full name of the candidate"),
+		roleName: z.string().describe("Role title (e.g. Travel ICU RN)"),
+		facilityName: z.string().describe("Facility name"),
+		targetState: z.string().describe("US state for the placement"),
+		overall: z.object({
+			completed: z.number().describe("Number of completed items"),
+			total: z.number().describe("Total number of required items"),
+			percentage: z.number().describe("Completion percentage (0-100)"),
+		}),
+		groups: z.array(z.object({
+			source: z.enum(["federal", "state", "role", "facility"]).describe("Requirement source category"),
+			label: z.string().describe("Display label (e.g. 'FEDERAL CORE', 'STATE: FLORIDA', 'ROLE: ICU RN')"),
+			completed: z.number(),
+			total: z.number(),
+			items: z.array(z.object({
+				name: z.string().describe("Compliance item name"),
+				status: z.enum(["done", "missing", "expired"]).describe("Current status"),
+				detail: z.string().describe("Status detail (e.g. 'carries forward, expires 30 Jan 2027')"),
+				handler: z.enum(["fa", "candidate", "facility", "credentially"]).optional().describe("Who handles this item"),
+			})),
+		})),
+		recommendation: z.object({
+			faPackageId: z.string().describe("Recommended FA package ID"),
+			faPackageName: z.string().describe("Recommended FA package name"),
+			reason: z.string().describe("Why this package was recommended"),
+		}),
+		workerPassportCount: z.number().describe("Number of items carrying forward from previous assignments"),
+		newItemCount: z.number().describe("Number of new items for this placement"),
+		estimatedTimeToCompliance: z.string().describe("Estimated time to full compliance"),
+		blockers: z.array(z.string()).describe("Key blockers that must be resolved"),
+		immediateActions: z.array(z.string()).describe("Actions that can start right away"),
+	}),
 
 	inputSchema: z.object({
 		candidateSearch: z

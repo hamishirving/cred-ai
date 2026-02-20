@@ -5,27 +5,36 @@ import { ToolLoading } from "../tool-renderer";
 import type { ToolHandlerProps } from "../types";
 
 // ============================================
-// Types matching faCheckScreening output
+// Types matching Sterling API v2 response
 // ============================================
 
-interface ScreeningComponent {
+interface ReportItem {
+	id: string;
 	type: string;
-	subType?: string;
 	status: string;
-	result?: string;
-	updatedAt?: string;
+	result: string | null;
+	root?: string;
+	description?: string;
+	updatedAt: string;
+	estimatedCompletionTime?: string;
 }
 
 interface ScreeningData {
 	id: string;
 	candidateId: string;
 	packageId: string;
+	packageName?: string;
 	status: string;
-	result?: string;
-	reportLinks?: Array<{ href: string }>;
-	screenings?: ScreeningComponent[];
+	result: string;
+	links?: {
+		admin?: {
+			web?: string;
+		};
+	};
+	reportItems: ReportItem[];
 	submittedAt?: string;
 	updatedAt?: string;
+	estimatedCompletionTime?: string;
 }
 
 interface ScreeningOutput {
@@ -37,26 +46,7 @@ interface ScreeningOutput {
 // Helpers
 // ============================================
 
-/** Human-readable component type label */
-function componentLabel(type: string): string {
-	const labels: Record<string, string> = {
-		criminal_federal: "Criminal Federal",
-		criminal_county: "Criminal County",
-		criminal_nationwide: "Criminal Nationwide",
-		criminal_state: "Criminal State",
-		ssn_trace: "SSN Trace",
-		sex_offender: "Sex Offender",
-		facis_level3: "FACIS Level III",
-		drug_test: "Drug Test",
-		drug_10panel: "Drug Test (10-panel)",
-		oig_exclusion: "OIG Exclusion",
-		sam_exclusion: "SAM Exclusion",
-		health_screening: "Health Screening",
-	};
-	return labels[type] || type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-/** Status icon for a component */
+/** Status icon for a report item */
 function StatusIcon({ status }: { status: string }) {
 	switch (status) {
 		case "complete":
@@ -76,9 +66,11 @@ function StatusIcon({ status }: { status: string }) {
 
 /** Badge variant for overall status */
 function statusBadgeVariant(status: string): "neutral" | "info" | "success" | "warning" | "danger" {
-	switch (status) {
+	const s = status.toLowerCase();
+	switch (s) {
 		case "complete":
 			return "success";
+		case "in progress":
 		case "in_progress":
 			return "info";
 		case "pending":
@@ -94,39 +86,25 @@ function statusBadgeVariant(status: string): "neutral" | "info" | "success" | "w
 
 /** Badge variant for result */
 function resultBadgeVariant(result: string): "success" | "warning" | "danger" {
-	switch (result) {
+	const r = result.toLowerCase();
+	switch (r) {
 		case "clear":
 			return "success";
 		case "consider":
+		case "review":
 			return "warning";
 		case "adverse":
+		case "flagged":
 			return "danger";
 		default:
 			return "warning";
 	}
 }
 
-/** Format status label */
-function statusLabel(status: string): string {
-	switch (status) {
-		case "in_progress":
-			return "In Progress";
-		case "complete":
-			return "Complete";
-		case "pending":
-			return "Pending";
-		case "adverse":
-			return "Adverse";
-		case "consider":
-			return "Review";
-		default:
-			return status.charAt(0).toUpperCase() + status.slice(1);
-	}
-}
-
 /** Format result label */
 function resultLabel(result: string): string {
-	switch (result) {
+	const r = result.toLowerCase();
+	switch (r) {
 		case "clear":
 			return "Clear";
 		case "consider":
@@ -170,8 +148,8 @@ export function FAScreeningTool({
 	if (!output.data) return null;
 
 	const screening = output.data;
-	const components = screening.screenings || [];
-	const completedCount = components.filter((c) => c.status === "complete").length;
+	const items = screening.reportItems || [];
+	const completedCount = items.filter((c) => c.status === "complete").length;
 
 	return (
 		<div className="not-prose my-3 rounded-lg border bg-card text-card-foreground">
@@ -185,13 +163,13 @@ export function FAScreeningTool({
 						variant={statusBadgeVariant(screening.status)}
 						className="text-[10px] px-1.5 py-0"
 					>
-						{statusLabel(screening.status)}
+						{screening.status}
 					</Badge>
 				</div>
 
 				<div className="flex gap-3 text-xs text-muted-foreground">
 					<span>ID: {screening.id}</span>
-					<span>Pkg: {screening.packageId}</span>
+					{screening.packageName && <span>Pkg: {screening.packageName}</span>}
 					{screening.submittedAt && (
 						<span>
 							Submitted:{" "}
@@ -206,46 +184,48 @@ export function FAScreeningTool({
 				</div>
 
 				{/* Progress bar */}
-				{components.length > 0 && (
+				{items.length > 0 && (
 					<div className="space-y-1">
 						<div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
 							<div
 								className="h-full rounded-full transition-all bg-green-500"
 								style={{
-									width: `${Math.round((completedCount / components.length) * 100)}%`,
+									width: `${Math.round((completedCount / items.length) * 100)}%`,
 								}}
 							/>
 						</div>
 						<span className="text-xs text-muted-foreground">
-							{completedCount} of {components.length} components complete
+							{completedCount} of {items.length} components complete
 						</span>
 					</div>
 				)}
 			</div>
 
-			{/* Component breakdown */}
-			{components.length > 0 && (
+			{/* Report items breakdown */}
+			{items.length > 0 && (
 				<div className="p-3">
 					<div className="flex flex-col gap-2">
-						{components.map((component, i) => (
+						{items.map((item) => (
 							<div
-								key={`${component.type}-${i}`}
+								key={item.id}
 								className="flex items-center gap-2 text-sm"
 							>
-								<StatusIcon status={component.status} />
-								<span>{componentLabel(component.type)}</span>
+								<StatusIcon status={item.status} />
+								<span>{item.type}</span>
+								{item.root && (
+									<span className="text-xs text-muted-foreground">
+										({item.root}{item.description ? ` - ${item.description}` : ""})
+									</span>
+								)}
 								<div className="ml-auto flex items-center gap-1.5">
-									{component.result && (
+									{item.result && (
 										<Badge
-											variant={resultBadgeVariant(component.result)}
+											variant={resultBadgeVariant(item.result)}
 											className="text-[10px] px-1.5 py-0"
 										>
-											{resultLabel(component.result)}
+											{resultLabel(item.result)}
 										</Badge>
 									)}
-									<span className="text-xs text-muted-foreground">
-										{statusLabel(component.status)}
-									</span>
 								</div>
 							</div>
 						))}
@@ -254,7 +234,7 @@ export function FAScreeningTool({
 			)}
 
 			{/* Overall result (when complete) */}
-			{screening.status === "complete" && screening.result && (
+			{screening.status.toLowerCase() === "complete" && screening.result && (
 				<div className="p-3 border-t">
 					<div className="flex items-center justify-between">
 						<span className="text-sm font-medium">Overall Result</span>
@@ -268,16 +248,16 @@ export function FAScreeningTool({
 				</div>
 			)}
 
-			{/* Report link */}
-			{screening.reportLinks && screening.reportLinks.length > 0 && (
+			{/* Admin link */}
+			{screening.links?.admin?.web && (
 				<div className="p-3 border-t">
 					<a
-						href={screening.reportLinks[0].href}
+						href={screening.links.admin.web}
 						target="_blank"
 						rel="noopener noreferrer"
 						className="text-xs text-blue-600 hover:underline"
 					>
-						View Full Report
+						View in Sterling Portal
 					</a>
 				</div>
 			)}

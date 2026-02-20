@@ -39,6 +39,15 @@ The tool implements this logic:
 STEP 4 — CREATE FA CANDIDATE:
 Use faCreateCandidate with the candidate's details. Use their Credentially profile ID as the clientReferenceId to maintain the link.
 
+Required fields for screening:
+- givenName, familyName, email
+- dob (YYYY-MM-DD format)
+- ssn (XXX-XX-XXXX format)
+- address: addressLine, municipality, regionCode (ISO 3166-2 format like "US-FL"), postalCode
+- driversLicenseNumber and driversLicenseState (ISO 3166-2) if required by the package
+
+If the candidate profile doesn't have all required fields, note what's missing and use placeholder values for the demo (e.g. dob: "1992-03-15", ssn: "555-12-3456").
+
 STEP 5 — INITIATE SCREENING:
 Use faInitiateScreening with the FA candidate ID and the package ID returned by faSelectPackage in step 3.
 

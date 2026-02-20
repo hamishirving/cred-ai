@@ -7,6 +7,7 @@ import { ToolStepCard } from "./step-cards/tool-step-card";
 import { ReasoningStepCard } from "./step-cards/reasoning-step-card";
 import { BrowserStepCard } from "./step-cards/browser-step-card";
 import { DecisionStepCard } from "./step-cards/decision-step-card";
+import { StructuredOutputStepCard } from "./step-cards/structured-output-step-card";
 
 interface ExecutionTimelineProps {
 	steps: AgentStep[];
@@ -30,6 +31,10 @@ function StepCard({
 	isLastStep: boolean;
 	isRunning: boolean;
 }) {
+	if (step.type === "structured-output") {
+		return <StructuredOutputStepCard step={step} />;
+	}
+
 	if (step.type === "tool-call") {
 		if (step.toolName === "browseAndVerify" || step.toolName === "dvlaBrowseVerify" || step.toolName === "gdcBrowseVerify") {
 			const isActive = isLastStep && isRunning;
@@ -110,10 +115,11 @@ function reorderSteps(steps: AgentStep[]): AgentStep[] {
 			i++;
 		}
 
-		// Text first, then tool calls
+		// Text first, then tool calls, then structured output last
 		const text = group.filter((s) => s.type === "text");
 		const tools = group.filter((s) => s.type === "tool-call");
-		result.push(...text, ...tools);
+		const structured = group.filter((s) => s.type === "structured-output");
+		result.push(...text, ...tools, ...structured);
 	}
 
 	return result;

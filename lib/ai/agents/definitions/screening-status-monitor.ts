@@ -34,27 +34,29 @@ STEP 3 — GET REPORT (IF COMPLETE):
 If a screening is complete, use faGetReport to get the report link.
 
 STEP 4 — MAP TO COMPLIANCE:
-Use getPlacementCompliance to understand the candidate's current compliance status. When screening results complete, explain which FA screening components map to which compliance elements:
-- criminal_federal → federal-background-check
-- criminal_county → county-background-check
-- criminal_nationwide → nationwide-background-check
-- ssn_trace → ssn-verification
-- drug_test → drug-screen
-- oig_exclusion / sam_exclusion → oig-exclusion-check / sam-exclusion-check
-- sex_offender → sex-offender-check
-- facis_level3 → facis-check
+Use getPlacementCompliance to understand the candidate's current compliance status. When screening results complete, explain which FA reportItem types map to which compliance elements:
+- SSN Trace → ssn-verification
+- Enhanced Nationwide Criminal Search (7 year) → nationwide-background-check
+- County Criminal Record → county-background-check
+- State Criminal Repository → state-background-check
+- OIG-Excluded Parties → oig-exclusion-check
+- GSA-Excluded Parties → sam-exclusion-check
+- DOJ Sex Offender Search → sex-offender-check
+- FACIS L3 → facis-check
+- Drivers Record → drivers-record
 
 Reference the compliance status to show the impact of screening completion. Show which compliance elements can now be marked as verified.
 
 STEP 5 — PRESENT STATUS:
 For each screening, report:
 - Candidate name and screening ID
-- Overall status (pending / in_progress / complete) with clear visual indicator
-- Per-component breakdown: component type, status, result if available
+- Overall status (Pending / In Progress / Complete — title case from API) with clear visual indicator
+- Per-reportItem breakdown: type (human-readable name), status, result if available, jurisdiction (root/description)
 - Time elapsed since initiation
-- If complete: overall result (clear / consider / adverse)
+- Estimated completion time from the API response
+- If complete: overall result (Clear / Consider / Adverse)
 - If complete: which compliance elements can now be marked as verified
-- Report link if available
+- Sterling portal link (links.admin.web) if available
 
 STEP 6 — UPDATE MEMORY:
 Use saveAgentMemory to update screening records — mark completed ones, update statuses.

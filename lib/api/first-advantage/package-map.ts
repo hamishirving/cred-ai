@@ -1,46 +1,59 @@
 /**
  * FA Package Map
  *
- * Maps Credentially compliance element slugs <-> FA screening component types.
+ * Maps Credentially compliance element slugs <-> FA reportItem types.
  * Used to translate FA screening results back to compliance element updates.
+ *
+ * reportItem.type values come from the real Sterling API (human-readable strings).
  */
 
-/** Maps our element slugs to the FA screening component type that fulfils them */
+/** Maps our element slugs to the FA reportItem type that fulfils them */
 export const elementToFAComponent: Record<string, string> = {
-  "federal-background-check": "criminal_federal",
-  "state-background-check": "criminal_state",
-  "california-background-check": "criminal_state_ca",
-  "texas-background-check": "criminal_state_tx",
-  "florida-level2-background": "criminal_state_fl",
-  "drug-screen": "drug_test_10panel",
-  "oig-exclusion-check": "oig_exclusion",
-  "sam-exclusion-check": "sam_exclusion",
+	"federal-background-check": "Enhanced Nationwide Criminal Search (7 year)",
+	"county-background-check": "County Criminal Record",
+	"state-background-check": "State Criminal Repository",
+	"ssn-verification": "SSN Trace",
+	"sex-offender-check": "DOJ Sex Offender Search",
+	"facis-check": "FACIS L3",
+	"oig-exclusion-check": "OIG-Excluded Parties",
+	"sam-exclusion-check": "GSA-Excluded Parties",
+	"drivers-record": "Drivers Record",
+	"nationwide-background-check": "Enhanced Nationwide Criminal Search (7 year)",
 };
 
-/** Reverse map: FA component type -> compliance element slug */
-export const faComponentToElement: Record<string, string> = Object.fromEntries(
-  Object.entries(elementToFAComponent).map(([k, v]) => [v, k]),
-);
+/** Reverse map: FA reportItem type -> compliance element slug */
+export const faComponentToElement: Record<string, string> = {
+	"SSN Trace": "ssn-verification",
+	"Enhanced Nationwide Criminal Search (7 year)": "nationwide-background-check",
+	"County Criminal Record": "county-background-check",
+	"State Criminal Repository": "state-background-check",
+	"Drivers Record": "drivers-record",
+	"OIG-Excluded Parties": "oig-exclusion-check",
+	"GSA-Excluded Parties": "sam-exclusion-check",
+	"FACIS L3": "facis-check",
+	"DOJ Sex Offender Search": "sex-offender-check",
+	"National Wants Warrants": "national-wants-warrants",
+};
 
 /**
- * Given an FA screening result, determine which compliance elements it fulfils.
+ * Given FA screening reportItems, determine which compliance elements they fulfil.
  */
 export function mapScreeningToElements(
-  screeningComponents: Array<{ type: string; status: string; result?: string }>,
+	reportItems: Array<{ type: string; status: string; result?: string | null }>,
 ): Array<{
-  elementSlug: string;
-  faComponentType: string;
-  status: string;
-  result?: string;
-  canMarkVerified: boolean;
+	elementSlug: string;
+	faReportItemType: string;
+	status: string;
+	result?: string | null;
+	canMarkVerified: boolean;
 }> {
-  return screeningComponents
-    .filter((c) => faComponentToElement[c.type])
-    .map((c) => ({
-      elementSlug: faComponentToElement[c.type],
-      faComponentType: c.type,
-      status: c.status,
-      result: c.result,
-      canMarkVerified: c.status === "complete" && c.result === "clear",
-    }));
+	return reportItems
+		.filter((item) => faComponentToElement[item.type])
+		.map((item) => ({
+			elementSlug: faComponentToElement[item.type],
+			faReportItemType: item.type,
+			status: item.status,
+			result: item.result,
+			canMarkVerified: item.status === "complete" && item.result === "clear",
+		}));
 }

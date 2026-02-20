@@ -103,7 +103,7 @@ export async function POST(
 								status: result.status,
 								agentId: agent.id,
 							});
-							controller.close();
+							// Don't close here — structured output steps may follow
 						},
 						onError: (error) => {
 							sendEvent("agent-status", {
@@ -121,7 +121,6 @@ export async function POST(
 								},
 								durationMs: 0,
 							});
-							controller.close();
 						},
 					},
 				);
@@ -131,6 +130,8 @@ export async function POST(
 					error:
 						error instanceof Error ? error.message : "Unknown error occurred",
 				});
+			} finally {
+				// Close stream after executeAgent fully completes (including structured output)
 				controller.close();
 			}
 		},

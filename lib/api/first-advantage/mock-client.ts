@@ -2,147 +2,169 @@
  * Mock FA Client
  *
  * Simulates realistic FA behaviour with time-based status progression.
- * Results are deterministic per candidate for repeatable demos.
+ * Response shapes match the real Sterling API v2 (see API-REFERENCE.md).
  */
 
 import type {
-  FAClient,
-  FAAuthToken,
-  FAPackage,
-  FACreateCandidateInput,
-  FACandidate,
-  FAInitiateScreeningInput,
-  FAScreening,
-  FAReportLink,
+	FAClient,
+	FAAuthToken,
+	FAPackage,
+	FACreateCandidateInput,
+	FACandidate,
+	FAInitiateScreeningInput,
+	FAScreening,
+	FAReportLink,
 } from "./types";
 
 // In-memory store for mock screenings
 const mockScreenings = new Map<string, FAScreening & { createdAt: number }>();
-let nextCandidateId = 1000;
 let nextScreeningId = 5000;
 
 export class MockFAClient implements FAClient {
-  async authenticate(): Promise<FAAuthToken> {
-    return {
-      access_token: "mock-token-" + Date.now(),
-      token_type: "Bearer",
-      expires_in: 3600,
-      expiresAt: Date.now() + 3600_000,
-    };
-  }
+	async authenticate(): Promise<FAAuthToken> {
+		return {
+			access_token: "mock-token-" + Date.now(),
+			token_type: "bearer",
+			expires_in: "3600",
+			expiresAt: Date.now() + 3600_000,
+		};
+	}
 
-  async getPackages(): Promise<FAPackage[]> {
-    return [
-      {
-        id: "539147",
-        name: "Sample Standard + FACIS",
-        description: "SSN Trace, County Criminal, Federal Criminal, Nationwide 7yr, Sex Offender, FACIS L3",
-        currentVersion: {
-          screenings: [
-            { type: "criminal", subType: "county" },
-            { type: "criminal", subType: "federal" },
-            { type: "criminal", subType: "nationwide" },
-            { type: "identity", subType: "ssn_trace" },
-            { type: "sex_offender", subType: "national" },
-            { type: "healthcare", subType: "facis_level3" },
-          ],
-        },
-      },
-      {
-        id: "539150",
-        name: "Standard + D&HS",
-        description: "Standard + Drug Test + Health Screening",
-        currentVersion: {
-          screenings: [
-            { type: "criminal", subType: "county" },
-            { type: "criminal", subType: "federal" },
-            { type: "criminal", subType: "nationwide" },
-            { type: "identity", subType: "ssn_trace" },
-            { type: "sex_offender", subType: "national" },
-            { type: "healthcare", subType: "facis_level3" },
-            { type: "drug", subType: "10panel" },
-            { type: "health", subType: "screening" },
-          ],
-        },
-      },
-      {
-        id: "587791",
-        name: "Medical Solution Package 0",
-        description: "Placeholder -- SSN Trace only",
-        currentVersion: {
-          screenings: [{ type: "identity", subType: "ssn_trace" }],
-        },
-      },
-    ];
-  }
+	async getPackages(): Promise<FAPackage[]> {
+		return [
+			{
+				id: "571732",
+				title: "Medical Solutions Package TEST",
+				active: true,
+				type: "Standard",
+				components: [
+					"State Criminal Repository",
+					"County Criminal Record",
+					"SSN Trace",
+					"HealthCare - Excluded Parties",
+					"Criminal Enhanced Nationwide (7 year)",
+					"FACISL",
+					"DOJ Sex Offender Search",
+					"Drivers Record",
+					"National Wants Warrants",
+				],
+				products: [
+					{ code: "CRST", description: "State Criminal Repository", variants: [] },
+					{ code: "EXOIG", description: "HealthCare - Excluded Parties", variants: [{ id: "3604", root: "GSA", description: "General Services Administration", subtypes: [] }] },
+					{ code: "MSMJVII", description: "Criminal Enhanced Nationwide (7 year)", variants: [] },
+					{ code: "CRFM", description: "County Criminal Record", variants: [] },
+					{ code: "CRSEXDOJ", description: "DOJ Sex Offender Search", variants: [] },
+					{ code: "CRNW", description: "National Wants Warrants", variants: [] },
+					{ code: "SSV1", description: "SSN Trace", variants: [] },
+					{ code: "DR", description: "Drivers Record", variants: [] },
+					{ code: "FACISL", description: "FACISL", variants: [{ id: "5114", root: "FACIS", description: "L3", subtypes: [] }] },
+				],
+				requiredFields: ["address.addressLine", "address.countryCode", "address.municipality", "address.postalCode", "address.regionCode", "dob", "driversLicense.issuingAgency", "driversLicense.licenseNumber", "email", "familyName", "givenName", "ssn"],
+			},
+			{
+				id: "587791",
+				title: "Medical Solution Package 0",
+				active: true,
+				type: "Standard",
+				components: ["SSN Trace"],
+				products: [
+					{ code: "SSV1", description: "SSN Trace", variants: [] },
+				],
+				requiredFields: ["address.addressLine", "address.countryCode", "address.municipality", "address.postalCode", "address.regionCode", "dob", "familyName", "givenName", "ssn"],
+			},
+		];
+	}
 
-  async createCandidate(input: FACreateCandidateInput): Promise<FACandidate> {
-    const id = String(nextCandidateId++);
-    return {
-      id,
-      links: [{ rel: "self", href: `/v2/candidates/${id}` }],
-    };
-  }
+	async createCandidate(input: FACreateCandidateInput): Promise<FACandidate> {
+		const id = crypto.randomUUID();
+		return {
+			id,
+			clientReferenceId: input.clientReferenceId,
+			email: input.email,
+			givenName: input.givenName,
+			familyName: input.familyName,
+			confirmedNoMiddleName: false,
+			dob: input.dob,
+			ssn: input.ssn,
+			address: input.address,
+			screeningIds: [],
+			driversLicense: input.driversLicense,
+		};
+	}
 
-  async initiateScreening(input: FAInitiateScreeningInput): Promise<FAScreening> {
-    const id = String(nextScreeningId++);
-    const screening: FAScreening & { createdAt: number } = {
-      id,
-      candidateId: input.candidateId,
-      packageId: input.packageId,
-      status: "pending",
-      screenings: [
-        { type: "criminal_federal", status: "pending" },
-        { type: "criminal_county", status: "pending" },
-        { type: "criminal_nationwide", status: "pending" },
-        { type: "ssn_trace", status: "pending" },
-        { type: "sex_offender", status: "pending" },
-        { type: "facis_level3", status: "pending" },
-      ],
-      submittedAt: new Date().toISOString(),
-      createdAt: Date.now(),
-    };
-    mockScreenings.set(id, screening);
-    return screening;
-  }
+	async initiateScreening(input: FAInitiateScreeningInput): Promise<FAScreening> {
+		const id = String(nextScreeningId++);
+		const now = new Date().toISOString();
+		const screening: FAScreening & { createdAt: number } = {
+			id,
+			packageId: input.packageId,
+			packageName: input.packageId === "571732" ? "Medical Solutions Package TEST" : "Medical Solution Package 0",
+			accountName: "Medical Solutions_Old",
+			candidateId: input.candidateId,
+			status: "Pending",
+			result: "Pending",
+			links: {
+				admin: {
+					web: `https://demo.sterlingcheck.app/order/${id}`,
+				},
+			},
+			reportItems: [
+				{ id: `${id}-1`, type: "SSN Trace", status: "pending", result: null, updatedAt: now, estimatedCompletionTime: now },
+				{ id: `${id}-2`, type: "Enhanced Nationwide Criminal Search (7 year)", status: "pending", result: null, updatedAt: now, estimatedCompletionTime: now },
+				{ id: `${id}-3`, type: "County Criminal Record", status: "pending", result: null, root: "FL", description: "DUVAL", updatedAt: now, estimatedCompletionTime: now },
+				{ id: `${id}-4`, type: "State Criminal Repository", status: "pending", result: null, root: "FL", description: "Florida Dept of Law Enforcement", updatedAt: now, estimatedCompletionTime: now },
+				{ id: `${id}-5`, type: "OIG-Excluded Parties", status: "pending", result: null, root: "OIG", description: "Office of Inspector General", updatedAt: now, estimatedCompletionTime: now },
+				{ id: `${id}-6`, type: "GSA-Excluded Parties", status: "pending", result: null, root: "GSA", description: "General Services Administration", updatedAt: now, estimatedCompletionTime: now },
+				{ id: `${id}-7`, type: "FACIS L3", status: "pending", result: null, root: "FACIS", description: "L3", updatedAt: now, estimatedCompletionTime: now },
+				{ id: `${id}-8`, type: "DOJ Sex Offender Search", status: "pending", result: null, updatedAt: now, estimatedCompletionTime: now },
+			],
+			submittedAt: now,
+			updatedAt: now,
+			estimatedCompletionTime: now,
+			createdAt: Date.now(),
+		};
+		mockScreenings.set(id, screening);
+		return screening;
+	}
 
-  async getScreening(screeningId: string): Promise<FAScreening> {
-    const screening = mockScreenings.get(screeningId);
-    if (!screening) {
-      throw new Error(`Screening ${screeningId} not found`);
-    }
+	async getScreening(screeningId: string): Promise<FAScreening> {
+		const screening = mockScreenings.get(screeningId);
+		if (!screening) {
+			throw new Error(`Screening ${screeningId} not found`);
+		}
 
-    // Time-based progression
-    const elapsed = Date.now() - screening.createdAt;
-    const components = screening.screenings || [];
+		// Time-based progression
+		const elapsed = Date.now() - screening.createdAt;
+		const items = screening.reportItems;
 
-    if (elapsed > 15_000) {
-      // After 15s: all complete
-      screening.status = "complete";
-      screening.result = "clear";
-      for (const c of components) {
-        c.status = "complete";
-        c.result = "clear";
-      }
-    } else if (elapsed > 5_000) {
-      // After 5s: in progress, some components done
-      screening.status = "in_progress";
-      const doneCount = Math.min(
-        Math.floor((elapsed - 5000) / 2000),
-        components.length - 1,
-      );
-      for (let i = 0; i < components.length; i++) {
-        if (i < doneCount) {
-          components[i].status = "complete";
-          components[i].result = "clear";
-        }
-      }
-    }
+		if (elapsed > 15_000) {
+			// After 15s: all complete
+			screening.status = "Complete";
+			screening.result = "Clear";
+			for (const item of items) {
+				item.status = "complete";
+				item.result = "clear";
+			}
+		} else if (elapsed > 5_000) {
+			// After 5s: in progress, some components done
+			screening.status = "In Progress";
+			const doneCount = Math.min(
+				Math.floor((elapsed - 5000) / 2000),
+				items.length - 1,
+			);
+			for (let i = 0; i < items.length; i++) {
+				if (i < doneCount) {
+					items[i].status = "complete";
+					items[i].result = "clear";
+				}
+			}
+		}
 
-    return { ...screening };
-  }
+		const { createdAt: _, ...result } = screening;
+		return { ...result };
+	}
 
-  async getReportLink(screeningId: string): Promise<FAReportLink> {
-    return { href: `https://demo.sterlingcheck.app/reports/${screeningId}` };
-  }
+	async getReportLink(screeningId: string): Promise<FAReportLink> {
+		return { href: `https://demo.sterlingcheck.app/reports/${screeningId}` };
+	}
 }

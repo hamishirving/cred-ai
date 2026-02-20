@@ -57,6 +57,9 @@ export interface AgentDefinition {
 
 	/** Optional function to assemble dynamic context (Layer 4) */
 	dynamicContext?: (ctx: AgentExecutionContext) => Promise<string>;
+
+	/** Optional structured output schema — when set, agent's final response is constrained to this shape */
+	outputSchema?: z.ZodType;
 }
 
 /**
@@ -88,7 +91,7 @@ export interface AgentStep {
 	/** Step index (1-based) */
 	index: number;
 	/** Step type */
-	type: "tool-call" | "reasoning" | "text";
+	type: "tool-call" | "reasoning" | "text" | "structured-output";
 	/** Tool name (if tool-call) */
 	toolName?: string;
 	/** Tool input (if tool-call) */
@@ -97,6 +100,8 @@ export interface AgentStep {
 	toolOutput?: unknown;
 	/** Text content (if reasoning/text) */
 	content?: string;
+	/** Parsed structured output (if structured-output) */
+	structuredOutput?: unknown;
 	/** Step duration in ms */
 	durationMs?: number;
 	/** When this step occurred */
