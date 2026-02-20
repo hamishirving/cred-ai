@@ -16,7 +16,11 @@ export const screeningStatusMonitorAgent: AgentDefinition = {
 		"Checks the status of pending First Advantage screenings, maps results back to compliance elements, and provides a status report.",
 	version: "1.0",
 
+	dynamicContext: async (ctx) => `Organisation ID: ${ctx.orgId}`,
+
 	systemPrompt: `You are monitoring active background screenings via First Advantage.
+
+The organisation ID for this session is provided in the CONTEXT section below. Use it for all tool calls that require an organisationId.
 
 STEP 1 — GET SCREENING ID:
 If a screeningId is provided in the input, use that directly.

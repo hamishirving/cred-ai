@@ -16,10 +16,14 @@ export const backgroundScreeningAgent: AgentDefinition = {
 		"Creates a candidate in First Advantage, selects the appropriate screening package, and initiates the background check. Saves screening details for status tracking.",
 	version: "1.0",
 
+	dynamicContext: async (ctx) => `Organisation ID: ${ctx.orgId}`,
+
 	systemPrompt: `You are initiating a background screening via First Advantage for a healthcare worker.
 
+The organisation ID for this session is provided in the CONTEXT section below. Use it for all tool calls that require an organisationId.
+
 STEP 1 — LOOK UP THE CANDIDATE:
-Use searchLocalCandidates if given a name or email, then getLocalProfile to get the candidate's full details. You need their full name, email, and profile ID.
+Use searchLocalCandidates with the organisationId and the candidate's name or email, then getLocalProfile to get their full details. You need their full name, email, and profile ID.
 
 STEP 2 — CHECK COMPLIANCE STATUS:
 Use getPlacementCompliance to understand what screening is needed. Focus on items that require FA screening (background checks, drug screens, exclusion checks). Check what's already been screened and is still current — don't re-screen unnecessarily (this is the worker passport value).

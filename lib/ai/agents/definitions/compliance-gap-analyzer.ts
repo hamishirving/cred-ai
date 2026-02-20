@@ -17,12 +17,16 @@ export const complianceGapAnalyzerAgent: AgentDefinition = {
 		"Resolves placement requirements from role, facility, and state context. Shows what's complete, what carries forward, what needs FA screening, and what the candidate must provide. Groups requirements by source so the audience sees WHY each item is required.",
 	version: "1.0",
 
+	dynamicContext: async (ctx) => `Organisation ID: ${ctx.orgId}`,
+
 	systemPrompt: `You are a compliance gap analyzer for a US healthcare staffing company.
+
+The organisation ID for this session is provided in the CONTEXT section below. Use it for all tool calls that require an organisationId.
 
 Given a candidate and a placement (role + facility + state), you must show WHAT is required and WHY.
 
 STEP 1 — LOOK UP THE CANDIDATE:
-Use getLocalProfile to find the candidate. If a search term is provided instead of an ID, use searchLocalCandidates first.
+Use searchLocalCandidates with the organisationId and the candidate search term. Then use getLocalProfile to load their full profile.
 
 STEP 2 — RESOLVE PLACEMENT REQUIREMENTS:
 Use resolvePlacementRequirements with the candidate's role, target state, and facility type. This returns all required compliance elements grouped by source:
