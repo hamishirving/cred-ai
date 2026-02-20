@@ -42,6 +42,7 @@ import {
 	compliancePackages,
 	complianceElements,
 	// Identity & People
+	profileShareLinks,
 	orgMemberships,
 	profiles,
 	users,
@@ -230,6 +231,14 @@ export async function clearAllData() {
 	}
 	console.log("   ✓ Cleared reference_contacts");
 
+	// Profile share links (must delete before profiles)
+	if (preservedOrgIds.length > 0) {
+		await db.delete(profileShareLinks).where(notInArray(profileShareLinks.organisationId, preservedOrgIds));
+	} else {
+		await db.delete(profileShareLinks);
+	}
+	console.log("   ✓ Cleared profile_share_links");
+
 	// Profiles: preserve those in preserved orgs
 	if (preservedOrgIds.length > 0) {
 		await db.delete(profiles).where(notInArray(profiles.organisationId, preservedOrgIds));
@@ -402,6 +411,8 @@ export async function clearOrgData(orgId: string): Promise<void> {
 	await db.delete(complianceElements).where(eq(complianceElements.organisationId, orgId));
 
 	// 7. Identity
+	// Profile share links (must delete before profiles)
+	await db.delete(profileShareLinks).where(eq(profileShareLinks.organisationId, orgId));
 	// Reference contacts (must delete before profiles)
 	await db.delete(referenceContacts).where(eq(referenceContacts.organisationId, orgId));
 	// Delete all org memberships (will be restored for real users after roles recreated)
