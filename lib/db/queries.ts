@@ -14,8 +14,6 @@ import {
 	sql,
 	type SQL,
 } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
 import type { ArtifactKind } from "@/components/artifact";
 import type { VisibilityType } from "@/components/visibility-selector";
 import { ChatSDKError } from "../errors";
@@ -42,6 +40,11 @@ import {
 	type Profile,
 	placements,
 	type Placement,
+	roles,
+	type Role,
+	workNodes,
+	type WorkNode,
+	workNodeTypes,
 	pipelines,
 	type Pipeline,
 	pipelineStages,
@@ -70,13 +73,8 @@ import type {
 	VoiceCallOutcome,
 } from "../voice/types";
 
-// biome-ignore lint: Forbidden non-null assertion.
-const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-if (!databaseUrl) {
-	throw new Error("DATABASE_URL is not defined");
-}
-const client = postgres(databaseUrl);
-const db = drizzle(client);
+// Use the shared connection pool from lib/db/index.ts
+import { db } from "./index";
 
 export async function saveChat({
 	id,
@@ -1548,4 +1546,174 @@ export async function getSampleCandidate({
 		name: `${result.firstName} ${result.lastName}`,
 		email: result.email,
 	};
+}
+
+// ============================================
+// Placement Queries
+// ============================================
+
+export interface PlacementListItem {
+	id: string;
+	candidateName: string;
+	candidateEmail: string;
+	roleName: string;
+	facilityName: string;
+	jurisdiction: string | null;
+	startDate: Date | null;
+	status: string;
+	compliancePercentage: number;
+	isCompliant: boolean;
+	dealType: string | null;
+}
+
+/**
+ * Get all placements for an organisation with joined profile, role, and work node data.
+ */
+export async function getPlacementsByOrganisationId({
+	organisationId,
+}: {
+	organisationId: string;
+}): Promise<PlacementListItem[]> {
+	try {
+		const results = await db
+			.select({
+				id: placements.id,
+				firstName: profiles.firstName,
+				lastName: profiles.lastName,
+				email: profiles.email,
+				roleName: roles.name,
+				facilityName: workNodes.name,
+				jurisdiction: workNodes.jurisdiction,
+				startDate: placements.startDate,
+				status: placements.status,
+				compliancePercentage: placements.compliancePercentage,
+				isCompliant: placements.isCompliant,
+				customFields: placements.customFields,
+			})
+			.from(placements)
+			.innerJoin(profiles, eq(profiles.id, placements.profileId))
+			.innerJoin(roles, eq(roles.id, placements.roleId))
+			.innerJoin(workNodes, eq(workNodes.id, placements.workNodeId))
+			.where(eq(placements.organisationId, organisationId))
+			.orderBy(desc(placements.startDate));
+
+		return results.map((r) => ({
+			id: r.id,
+			candidateName: `${r.firstName} ${r.lastName}`,
+			candidateEmail: r.email,
+			roleName: r.roleName,
+			facilityName: r.facilityName,
+			jurisdiction: r.jurisdiction,
+			startDate: r.startDate,
+			status: r.status,
+			compliancePercentage: r.compliancePercentage,
+			isCompliant: r.isCompliant,
+			dealType: (r.customFields as Record<string, unknown>)?.dealType as string | null ?? null,
+		}));
+	} catch (error) {
+		console.error("Failed to get placements:", error);
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to get placements by organisation id",
+		);
+	}
+}
+
+export interface PlacementDetail {
+	id: string;
+	organisationId: string;
+	profileId: string;
+	candidateName: string;
+	candidateEmail: string;
+	roleName: string;
+	roleSlug: string;
+	facilityName: string;
+	facilityType: string;
+	jurisdiction: string | null;
+	startDate: Date | null;
+	endDate: Date | null;
+	status: string;
+	compliancePercentage: number;
+	isCompliant: boolean;
+	dealType: string | null;
+	notes: string | null;
+}
+
+/**
+ * Get a single placement by ID with joined profile, role, and work node data.
+ */
+export async function getPlacementById({
+	id,
+}: {
+	id: string;
+}): Promise<PlacementDetail | null> {
+	try {
+		const [result] = await db
+			.select({
+				id: placements.id,
+				organisationId: placements.organisationId,
+				profileId: placements.profileId,
+				firstName: profiles.firstName,
+				lastName: profiles.lastName,
+				email: profiles.email,
+				roleName: roles.name,
+				roleSlug: roles.slug,
+				facilityName: workNodes.name,
+				typeId: workNodes.typeId,
+				jurisdiction: workNodes.jurisdiction,
+				startDate: placements.startDate,
+				endDate: placements.endDate,
+				status: placements.status,
+				compliancePercentage: placements.compliancePercentage,
+				isCompliant: placements.isCompliant,
+				customFields: placements.customFields,
+				notes: placements.notes,
+			})
+			.from(placements)
+			.innerJoin(profiles, eq(profiles.id, placements.profileId))
+			.innerJoin(roles, eq(roles.id, placements.roleId))
+			.innerJoin(workNodes, eq(workNodes.id, placements.workNodeId))
+			.where(eq(placements.id, id));
+
+		if (!result) return null;
+
+		// Look up work node type name to derive facilityType
+		let facilityType = "hospital";
+		if (result.typeId) {
+			const [nodeType] = await db
+				.select({ name: workNodeTypes.name })
+				.from(workNodeTypes)
+				.where(eq(workNodeTypes.id, result.typeId))
+				.limit(1);
+			if (nodeType) {
+				facilityType = nodeType.name.toLowerCase();
+			}
+		}
+
+		return {
+			id: result.id,
+			organisationId: result.organisationId,
+			profileId: result.profileId,
+			candidateName: `${result.firstName} ${result.lastName}`,
+			candidateEmail: result.email,
+			roleName: result.roleName,
+			roleSlug: result.roleSlug,
+			facilityName: result.facilityName,
+			facilityType,
+			jurisdiction: result.jurisdiction,
+			startDate: result.startDate,
+			endDate: result.endDate,
+			status: result.status,
+			compliancePercentage: result.compliancePercentage,
+			isCompliant: result.isCompliant,
+			dealType: (result.customFields as Record<string, unknown>)?.dealType as string | null ?? null,
+			notes: result.notes,
+		};
+	} catch (error) {
+		console.error("Failed to get placement:", error);
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to get placement by id",
+		);
+	}
 }

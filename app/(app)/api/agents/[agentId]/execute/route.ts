@@ -67,9 +67,17 @@ export async function POST(
 
 	const stream = new ReadableStream({
 		async start(controller) {
+			let closed = false;
+
 			function sendEvent(event: string, data: unknown) {
-				const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-				controller.enqueue(encoder.encode(payload));
+				if (closed) return;
+				try {
+					const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+					controller.enqueue(encoder.encode(payload));
+				} catch {
+					// Client disconnected — stop sending
+					closed = true;
+				}
 			}
 
 			// Signal execution started (executionId will be sent once the runner creates it)
@@ -132,7 +140,13 @@ export async function POST(
 				});
 			} finally {
 				// Close stream after executeAgent fully completes (including structured output)
-				controller.close();
+				if (!closed) {
+					try {
+						controller.close();
+					} catch {
+						// Already closed by client disconnect
+					}
+				}
 			}
 		},
 	});

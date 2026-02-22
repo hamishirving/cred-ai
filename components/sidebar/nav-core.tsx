@@ -2,6 +2,7 @@
 
 import {
 	BarChart3,
+	Briefcase,
 	CheckSquare,
 	Home,
 	type LucideIcon,
@@ -50,6 +51,11 @@ export function NavCore() {
 			title: terminology.candidates,
 			url: "/candidates",
 			icon: Users,
+		},
+		{
+			title: terminology.placements,
+			url: "/placements",
+			icon: Briefcase,
 		},
 		{
 			title: "Agents",

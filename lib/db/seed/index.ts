@@ -526,7 +526,64 @@ Sign off as: "${config.name} Credentialing Team"`),
 		});
 
 		// Create placement for compliant/near-complete candidates
-		if (["compliant", "near_complete", "expiring"].includes(candidateConfig.state.status)) {
+		// FA demo candidates get special-cased below with specific work nodes and deal types
+		const faDemoPlacements: Record<string, {
+			workNodeName: string;
+			roleSlug: string;
+			status: "pending" | "onboarding" | "compliance" | "ready" | "active" | "completed" | "cancelled";
+			dealType: "standard" | "lapse" | "reassignment";
+			compliancePercentage: number;
+			startDateDays?: number;
+		}> = {
+			"ashlyn.torres@email.com": {
+				workNodeName: "Memorial Hospital Jacksonville",
+				roleSlug: "travel-icu-rn",
+				status: "onboarding",
+				dealType: "standard",
+				compliancePercentage: 45,
+				startDateDays: 28,
+			},
+			"lexie.chen@email.com": {
+				workNodeName: "UCLA Medical Center",
+				roleSlug: "travel-rn",
+				status: "compliance",
+				dealType: "reassignment",
+				compliancePercentage: 78,
+				startDateDays: 21,
+			},
+			"peter.walsh@email.com": {
+				workNodeName: "Baptist Health Miami",
+				roleSlug: "travel-rn",
+				status: "compliance",
+				dealType: "lapse",
+				compliancePercentage: 25,
+				startDateDays: 35,
+			},
+		};
+
+		const faPlacement = faDemoPlacements[candidateConfig.profile.email];
+
+		if (faPlacement) {
+			// FA demo candidate — create placement with specific work node and deal type
+			const workNodeId = nodeMap.get(faPlacement.workNodeName);
+			const roleId = roleMap.get(faPlacement.roleSlug);
+
+			if (workNodeId && roleId) {
+				await db.insert(placements).values({
+					organisationId: org.id,
+					profileId: profile.id,
+					workNodeId,
+					roleId,
+					status: faPlacement.status,
+					compliancePercentage: faPlacement.compliancePercentage,
+					isCompliant: false,
+					startDate: faPlacement.startDateDays
+						? daysFromNow(faPlacement.startDateDays)
+						: null,
+					customFields: { dealType: faPlacement.dealType },
+				});
+			}
+		} else if (["compliant", "near_complete", "expiring"].includes(candidateConfig.state.status)) {
 			const workNodeNames = config.workNodes.filter(n => n.parent).map(n => n.name);
 			const randomWorkNode = randomPick(workNodeNames);
 			const workNodeId = nodeMap.get(randomWorkNode);
