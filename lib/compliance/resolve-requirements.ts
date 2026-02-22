@@ -97,6 +97,14 @@ export interface PlacementComplianceItem {
 	packageSlug: string;
 	/** Reason the package was included */
 	packageReason: string;
+	/** How the evidence was obtained */
+	evidenceSource: string | null;
+	/** Verification level of the evidence */
+	evidenceVerificationStatus: string | null;
+	/** When the evidence was issued */
+	evidenceIssuedAt: Date | null;
+	/** When the evidence was verified */
+	evidenceVerifiedAt: Date | null;
 }
 
 // ============================================
@@ -408,6 +416,10 @@ export async function checkPlacementCompliance(
 					evidenceStatus: null,
 					packageSlug,
 					packageReason,
+					evidenceSource: null,
+					evidenceVerificationStatus: null,
+					evidenceIssuedAt: null,
+					evidenceVerifiedAt: null,
 				};
 			}
 
@@ -454,6 +466,10 @@ export async function checkPlacementCompliance(
 				evidenceStatus: ev.status,
 				packageSlug,
 				packageReason,
+				evidenceSource: ev.source,
+				evidenceVerificationStatus: ev.verificationStatus,
+				evidenceIssuedAt: ev.issuedAt,
+				evidenceVerifiedAt: ev.verifiedAt,
 			};
 		},
 	);

@@ -1623,6 +1623,7 @@ export interface PlacementDetail {
 	id: string;
 	organisationId: string;
 	profileId: string;
+	workNodeId: string;
 	candidateName: string;
 	candidateEmail: string;
 	roleName: string;
@@ -1653,6 +1654,7 @@ export async function getPlacementById({
 				id: placements.id,
 				organisationId: placements.organisationId,
 				profileId: placements.profileId,
+				workNodeId: placements.workNodeId,
 				firstName: profiles.firstName,
 				lastName: profiles.lastName,
 				email: profiles.email,
@@ -1694,6 +1696,7 @@ export async function getPlacementById({
 			id: result.id,
 			organisationId: result.organisationId,
 			profileId: result.profileId,
+			workNodeId: result.workNodeId,
 			candidateName: `${result.firstName} ${result.lastName}`,
 			candidateEmail: result.email,
 			roleName: result.roleName,
@@ -1714,6 +1717,137 @@ export async function getPlacementById({
 		throw new ChatSDKError(
 			"bad_request:database",
 			"Failed to get placement by id",
+		);
+	}
+}
+
+// ============================================
+// Work Node / Facility Queries
+// ============================================
+
+export interface WorkNodeDetail {
+	id: string;
+	name: string;
+	typeName: string;
+	jurisdiction: string | null;
+	address: string | null;
+	hierarchyPath: { id: string; name: string; typeName: string }[];
+	activePlacements: {
+		id: string;
+		candidateName: string;
+		roleName: string;
+		status: string;
+		compliancePercentage: number;
+	}[];
+}
+
+/**
+ * Get full work node detail including hierarchy path and active placements.
+ */
+export async function getWorkNodeDetail({
+	id,
+}: {
+	id: string;
+}): Promise<WorkNodeDetail | null> {
+	try {
+		// 1. Fetch the node with its type name
+		const [node] = await db
+			.select({
+				id: workNodes.id,
+				name: workNodes.name,
+				parentId: workNodes.parentId,
+				jurisdiction: workNodes.jurisdiction,
+				address: workNodes.address,
+				typeName: workNodeTypes.name,
+			})
+			.from(workNodes)
+			.innerJoin(workNodeTypes, eq(workNodeTypes.id, workNodes.typeId))
+			.where(eq(workNodes.id, id));
+
+		if (!node) return null;
+
+		// 2. Walk parent chain to build hierarchy path (max 5 levels)
+		const hierarchyPath: { id: string; name: string; typeName: string }[] = [];
+		let currentParentId = node.parentId;
+		let depth = 0;
+
+		while (currentParentId && depth < 5) {
+			const [parent] = await db
+				.select({
+					id: workNodes.id,
+					name: workNodes.name,
+					parentId: workNodes.parentId,
+					typeName: workNodeTypes.name,
+				})
+				.from(workNodes)
+				.innerJoin(workNodeTypes, eq(workNodeTypes.id, workNodes.typeId))
+				.where(eq(workNodes.id, currentParentId));
+
+			if (!parent) break;
+
+			hierarchyPath.unshift({
+				id: parent.id,
+				name: parent.name,
+				typeName: parent.typeName,
+			});
+			currentParentId = parent.parentId;
+			depth++;
+		}
+
+		// Add current node at the end
+		hierarchyPath.push({
+			id: node.id,
+			name: node.name,
+			typeName: node.typeName,
+		});
+
+		// 3. Fetch active placements at this node (limit 10)
+		const activePlacementRows = await db
+			.select({
+				id: placements.id,
+				firstName: profiles.firstName,
+				lastName: profiles.lastName,
+				roleName: roles.name,
+				status: placements.status,
+				compliancePercentage: placements.compliancePercentage,
+			})
+			.from(placements)
+			.innerJoin(profiles, eq(profiles.id, placements.profileId))
+			.innerJoin(roles, eq(roles.id, placements.roleId))
+			.where(
+				and(
+					eq(placements.workNodeId, id),
+					inArray(placements.status, [
+						"pending",
+						"onboarding",
+						"compliance",
+						"ready",
+						"active",
+					]),
+				),
+			)
+			.limit(10);
+
+		return {
+			id: node.id,
+			name: node.name,
+			typeName: node.typeName,
+			jurisdiction: node.jurisdiction,
+			address: node.address,
+			hierarchyPath,
+			activePlacements: activePlacementRows.map((r) => ({
+				id: r.id,
+				candidateName: `${r.firstName} ${r.lastName}`,
+				roleName: r.roleName,
+				status: r.status,
+				compliancePercentage: r.compliancePercentage,
+			})),
+		};
+	} catch (error) {
+		console.error("Failed to get work node detail:", error);
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to get work node detail",
 		);
 	}
 }

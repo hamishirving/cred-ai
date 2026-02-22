@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
+import faIcon from "@/app/FA-icon.png";
 import { toast } from "@/components/toast";
 import {
 	ArrowLeft,
@@ -26,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { FacilityDetailDialog } from "@/components/facility/facility-detail-dialog";
 
 // ============================================
 // Types
@@ -35,6 +38,7 @@ interface PlacementDetail {
 	id: string;
 	organisationId: string;
 	profileId: string;
+	workNodeId: string;
 	candidateName: string;
 	candidateEmail: string;
 	roleName: string;
@@ -63,6 +67,10 @@ interface ComplianceItem {
 	evidenceStatus: string | null;
 	packageSlug: string;
 	packageReason: string;
+	evidenceSource: string | null;
+	evidenceVerificationStatus: string | null;
+	evidenceIssuedAt: string | null;
+	evidenceVerifiedAt: string | null;
 }
 
 interface ComplianceSummary {
@@ -163,6 +171,36 @@ const COMPLIANCE_STATUS_VARIANT: Record<string, "success" | "danger" | "warning"
 	expiring: "warning",
 };
 
+const EVIDENCE_TYPE_LABELS: Record<string, string> = {
+	document: "Document upload",
+	form: "Form completion",
+	check: "Background check",
+	attestation: "Self-attestation",
+	external: "External verification",
+};
+
+const SCOPE_LABELS: Record<string, string> = {
+	candidate: "Candidate-scoped (portable)",
+	placement: "Placement-specific",
+};
+
+const EVIDENCE_SOURCE_LABELS: Record<string, string> = {
+	user_upload: "Uploaded by candidate",
+	cv_extraction: "Extracted from CV",
+	document_extraction: "Extracted from document",
+	external_check: "External provider",
+	ai_extraction: "AI extraction",
+	admin_entry: "Entered by admin",
+	attestation: "Self-attested",
+};
+
+const VERIFICATION_LABELS: Record<string, string> = {
+	unverified: "Unverified",
+	auto_verified: "Auto-verified",
+	human_verified: "Verified by admin",
+	external_verified: "Externally verified",
+};
+
 const SOURCE_ICONS: Record<string, typeof Shield> = {
 	federal: Shield,
 	state: MapPin,
@@ -211,17 +249,32 @@ function ComplianceStatusIcon({ status }: { status: ComplianceItem["status"] }) 
 	}
 }
 
-function ComplianceItemRow({ item }: { item: ComplianceItem }) {
+function ComplianceItemRow({
+	item,
+	isSelected,
+	onSelect,
+}: {
+	item: ComplianceItem;
+	isSelected: boolean;
+	onSelect: () => void;
+}) {
 	return (
-		<div className="flex items-center gap-3 py-2 border-b border-border/50 last:border-b-0">
+		<button
+			type="button"
+			onClick={onSelect}
+			className={cn(
+				"w-full flex items-center gap-3 py-2 px-2 border-b border-border/50 last:border-b-0 text-left transition-colors duration-100 cursor-pointer rounded-sm",
+				isSelected
+					? "bg-muted/40"
+					: "hover:bg-muted/40",
+			)}
+		>
 			<ComplianceStatusIcon status={item.status} />
 			<div className="flex-1 min-w-0">
 				<div className="flex items-center gap-2">
 					<span className="text-sm">{item.name}</span>
 					{item.faHandled && (
-						<Badge variant="info" className="text-[10px] px-1.5 py-0 leading-tight shrink-0 rounded-full">
-							FA
-						</Badge>
+						<Image src={faIcon} alt="First Advantage" className="size-4 shrink-0" />
 					)}
 					{item.carryForward && (
 						<span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0 rounded-full shrink-0">
@@ -242,16 +295,20 @@ function ComplianceItemRow({ item }: { item: ComplianceItem }) {
 			>
 				{item.status === "requires_review" ? "Review" : item.status}
 			</Badge>
-		</div>
+		</button>
 	);
 }
 
 function RequirementGroupCard({
 	group,
 	items,
+	selectedItemSlug,
+	onSelectItem,
 }: {
 	group: RequirementGroup;
 	items: ComplianceItem[];
+	selectedItemSlug: string | null;
+	onSelectItem: (slug: string) => void;
 }) {
 	const source = getSourceFromReason(group.reason);
 	const Icon = SOURCE_ICONS[source] || Shield;
@@ -290,11 +347,128 @@ function RequirementGroupCard({
 			{open && (
 				<div className="px-4 pb-3 pl-12">
 					{items.map((item) => (
-						<ComplianceItemRow key={item.slug} item={item} />
+						<ComplianceItemRow
+							key={item.slug}
+							item={item}
+							isSelected={selectedItemSlug === item.slug}
+							onSelect={() => onSelectItem(item.slug)}
+						/>
 					))}
 				</div>
 			)}
 		</Card>
+	);
+}
+
+type ElementDefinition = RequirementGroup["elements"][number];
+
+function ComplianceDetailPanel({
+	item,
+	element,
+}: {
+	item: ComplianceItem | null;
+	element: ElementDefinition | null;
+}) {
+	if (!item) {
+		return (
+			<Card className="shadow-none! bg-card p-4">
+				<p className="text-sm text-muted-foreground">Select a requirement to view details</p>
+			</Card>
+		);
+	}
+
+	const hasEvidence = !!item.evidenceId;
+
+	return (
+		<Card className="shadow-none! bg-card p-4 space-y-4">
+			{/* Header */}
+			<div className="flex items-start justify-between gap-2">
+				<h3 className="text-sm font-semibold">{item.name}</h3>
+				<Badge
+					variant={COMPLIANCE_STATUS_VARIANT[item.status] || "neutral"}
+					className="text-xs font-medium capitalize shrink-0"
+				>
+					{item.status === "requires_review" ? "Review" : item.status}
+				</Badge>
+			</div>
+
+			{/* Description */}
+			{element?.description && (
+				<p className="text-sm text-muted-foreground leading-relaxed">
+					{element.description}
+				</p>
+			)}
+
+			{/* Metadata */}
+			<div className="space-y-2">
+				{element && (
+					<>
+						<DetailRow
+							label="Scope"
+							value={SCOPE_LABELS[element.scope] || element.scope}
+						/>
+						<DetailRow
+							label="Evidence type"
+							value={EVIDENCE_TYPE_LABELS[element.evidenceType] || element.evidenceType}
+						/>
+					</>
+				)}
+
+				{hasEvidence && item.evidenceSource && (
+					<DetailRow
+						label="Source"
+						value={EVIDENCE_SOURCE_LABELS[item.evidenceSource] || item.evidenceSource}
+					/>
+				)}
+
+				{hasEvidence && item.evidenceVerificationStatus && (
+					<DetailRow
+						label="Verification"
+						value={VERIFICATION_LABELS[item.evidenceVerificationStatus] || item.evidenceVerificationStatus}
+					/>
+				)}
+
+				{hasEvidence && item.evidenceIssuedAt && (
+					<DetailRow
+						label="Issued"
+						value={format(new Date(item.evidenceIssuedAt), "dd MMM yyyy")}
+					/>
+				)}
+
+				{hasEvidence && item.evidenceVerifiedAt && (
+					<DetailRow
+						label="Verified"
+						value={format(new Date(item.evidenceVerifiedAt), "dd MMM yyyy")}
+					/>
+				)}
+
+				{item.expiresAt && (
+					<DetailRow
+						label={item.status === "expired" ? "Expired" : "Expires"}
+						value={format(new Date(item.expiresAt), "dd MMM yyyy")}
+					/>
+				)}
+			</div>
+
+			{/* Missing item guidance */}
+			{!hasEvidence && element && (
+				<div className="rounded-md border border-border bg-muted/30 px-3 py-2">
+					<p className="text-xs text-muted-foreground">
+						<span className="font-medium text-foreground">Required:</span>{" "}
+						{EVIDENCE_TYPE_LABELS[element.evidenceType] || element.evidenceType} needed to fulfil this requirement.
+					</p>
+				</div>
+			)}
+		</Card>
+	);
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+	return (
+		<div className="flex items-baseline justify-between gap-2">
+			<span className="text-xs text-muted-foreground shrink-0">{label}</span>
+			<span className="text-xs text-right">{value}</span>
+		</div>
 	);
 }
 
@@ -385,6 +559,42 @@ export default function PlacementDetailPage() {
 			(i) => i.faHandled && (i.status === "missing" || i.status === "expired"),
 		).length;
 	}, [data]);
+
+	// Element definition lookup by slug (from requirementGroups)
+	const elementLookup = useMemo(() => {
+		if (!data) return new Map<string, ElementDefinition>();
+		const map = new Map<string, ElementDefinition>();
+		for (const group of data.requirementGroups) {
+			for (const el of group.elements) {
+				if (!map.has(el.slug)) map.set(el.slug, el);
+			}
+		}
+		return map;
+	}, [data]);
+
+	// Selection state
+	const [selectedItemSlug, setSelectedItemSlug] = useState<string | null>(null);
+
+	// Auto-select first incomplete item when data loads
+	useEffect(() => {
+		if (!data || selectedItemSlug) return;
+		const firstIncomplete = data.compliance.items.find(
+			(i) => i.status !== "met",
+		);
+		setSelectedItemSlug(
+			firstIncomplete?.slug ?? data.compliance.items[0]?.slug ?? null,
+		);
+	}, [data, selectedItemSlug]);
+
+	const selectedItem = useMemo(() => {
+		if (!data || !selectedItemSlug) return null;
+		return data.compliance.items.find((i) => i.slug === selectedItemSlug) ?? null;
+	}, [data, selectedItemSlug]);
+
+	const selectedElement = useMemo(() => {
+		if (!selectedItemSlug) return null;
+		return elementLookup.get(selectedItemSlug) ?? null;
+	}, [selectedItemSlug, elementLookup]);
 
 	async function handleInitiateScreening() {
 		if (!data) return;
@@ -509,12 +719,12 @@ export default function PlacementDetailPage() {
 							<Badge variant="info" className="text-xs font-medium">
 								{placement.roleName}
 							</Badge>
-							<span className="text-sm text-muted-foreground">
-								{placement.facilityName}
-								{placement.jurisdiction && (
-									<span className="capitalize">, {placement.jurisdiction}</span>
-								)}
-							</span>
+							<FacilityDetailDialog
+								workNodeId={placement.workNodeId}
+								facilityName={placement.facilityName}
+								jurisdiction={placement.jurisdiction}
+								currentPlacementId={placement.id}
+							/>
 							<Badge
 								variant={STATUS_BADGE_VARIANT[placement.status] || "neutral"}
 								className="text-xs font-medium capitalize"
@@ -611,20 +821,35 @@ export default function PlacementDetailPage() {
 				</Card>
 			)}
 
-			{/* Compliance groups */}
+			{/* Compliance requirements — list-detail layout */}
 			<div className="space-y-4">
 				<h2 className="text-xl font-semibold text-foreground">Compliance Requirements</h2>
-				{data.requirementGroups.map((group) => {
-					const items = groupedItems.get(group.packageSlug) || [];
-					if (items.length === 0) return null;
-					return (
-						<RequirementGroupCard
-							key={group.packageSlug}
-							group={group}
-							items={items}
+				<div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+					{/* Left: requirement groups list */}
+					<div className="space-y-3">
+						{data.requirementGroups.map((group) => {
+							const items = groupedItems.get(group.packageSlug) || [];
+							if (items.length === 0) return null;
+							return (
+								<RequirementGroupCard
+									key={group.packageSlug}
+									group={group}
+									items={items}
+									selectedItemSlug={selectedItemSlug}
+									onSelectItem={setSelectedItemSlug}
+								/>
+							);
+						})}
+					</div>
+
+					{/* Right: detail panel (sticky) */}
+					<div className="hidden lg:block sticky top-4 self-start">
+						<ComplianceDetailPanel
+							item={selectedItem}
+							element={selectedElement}
 						/>
-					);
-				})}
+					</div>
+				</div>
 			</div>
 		</div>
 	);

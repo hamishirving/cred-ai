@@ -63,7 +63,7 @@ interface OrgConfig {
 	orgPrompt?: string;
 	terminology?: Record<string, string>;
 	workNodeTypes: { name: string; level: number }[];
-	workNodes: { name: string; type: string; parent?: string; jurisdiction?: string }[];
+	workNodes: { name: string; type: string; parent?: string; jurisdiction?: string; address?: string }[];
 	candidates: CandidateProfile[];
 }
 
@@ -82,16 +82,16 @@ const orgConfigs: OrgConfig[] = [
 		],
 		workNodes: [
 			{ name: "NHS Trust North", type: "NHS Trust", jurisdiction: "england" },
-			{ name: "City Hospital", type: "Hospital", parent: "NHS Trust North", jurisdiction: "england" },
+			{ name: "City Hospital", type: "Hospital", parent: "NHS Trust North", jurisdiction: "england", address: "Kingsway, Derby DE22 3NE" },
 			{ name: "A&E", type: "Ward", parent: "City Hospital", jurisdiction: "england" },
 			{ name: "ICU", type: "Ward", parent: "City Hospital", jurisdiction: "england" },
 			{ name: "Medical Ward", type: "Ward", parent: "City Hospital", jurisdiction: "england" },
-			{ name: "Community Hospital", type: "Hospital", parent: "NHS Trust North", jurisdiction: "england" },
+			{ name: "Community Hospital", type: "Hospital", parent: "NHS Trust North", jurisdiction: "england", address: "London Road, Buxton SK17 9NJ" },
 			{ name: "NHS Trust South", type: "NHS Trust", jurisdiction: "england" },
-			{ name: "General Hospital", type: "Hospital", parent: "NHS Trust South", jurisdiction: "england" },
+			{ name: "General Hospital", type: "Hospital", parent: "NHS Trust South", jurisdiction: "england", address: "Bristol Road South, Birmingham B31 2AP" },
 			{ name: "Private Care Group", type: "Care Group", jurisdiction: "england" },
-			{ name: "Sunrise Care Home", type: "Care Home", parent: "Private Care Group", jurisdiction: "england" },
-			{ name: "Oak Lodge Care Home", type: "Care Home", parent: "Private Care Group", jurisdiction: "england" },
+			{ name: "Sunrise Care Home", type: "Care Home", parent: "Private Care Group", jurisdiction: "england", address: "45 Willow Lane, Cheltenham GL50 3PR" },
+			{ name: "Oak Lodge Care Home", type: "Care Home", parent: "Private Care Group", jurisdiction: "england", address: "12 The Green, Solihull B91 3QR" },
 		],
 		candidates: meridianCandidates,
 	},
@@ -108,19 +108,19 @@ const orgConfigs: OrgConfig[] = [
 		workNodes: [
 			// England - North West
 			{ name: "North West", type: "Region", jurisdiction: "england" },
-			{ name: "Manchester Dom Care", type: "Branch", parent: "North West", jurisdiction: "england" },
-			{ name: "Liverpool Dom Care", type: "Branch", parent: "North West", jurisdiction: "england" },
-			{ name: "Willow House Residential", type: "Branch", parent: "North West", jurisdiction: "england" },
+			{ name: "Manchester Dom Care", type: "Branch", parent: "North West", jurisdiction: "england", address: "Unit 4, Salford Enterprise Park, M6 5FT" },
+			{ name: "Liverpool Dom Care", type: "Branch", parent: "North West", jurisdiction: "england", address: "8 Crown Street, Liverpool L7 3QD" },
+			{ name: "Willow House Residential", type: "Branch", parent: "North West", jurisdiction: "england", address: "Willow House, 15 Park Avenue, Bolton BL1 4RD" },
 			// England - South East
 			{ name: "South East", type: "Region", jurisdiction: "england" },
-			{ name: "London Dom Care", type: "Branch", parent: "South East", jurisdiction: "england" },
-			{ name: "Kent Dom Care", type: "Branch", parent: "South East", jurisdiction: "england" },
-			{ name: "Oakwood Manor Residential", type: "Branch", parent: "South East", jurisdiction: "england" },
+			{ name: "London Dom Care", type: "Branch", parent: "South East", jurisdiction: "england", address: "3rd Floor, 100 Borough High Street, SE1 1LB" },
+			{ name: "Kent Dom Care", type: "Branch", parent: "South East", jurisdiction: "england", address: "2 Station Road, Maidstone ME14 1QQ" },
+			{ name: "Oakwood Manor Residential", type: "Branch", parent: "South East", jurisdiction: "england", address: "Oakwood Manor, Canterbury CT2 7HE" },
 			// Scotland
 			{ name: "Scotland", type: "Region", jurisdiction: "scotland" },
-			{ name: "Edinburgh Dom Care", type: "Branch", parent: "Scotland", jurisdiction: "scotland" },
-			{ name: "Glasgow Dom Care", type: "Branch", parent: "Scotland", jurisdiction: "scotland" },
-			{ name: "Heather Glen Residential", type: "Branch", parent: "Scotland", jurisdiction: "scotland" },
+			{ name: "Edinburgh Dom Care", type: "Branch", parent: "Scotland", jurisdiction: "scotland", address: "14 Leith Walk, Edinburgh EH6 5DT" },
+			{ name: "Glasgow Dom Care", type: "Branch", parent: "Scotland", jurisdiction: "scotland", address: "250 West George Street, Glasgow G2 4QY" },
+			{ name: "Heather Glen Residential", type: "Branch", parent: "Scotland", jurisdiction: "scotland", address: "Heather Glen, Stirling FK8 2BX" },
 		],
 		orgPrompt: `You're writing on behalf of Oakwood Care Group, a family-run care provider delivering domiciliary and residential care across England and Scotland.
 
@@ -151,17 +151,17 @@ Sign off as: "The Oakwood Care Team"`,
 		],
 		workNodes: [
 			{ name: "California", type: "State", jurisdiction: "california" },
-			{ name: "UCLA Medical Center", type: "Hospital", parent: "California", jurisdiction: "california" },
+			{ name: "UCLA Medical Center", type: "Hospital", parent: "California", jurisdiction: "california", address: "757 Westwood Plaza, Los Angeles, CA 90095" },
 			{ name: "Emergency Dept", type: "Unit", parent: "UCLA Medical Center", jurisdiction: "california" },
 			{ name: "ICU", type: "Unit", parent: "UCLA Medical Center", jurisdiction: "california" },
-			{ name: "Cedars-Sinai", type: "Hospital", parent: "California", jurisdiction: "california" },
+			{ name: "Cedars-Sinai", type: "Hospital", parent: "California", jurisdiction: "california", address: "8700 Beverly Blvd, Los Angeles, CA 90048" },
 			{ name: "Texas", type: "State", jurisdiction: "texas" },
-			{ name: "Houston Methodist", type: "Hospital", parent: "Texas", jurisdiction: "texas" },
-			{ name: "UT Southwestern", type: "Hospital", parent: "Texas", jurisdiction: "texas" },
+			{ name: "Houston Methodist", type: "Hospital", parent: "Texas", jurisdiction: "texas", address: "6565 Fannin St, Houston, TX 77030" },
+			{ name: "UT Southwestern", type: "Hospital", parent: "Texas", jurisdiction: "texas", address: "5323 Harry Hines Blvd, Dallas, TX 75390" },
 			{ name: "Florida", type: "State", jurisdiction: "florida" },
-			{ name: "Memorial Hospital Jacksonville", type: "Hospital", parent: "Florida", jurisdiction: "florida" },
-			{ name: "Tampa General", type: "Hospital", parent: "Florida", jurisdiction: "florida" },
-			{ name: "Baptist Health Miami", type: "Hospital", parent: "Florida", jurisdiction: "florida" },
+			{ name: "Memorial Hospital Jacksonville", type: "Hospital", parent: "Florida", jurisdiction: "florida", address: "3625 University Blvd S, Jacksonville, FL 32216" },
+			{ name: "Tampa General", type: "Hospital", parent: "Florida", jurisdiction: "florida", address: "1 Tampa General Cir, Tampa, FL 33606" },
+			{ name: "Baptist Health Miami", type: "Hospital", parent: "Florida", jurisdiction: "florida", address: "8900 N Kendall Dr, Miami, FL 33176" },
 		],
 		terminology: { candidate: "Talent", placement: "Assignment" },
 		candidates: travelNurseCandidates,
@@ -176,14 +176,14 @@ Sign off as: "The Oakwood Care Team"`,
 			{ name: "Department", level: 1 },
 		],
 		workNodes: [
-			{ name: "Lakeside Medical Center", type: "Facility", jurisdiction: "texas" },
+			{ name: "Lakeside Medical Center", type: "Facility", jurisdiction: "texas", address: "2100 Lakeside Boulevard, Plano, TX 75024" },
 			{ name: "Emergency Services", type: "Department", parent: "Lakeside Medical Center", jurisdiction: "texas" },
 			{ name: "Surgical Services", type: "Department", parent: "Lakeside Medical Center", jurisdiction: "texas" },
 			{ name: "Critical Care", type: "Department", parent: "Lakeside Medical Center", jurisdiction: "texas" },
 			{ name: "Medical/Surgical Units", type: "Department", parent: "Lakeside Medical Center", jurisdiction: "texas" },
-			{ name: "Lakeside Community Hospital", type: "Facility", jurisdiction: "texas" },
+			{ name: "Lakeside Community Hospital", type: "Facility", jurisdiction: "texas", address: "850 Main Street, McKinney, TX 75069" },
 			{ name: "General Care", type: "Department", parent: "Lakeside Community Hospital", jurisdiction: "texas" },
-			{ name: "Lakeside Clinics", type: "Facility", jurisdiction: "texas" },
+			{ name: "Lakeside Clinics", type: "Facility", jurisdiction: "texas", address: "4500 Elm Avenue, Frisco, TX 75034" },
 			{ name: "Downtown Clinic", type: "Department", parent: "Lakeside Clinics", jurisdiction: "texas" },
 			{ name: "Suburban Clinic", type: "Department", parent: "Lakeside Clinics", jurisdiction: "texas" },
 		],
@@ -315,6 +315,7 @@ Sign off as: "${config.name} Credentialing Team"`),
 				typeId: typeMap.get(nodeConfig.type)!,
 				name: nodeConfig.name,
 				jurisdiction: nodeConfig.jurisdiction,
+				address: nodeConfig.address,
 			})
 			.returning();
 		nodeMap.set(nodeConfig.name, node.id);
@@ -329,6 +330,7 @@ Sign off as: "${config.name} Credentialing Team"`),
 				name: nodeConfig.name,
 				parentId: nodeMap.get(nodeConfig.parent!),
 				jurisdiction: nodeConfig.jurisdiction,
+				address: nodeConfig.address,
 			})
 			.returning();
 		nodeMap.set(nodeConfig.name, node.id);
