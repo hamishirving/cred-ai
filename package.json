@@ -28,6 +28,7 @@
 		"@codemirror/theme-one-dark": "^6.1.2",
 		"@codemirror/view": "^6.35.3",
 		"@dagrejs/dagre": "^1.1.8",
+		"@hello-pangea/dnd": "^18.0.1",
 		"@hookform/resolvers": "^5.2.2",
 		"@icons-pack/react-simple-icons": "^13.7.0",
 		"@posthog/ai": "^7.3.0",

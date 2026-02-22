@@ -253,11 +253,11 @@ function RequirementGroupCard({
 	group: RequirementGroup;
 	items: ComplianceItem[];
 }) {
-	const [open, setOpen] = useState(true);
 	const source = getSourceFromReason(group.reason);
 	const Icon = SOURCE_ICONS[source] || Shield;
 	const met = items.filter((i) => i.status === "met").length;
 	const allDone = met === items.length;
+	const [open, setOpen] = useState(!allDone);
 
 	return (
 		<Card className="shadow-none! bg-card overflow-hidden">

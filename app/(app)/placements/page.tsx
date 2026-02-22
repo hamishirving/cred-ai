@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
 	type ColumnDef,
@@ -12,7 +12,7 @@ import {
 	getPaginationRowModel,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { ArrowUpDown, Briefcase, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpDown, Briefcase, ChevronLeft, ChevronRight, Columns3, LayoutList } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,64 +29,20 @@ import {
 import { cn } from "@/lib/utils";
 import { useOrg } from "@/lib/org-context";
 import { useTerminology } from "@/lib/hooks/use-terminology";
+import { toast } from "@/components/toast";
 
-// Types from API
-interface PlacementRow {
-	id: string;
-	candidateName: string;
-	candidateEmail: string;
-	roleName: string;
-	facilityName: string;
-	jurisdiction: string | null;
-	startDate: string | null;
-	status: string;
-	compliancePercentage: number;
-	isCompliant: boolean;
-	dealType: string | null;
-}
+import {
+	type PlacementRow,
+	STATUS_TABS,
+	STATUS_BADGE_VARIANT,
+	STATUS_LABELS,
+	KANBAN_STATUSES,
+	getAvatarColor,
+	getInitials,
+} from "./constants";
+import { PlacementsKanban } from "./placements-kanban";
 
-// Avatar colours matching candidates page
-const avatarColors = [
-	"bg-primary",
-	"bg-chart-2",
-	"bg-chart-3",
-	"bg-destructive",
-	"bg-muted-foreground",
-	"bg-chart-5",
-];
-
-function getAvatarColor(name: string): string {
-	const hash = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-	return avatarColors[hash % avatarColors.length];
-}
-
-function getInitials(name: string): string {
-	return name
-		.split(" ")
-		.map((n) => n[0])
-		.join("")
-		.toUpperCase()
-		.slice(0, 2);
-}
-
-const STATUS_TABS = [
-	{ value: null as string | null, label: "All" },
-	{ value: "onboarding", label: "Onboarding" },
-	{ value: "compliance", label: "Compliance" },
-	{ value: "ready", label: "Ready" },
-	{ value: "active", label: "Active" },
-	{ value: "completed", label: "Completed" },
-];
-
-const STATUS_BADGE_VARIANT: Record<string, "neutral" | "info" | "warning" | "success" | "danger"> = {
-	pending: "neutral",
-	onboarding: "info",
-	compliance: "warning",
-	ready: "success",
-	active: "success",
-	completed: "neutral",
-	cancelled: "danger",
-};
+type ViewMode = "table" | "kanban";
 
 function StatusBadge({ status }: { status: string }) {
 	const variant = STATUS_BADGE_VARIANT[status] || "neutral";
@@ -132,6 +88,39 @@ function PlacementTableSkeleton() {
 				</TableRow>
 			))}
 		</>
+	);
+}
+
+function ViewToggle({ viewMode, onChange }: { viewMode: ViewMode; onChange: (mode: ViewMode) => void }) {
+	return (
+		<div className="flex items-center rounded-lg border border-border bg-muted/50 p-0.5">
+			<button
+				type="button"
+				onClick={() => onChange("kanban")}
+				className={cn(
+					"flex items-center justify-center rounded-md p-1.5 transition-colors duration-150 cursor-pointer",
+					viewMode === "kanban"
+						? "bg-card text-foreground shadow-sm"
+						: "text-muted-foreground hover:text-foreground",
+				)}
+				aria-label="Kanban view"
+			>
+				<Columns3 className="h-4 w-4" />
+			</button>
+			<button
+				type="button"
+				onClick={() => onChange("table")}
+				className={cn(
+					"flex items-center justify-center rounded-md p-1.5 transition-colors duration-150 cursor-pointer",
+					viewMode === "table"
+						? "bg-card text-foreground shadow-sm"
+						: "text-muted-foreground hover:text-foreground",
+				)}
+				aria-label="Table view"
+			>
+				<LayoutList className="h-4 w-4" />
+			</button>
+		</div>
 	);
 }
 
@@ -263,6 +252,20 @@ export default function PlacementsPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 	const [sorting, setSorting] = useState<SortingState>([]);
+	const [viewMode, setViewMode] = useState<ViewMode>("kanban");
+
+	// Hydrate view mode from localStorage
+	useEffect(() => {
+		const stored = localStorage.getItem("placements-view-mode");
+		if (stored === "table" || stored === "kanban") {
+			setViewMode(stored);
+		}
+	}, []);
+
+	function handleViewModeChange(mode: ViewMode) {
+		setViewMode(mode);
+		localStorage.setItem("placements-view-mode", mode);
+	}
 
 	useEffect(() => {
 		if (!selectedOrg?.id) {
@@ -289,10 +292,52 @@ export default function PlacementsPage() {
 		fetchData();
 	}, [selectedOrg?.id]);
 
+	const handleStatusChange = useCallback(async (placementId: string, newStatus: string) => {
+		// Capture original for rollback
+		const original = placements.find((p) => p.id === placementId);
+		if (!original) return;
+		const originalStatus = original.status;
+
+		// Optimistic update
+		setPlacements((prev) =>
+			prev.map((p) => (p.id === placementId ? { ...p, status: newStatus } : p)),
+		);
+
+		try {
+			const res = await fetch(`/api/placements/${placementId}`, {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ status: newStatus }),
+			});
+
+			if (!res.ok) throw new Error("Failed to update");
+
+			toast({
+				type: "success",
+				description: `Moved to ${STATUS_LABELS[newStatus] || newStatus}`,
+			});
+		} catch {
+			// Rollback
+			setPlacements((prev) =>
+				prev.map((p) => (p.id === placementId ? { ...p, status: originalStatus } : p)),
+			);
+			toast({
+				type: "error",
+				description: "Failed to update status",
+			});
+		}
+	}, [placements]);
+
 	const filteredPlacements = useMemo(() => {
 		if (selectedStatus === null) return placements;
 		return placements.filter((p) => p.status === selectedStatus);
 	}, [selectedStatus, placements]);
+
+	// Kanban shows all placements that belong to kanban statuses (excludes pending/cancelled)
+	const kanbanPlacements = useMemo(() => {
+		const kanbanSet = new Set<string>(KANBAN_STATUSES);
+		return placements.filter((p) => kanbanSet.has(p.status));
+	}, [placements]);
 
 	const tabs = useMemo(() => {
 		return STATUS_TABS.map((tab) => ({
@@ -334,34 +379,39 @@ export default function PlacementsPage() {
 				</p>
 			</div>
 
-			{/* Status tabs */}
-			<div className="flex items-center gap-1 border-b border-border">
-				{tabs.map((tab) => {
-					const isSelected = selectedStatus === tab.value;
-					return (
-						<button
-							key={tab.value ?? "all"}
-							type="button"
-							onClick={() => setSelectedStatus(tab.value)}
-							className={cn(
-								"px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer whitespace-nowrap outline-none",
-								isSelected
-									? "border-primary text-primary"
-									: "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
-							)}
-						>
-							{tab.label}
-							<span
-								className={cn(
-									"ml-1.5 tabular-nums text-xs",
-									isSelected ? "text-primary/70" : "text-muted-foreground/80",
-								)}
-							>
-								{tab.count}
-							</span>
-						</button>
-					);
-				})}
+			{/* View toggle + status tabs */}
+			<div className="flex items-center gap-4">
+				<ViewToggle viewMode={viewMode} onChange={handleViewModeChange} />
+				{viewMode === "table" && (
+					<div className="flex items-center gap-1 border-b border-border flex-1">
+						{tabs.map((tab) => {
+							const isSelected = selectedStatus === tab.value;
+							return (
+								<button
+									key={tab.value ?? "all"}
+									type="button"
+									onClick={() => setSelectedStatus(tab.value)}
+									className={cn(
+										"px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer whitespace-nowrap outline-none",
+										isSelected
+											? "border-primary text-primary"
+											: "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
+									)}
+								>
+									{tab.label}
+									<span
+										className={cn(
+											"ml-1.5 tabular-nums text-xs",
+											isSelected ? "text-primary/70" : "text-muted-foreground/80",
+										)}
+									>
+										{tab.count}
+									</span>
+								</button>
+							);
+						})}
+					</div>
+				)}
 			</div>
 
 			{/* Error state */}
@@ -371,102 +421,113 @@ export default function PlacementsPage() {
 				</div>
 			)}
 
-			{/* Data Table */}
-			<Card className="shadow-none! bg-card">
-				<Table>
-					<TableHeader>
-						{table.getHeaderGroups().map((headerGroup) => (
-							<TableRow key={headerGroup.id} className="bg-muted hover:bg-muted">
-								{headerGroup.headers.map((header) => (
-									<TableHead
-										key={header.id}
-										className={cn(
-											"text-xs font-medium text-muted-foreground",
-											header.id === "candidateName" && "w-[260px]",
-											header.id === "roleName" && "w-[160px]",
-											header.id === "facilityName" && "w-[200px]",
-											header.id === "startDate" && "w-[120px]",
-											header.id === "status" && "w-[120px]",
-											header.id === "compliancePercentage" && "w-[110px]",
-										)}
-									>
-										{header.isPlaceholder
-											? null
-											: flexRender(header.column.columnDef.header, header.getContext())}
-									</TableHead>
-								))}
-							</TableRow>
-						))}
-					</TableHeader>
-					<TableBody>
-						{isLoading ? (
-							<PlacementTableSkeleton />
-						) : table.getRowModel().rows?.length ? (
-							table.getRowModel().rows.map((row) => (
-								<TableRow
-									key={row.id}
-									className="bg-card cursor-pointer transition-colors hover:bg-muted/60"
-									onClick={() => router.push(`/placements/${row.original.id}`)}
-								>
-									{row.getVisibleCells().map((cell) => (
-										<TableCell key={cell.id} className="py-2">
-											{flexRender(cell.column.columnDef.cell, cell.getContext())}
-										</TableCell>
+			{/* Kanban view */}
+			{viewMode === "kanban" && (
+				<PlacementsKanban
+					placements={kanbanPlacements}
+					loading={isLoading}
+					onStatusChange={handleStatusChange}
+				/>
+			)}
+
+			{/* Table view */}
+			{viewMode === "table" && (
+				<Card className="shadow-none! bg-card">
+					<Table>
+						<TableHeader>
+							{table.getHeaderGroups().map((headerGroup) => (
+								<TableRow key={headerGroup.id} className="bg-muted hover:bg-muted">
+									{headerGroup.headers.map((header) => (
+										<TableHead
+											key={header.id}
+											className={cn(
+												"text-xs font-medium text-muted-foreground",
+												header.id === "candidateName" && "w-[260px]",
+												header.id === "roleName" && "w-[160px]",
+												header.id === "facilityName" && "w-[200px]",
+												header.id === "startDate" && "w-[120px]",
+												header.id === "status" && "w-[120px]",
+												header.id === "compliancePercentage" && "w-[110px]",
+											)}
+										>
+											{header.isPlaceholder
+												? null
+												: flexRender(header.column.columnDef.header, header.getContext())}
+										</TableHead>
 									))}
 								</TableRow>
-							))
-						) : (
-							<TableRow className="bg-card">
-								<TableCell colSpan={columns.length} className="h-32 text-center">
-									<div className="flex flex-col items-center justify-center">
-										<Briefcase className="mb-3 h-8 w-8 text-muted-foreground/80" aria-hidden="true" />
-										<h3 className="text-xl font-semibold text-foreground">
-											No {placementLabel}s found
-										</h3>
-										<p className="mt-1 max-w-[40ch] text-sm text-muted-foreground">
-											{selectedStatus
-												? `No ${placementLabel}s with "${selectedStatus}" status.`
-												: `No ${placementLabel}s have been created yet.`}
-										</p>
-									</div>
-								</TableCell>
-							</TableRow>
-						)}
-					</TableBody>
-				</Table>
+							))}
+						</TableHeader>
+						<TableBody>
+							{isLoading ? (
+								<PlacementTableSkeleton />
+							) : table.getRowModel().rows?.length ? (
+								table.getRowModel().rows.map((row) => (
+									<TableRow
+										key={row.id}
+										className="bg-card cursor-pointer transition-colors hover:bg-muted/60"
+										onClick={() => router.push(`/placements/${row.original.id}`)}
+									>
+										{row.getVisibleCells().map((cell) => (
+											<TableCell key={cell.id} className="py-2">
+												{flexRender(cell.column.columnDef.cell, cell.getContext())}
+											</TableCell>
+										))}
+									</TableRow>
+								))
+							) : (
+								<TableRow className="bg-card">
+									<TableCell colSpan={columns.length} className="h-32 text-center">
+										<div className="flex flex-col items-center justify-center">
+											<Briefcase className="mb-3 h-8 w-8 text-muted-foreground/80" aria-hidden="true" />
+											<h3 className="text-xl font-semibold text-foreground">
+												No {placementLabel}s found
+											</h3>
+											<p className="mt-1 max-w-[40ch] text-sm text-muted-foreground">
+												{selectedStatus
+													? `No ${placementLabel}s with "${selectedStatus}" status.`
+													: `No ${placementLabel}s have been created yet.`}
+											</p>
+										</div>
+									</TableCell>
+								</TableRow>
+							)}
+						</TableBody>
+					</Table>
 
-				{/* Pagination */}
-				{!isLoading && table.getPageCount() > 1 && (
-					<div className="flex items-center justify-between border-t border-border px-4 py-3">
-						<p className="text-xs text-muted-foreground tabular-nums">
-							{filteredPlacements.length} {placementLabel}{filteredPlacements.length !== 1 ? "s" : ""} · page{" "}
-							{table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-						</p>
-						<div className="flex items-center gap-1">
-							<Button
-								variant="ghost"
-								size="sm"
-								onClick={() => table.previousPage()}
-								disabled={!table.getCanPreviousPage()}
-								className="h-7 px-2 text-xs text-muted-foreground"
-							>
-								<ChevronLeft className="h-3.5 w-3.5 mr-1" />
-								Previous
-							</Button>
-							<Button
-								variant="ghost"
-								size="sm"
-								onClick={() => table.nextPage()}
-								disabled={!table.getCanNextPage()}
-								className="h-7 px-2 text-xs text-muted-foreground"
-							>
-								Next
-								<ChevronRight className="h-3.5 w-3.5 ml-1" />
-							</Button>
+					{/* Pagination */}
+					{!isLoading && table.getPageCount() > 1 && (
+						<div className="flex items-center justify-between border-t border-border px-4 py-3">
+							<p className="text-xs text-muted-foreground tabular-nums">
+								{filteredPlacements.length} {placementLabel}{filteredPlacements.length !== 1 ? "s" : ""} · page{" "}
+								{table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+							</p>
+							<div className="flex items-center gap-1">
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => table.previousPage()}
+									disabled={!table.getCanPreviousPage()}
+									className="h-7 px-2 text-xs text-muted-foreground"
+								>
+									<ChevronLeft className="h-3.5 w-3.5 mr-1" />
+									Previous
+								</Button>
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => table.nextPage()}
+									disabled={!table.getCanNextPage()}
+									className="h-7 px-2 text-xs text-muted-foreground"
+								>
+									Next
+									<ChevronRight className="h-3.5 w-3.5 ml-1" />
+								</Button>
+							</div>
 						</div>
-					</div>
-				)}
-			</Card>
+					)}
+				</Card>
+			)}
 		</div>
 	);
 }

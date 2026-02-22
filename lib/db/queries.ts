@@ -1717,3 +1717,32 @@ export async function getPlacementById({
 		);
 	}
 }
+
+/**
+ * Update a placement's status.
+ */
+type PlacementStatus = "pending" | "onboarding" | "compliance" | "ready" | "active" | "completed" | "cancelled";
+
+export async function updatePlacementStatus({
+	id,
+	status,
+}: {
+	id: string;
+	status: PlacementStatus;
+}): Promise<{ id: string; status: string } | null> {
+	try {
+		const [result] = await db
+			.update(placements)
+			.set({ status, updatedAt: new Date() })
+			.where(eq(placements.id, id))
+			.returning({ id: placements.id, status: placements.status });
+
+		return result || null;
+	} catch (error) {
+		console.error("Failed to update placement status:", error);
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to update placement status",
+		);
+	}
+}

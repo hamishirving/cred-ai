@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPlacementById } from "@/lib/db/queries";
+import { getPlacementById, updatePlacementStatus } from "@/lib/db/queries";
 import {
 	checkPlacementCompliance,
 	resolvePlacementRequirements,
 	type PlacementContext,
 } from "@/lib/compliance/resolve-requirements";
+
+const VALID_STATUSES = [
+	"pending",
+	"onboarding",
+	"compliance",
+	"ready",
+	"active",
+	"completed",
+	"cancelled",
+];
 
 export async function GET(
 	request: NextRequest,
@@ -49,6 +59,41 @@ export async function GET(
 		console.error("Failed to fetch placement:", error);
 		return NextResponse.json(
 			{ error: "Failed to fetch placement" },
+			{ status: 500 },
+		);
+	}
+}
+
+export async function PATCH(
+	request: NextRequest,
+	props: { params: Promise<{ id: string }> },
+) {
+	try {
+		const params = await props.params;
+		const body = await request.json();
+		const { status } = body;
+
+		if (!status || !VALID_STATUSES.includes(status)) {
+			return NextResponse.json(
+				{ error: `Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}` },
+				{ status: 400 },
+			);
+		}
+
+		const result = await updatePlacementStatus({ id: params.id, status });
+
+		if (!result) {
+			return NextResponse.json(
+				{ error: "Placement not found" },
+				{ status: 404 },
+			);
+		}
+
+		return NextResponse.json({ placement: result });
+	} catch (error) {
+		console.error("Failed to update placement:", error);
+		return NextResponse.json(
+			{ error: "Failed to update placement" },
 			{ status: 500 },
 		);
 	}
