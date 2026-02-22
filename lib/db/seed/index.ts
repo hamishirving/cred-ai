@@ -48,6 +48,7 @@ import {
 	lakesideCandidates,
 	type CandidateProfile,
 } from "./candidates";
+import { faHandledElements } from "./markets/us";
 import { daysFromNow, slugify, randomPick, randomInt, atTime } from "./utils";
 
 // ============================================
@@ -564,6 +565,7 @@ Sign off as: "${config.name} Credentialing Team"`),
 		};
 
 		const faPlacement = faDemoPlacements[candidateConfig.profile.email];
+		let placementId: string | null = null;
 
 		if (faPlacement) {
 			// FA demo candidate — create placement with specific work node and deal type
@@ -571,7 +573,7 @@ Sign off as: "${config.name} Credentialing Team"`),
 			const roleId = roleMap.get(faPlacement.roleSlug);
 
 			if (workNodeId && roleId) {
-				await db.insert(placements).values({
+				const [pl] = await db.insert(placements).values({
 					organisationId: org.id,
 					profileId: profile.id,
 					workNodeId,
@@ -583,7 +585,8 @@ Sign off as: "${config.name} Credentialing Team"`),
 						? daysFromNow(faPlacement.startDateDays)
 						: null,
 					customFields: { dealType: faPlacement.dealType },
-				});
+				}).returning();
+				placementId = pl.id;
 			}
 		} else if (["compliant", "near_complete", "expiring"].includes(candidateConfig.state.status)) {
 			const workNodeNames = config.workNodes.filter(n => n.parent).map(n => n.name);
@@ -592,7 +595,7 @@ Sign off as: "${config.name} Credentialing Team"`),
 			const roleId = roleMap.get(candidateConfig.roleSlug);
 
 			if (workNodeId && roleId) {
-				await db.insert(placements).values({
+				const [pl] = await db.insert(placements).values({
 					organisationId: org.id,
 					profileId: profile.id,
 					workNodeId,
@@ -603,7 +606,8 @@ Sign off as: "${config.name} Credentialing Team"`),
 					startDate: candidateConfig.state.startDateDays
 						? daysFromNow(candidateConfig.state.startDateDays)
 						: daysFromNow(-randomInt(1, 90)),
-				});
+				}).returning();
+				placementId = pl.id;
 			}
 		}
 
@@ -878,79 +882,228 @@ Sign off as: "${config.name} Credentialing Team"`),
 		}
 
 		// Create tasks based on candidate state
-		if (candidateConfig.state.status === "stuck") {
-			await db.insert(tasks).values({
-				organisationId: org.id,
-				subjectType: "profile",
-				subjectId: profile.id,
-				title: `Chase ${profile.firstName} ${profile.lastName} for outstanding documents`,
-				description: `Candidate has not responded to multiple automated reminders. Manual follow-up required.`,
-				priority: "urgent",
-				category: "chase_candidate",
-				source: "ai_agent",
-				agentId: "onboarding-companion",
-				aiReasoning: "Candidate has not responded to 3 automated reminders over 14 days.",
-				status: "pending",
-				dueAt: daysFromNow(1),
-				createdAt: daysFromNow(-1),
-				updatedAt: daysFromNow(-1),
-			});
-			taskCount++;
-		} else if (candidateConfig.state.status === "near_complete") {
-			const missing = candidateConfig.state.missingElements?.[0] || "Right to Work";
-			await db.insert(tasks).values({
-				organisationId: org.id,
-				subjectType: "profile",
-				subjectId: profile.id,
-				title: `Review uploaded ${missing} document`,
-				description: `${profile.firstName} has uploaded their ${missing}. Please review and verify.`,
-				priority: "high",
-				category: "review_document",
-				source: "ai_agent",
-				agentId: "document-processor",
-				aiReasoning: "Document uploaded and awaiting manual verification.",
-				status: "pending",
-				dueAt: daysFromNow(2),
-				createdAt: daysFromNow(0),
-				updatedAt: daysFromNow(0),
-			});
-			taskCount++;
-		} else if (candidateConfig.state.status === "expiring") {
-			const expiring = candidateConfig.state.expiringElements?.[0] || "DBS";
-			await db.insert(tasks).values({
-				organisationId: org.id,
-				subjectType: "profile",
-				subjectId: profile.id,
-				title: `Renew expiring ${expiring} for ${profile.firstName} ${profile.lastName}`,
-				description: `${expiring} certificate expires soon. Initiate renewal process.`,
-				priority: "high",
-				category: "expiry",
-				source: "system",
-				aiReasoning: `${expiring} expires within 30 days.`,
-				status: "pending",
-				dueAt: daysFromNow(7),
-				createdAt: daysFromNow(-3),
-				updatedAt: daysFromNow(-3),
-			});
-			taskCount++;
-		} else if (candidateConfig.state.status === "in_progress") {
-			await db.insert(tasks).values({
-				organisationId: org.id,
-				subjectType: "profile",
-				subjectId: profile.id,
-				title: `Follow up on ${profile.firstName}'s reference request`,
-				description: `Reference request sent to previous employer. Follow up if no response within 5 days.`,
-				priority: "medium",
-				category: "follow_up",
-				source: "ai_agent",
-				agentId: "reference-chaser",
-				aiReasoning: "Reference request pending for 3 days.",
-				status: "in_progress",
-				dueAt: daysFromNow(5),
-				createdAt: daysFromNow(-3),
-				updatedAt: daysFromNow(-1),
-			});
-			taskCount++;
+		// If a placement exists, generate placement-scoped tasks from compliance state
+		// Otherwise, generate profile-scoped tasks (original behaviour)
+		const candidateName = `${profile.firstName} ${profile.lastName}`;
+
+		if (placementId) {
+			// --- Placement-scoped task generation ---
+			const allElementsForMarket = config.market === "uk" ? ukComplianceElements : usComplianceElements;
+			const elementNameMap = new Map(allElementsForMarket.map(e => [e.slug, e.name]));
+			const missingElements = candidateConfig.state.missingElements || [];
+
+			// Split missing elements into FA-handled vs non-FA
+			const missingFa = missingElements.filter(slug => faHandledElements.has(slug));
+			const missingNonFa = missingElements.filter(slug => !faHandledElements.has(slug));
+
+			// FA items → ONE grouped task per placement
+			if (missingFa.length > 0) {
+				await db.insert(tasks).values({
+					organisationId: org.id,
+					subjectType: "placement",
+					subjectId: placementId,
+					title: `Initiate FA screening — ${missingFa.length} item${missingFa.length !== 1 ? "s" : ""} outstanding`,
+					description: `Missing FA-handled items: ${missingFa.map(s => elementNameMap.get(s) || s).join(", ")}. Submit a single screening order to resolve.`,
+					priority: "high",
+					category: "general",
+					source: "system",
+					status: "pending",
+					complianceElementSlugs: missingFa,
+					dueAt: daysFromNow(3),
+					createdAt: daysFromNow(-1),
+					updatedAt: daysFromNow(-1),
+				});
+				taskCount++;
+			}
+
+			// Missing non-FA → individual tasks
+			for (const slug of missingNonFa) {
+				const itemName = elementNameMap.get(slug) || slug;
+				await db.insert(tasks).values({
+					organisationId: org.id,
+					subjectType: "placement",
+					subjectId: placementId,
+					title: `Chase ${profile.firstName} for ${itemName}`,
+					description: `${candidateName} is missing ${itemName}. Follow up to obtain this document.`,
+					priority: candidateConfig.state.status === "stuck" ? "high" : "medium",
+					category: "chase_candidate",
+					source: "system",
+					status: "pending",
+					complianceElementSlugs: [slug],
+					dueAt: candidateConfig.state.startDateDays
+						? daysFromNow(Math.min(candidateConfig.state.startDateDays - 7, 14))
+						: daysFromNow(7),
+					createdAt: daysFromNow(-randomInt(1, 3)),
+					updatedAt: daysFromNow(-1),
+				});
+				taskCount++;
+			}
+
+			// Expired elements → urgent tasks
+			const expiredElements = (candidateConfig.state.expiringElements || []).filter(
+				() => candidateConfig.state.status === "non_compliant",
+			);
+			for (const slug of expiredElements) {
+				const itemName = elementNameMap.get(slug) || slug;
+				await db.insert(tasks).values({
+					organisationId: org.id,
+					subjectType: "placement",
+					subjectId: placementId,
+					title: `Urgent: ${itemName} has expired`,
+					description: `${candidateName}'s ${itemName} has expired. Immediate renewal required.`,
+					priority: "urgent",
+					category: "expiry",
+					source: "system",
+					status: "pending",
+					complianceElementSlugs: [slug],
+					dueAt: daysFromNow(1),
+					createdAt: daysFromNow(-1),
+					updatedAt: daysFromNow(-1),
+				});
+				taskCount++;
+			}
+
+			// Expiring elements (not yet expired) → renewal tasks
+			const expiringElements = (candidateConfig.state.expiringElements || []).filter(
+				() => candidateConfig.state.status !== "non_compliant",
+			);
+			for (const slug of expiringElements) {
+				const itemName = elementNameMap.get(slug) || slug;
+				await db.insert(tasks).values({
+					organisationId: org.id,
+					subjectType: "placement",
+					subjectId: placementId,
+					title: `Renew ${itemName} — expires soon`,
+					description: `${candidateName}'s ${itemName} is expiring. Initiate renewal process.`,
+					priority: "high",
+					category: "expiry",
+					source: "system",
+					status: "pending",
+					complianceElementSlugs: [slug],
+					dueAt: daysFromNow(7),
+					createdAt: daysFromNow(-3),
+					updatedAt: daysFromNow(-3),
+				});
+				taskCount++;
+			}
+
+			// Pending admin review → review tasks
+			for (const slug of (candidateConfig.state.pendingAdminReview || [])) {
+				const itemName = elementNameMap.get(slug) || slug;
+				await db.insert(tasks).values({
+					organisationId: org.id,
+					subjectType: "placement",
+					subjectId: placementId,
+					title: `Review ${profile.firstName}'s ${itemName}`,
+					description: `${candidateName} has submitted ${itemName}. Review and verify the document.`,
+					priority: "high",
+					category: "review_document",
+					source: "system",
+					status: "pending",
+					complianceElementSlugs: [slug],
+					dueAt: daysFromNow(2),
+					createdAt: daysFromNow(0),
+					updatedAt: daysFromNow(0),
+				});
+				taskCount++;
+			}
+
+			// Pending third party → follow-up tasks
+			for (const slug of (candidateConfig.state.pendingThirdParty || [])) {
+				const itemName = elementNameMap.get(slug) || slug;
+				await db.insert(tasks).values({
+					organisationId: org.id,
+					subjectType: "placement",
+					subjectId: placementId,
+					title: `Follow up on ${itemName}`,
+					description: `External verification in progress for ${candidateName}'s ${itemName}. Chase provider if overdue.`,
+					priority: "medium",
+					category: "follow_up",
+					source: "system",
+					status: "pending",
+					complianceElementSlugs: [slug],
+					dueAt: daysFromNow(5),
+					createdAt: daysFromNow(-2),
+					updatedAt: daysFromNow(-2),
+				});
+				taskCount++;
+			}
+		} else {
+			// --- Profile-scoped tasks (no placement) ---
+			if (candidateConfig.state.status === "stuck") {
+				await db.insert(tasks).values({
+					organisationId: org.id,
+					subjectType: "profile",
+					subjectId: profile.id,
+					title: `Chase ${candidateName} for outstanding documents`,
+					description: `Candidate has not responded to multiple automated reminders. Manual follow-up required.`,
+					priority: "urgent",
+					category: "chase_candidate",
+					source: "ai_agent",
+					agentId: "onboarding-companion",
+					aiReasoning: "Candidate has not responded to 3 automated reminders over 14 days.",
+					status: "pending",
+					dueAt: daysFromNow(1),
+					createdAt: daysFromNow(-1),
+					updatedAt: daysFromNow(-1),
+				});
+				taskCount++;
+			} else if (candidateConfig.state.status === "near_complete") {
+				const missing = candidateConfig.state.missingElements?.[0] || "Right to Work";
+				await db.insert(tasks).values({
+					organisationId: org.id,
+					subjectType: "profile",
+					subjectId: profile.id,
+					title: `Review uploaded ${missing} document`,
+					description: `${profile.firstName} has uploaded their ${missing}. Please review and verify.`,
+					priority: "high",
+					category: "review_document",
+					source: "ai_agent",
+					agentId: "document-processor",
+					aiReasoning: "Document uploaded and awaiting manual verification.",
+					status: "pending",
+					dueAt: daysFromNow(2),
+					createdAt: daysFromNow(0),
+					updatedAt: daysFromNow(0),
+				});
+				taskCount++;
+			} else if (candidateConfig.state.status === "expiring") {
+				const expiring = candidateConfig.state.expiringElements?.[0] || "DBS";
+				await db.insert(tasks).values({
+					organisationId: org.id,
+					subjectType: "profile",
+					subjectId: profile.id,
+					title: `Renew expiring ${expiring} for ${candidateName}`,
+					description: `${expiring} certificate expires soon. Initiate renewal process.`,
+					priority: "high",
+					category: "expiry",
+					source: "system",
+					aiReasoning: `${expiring} expires within 30 days.`,
+					status: "pending",
+					dueAt: daysFromNow(7),
+					createdAt: daysFromNow(-3),
+					updatedAt: daysFromNow(-3),
+				});
+				taskCount++;
+			} else if (candidateConfig.state.status === "in_progress") {
+				await db.insert(tasks).values({
+					organisationId: org.id,
+					subjectType: "profile",
+					subjectId: profile.id,
+					title: `Follow up on ${profile.firstName}'s reference request`,
+					description: `Reference request sent to previous employer. Follow up if no response within 5 days.`,
+					priority: "medium",
+					category: "follow_up",
+					source: "ai_agent",
+					agentId: "reference-chaser",
+					aiReasoning: "Reference request pending for 3 days.",
+					status: "in_progress",
+					dueAt: daysFromNow(5),
+					createdAt: daysFromNow(-3),
+					updatedAt: daysFromNow(-1),
+				});
+				taskCount++;
+			}
 		}
 
 		// Create reference contacts if defined

@@ -78,9 +78,10 @@ interface Task {
 	updatedAt: string;
 	subject?: {
 		type: string;
-		id: string;
+		id: string | null;
 		name?: string;
 		email?: string;
+		facility?: string;
 	} | null;
 }
 
@@ -209,9 +210,14 @@ function createColumns(
 				if (!task.subject?.name) {
 					return <span className="text-muted-foreground text-sm">—</span>;
 				}
+
+				const href = task.subject.type === "placement"
+					? `/placements/${task.subjectId}`
+					: `/candidates/${task.subjectId}`;
+
 				return (
 					<Link
-						href={`/candidates/${task.subjectId}`}
+						href={href}
 						className="flex items-center gap-2 hover:underline"
 					>
 						<Avatar className="h-6 w-6">
@@ -219,7 +225,14 @@ function createColumns(
 								{getInitials(task.subject.name)}
 							</AvatarFallback>
 						</Avatar>
-						<span className="text-sm">{task.subject.name}</span>
+						<div className="min-w-0">
+							<span className="text-sm">{task.subject.name}</span>
+							{task.subject.facility && (
+								<span className="ml-1.5 text-[10px] text-muted-foreground bg-muted px-1.5 py-0 rounded-full">
+									{task.subject.facility}
+								</span>
+							)}
+						</div>
 					</Link>
 				);
 			},
@@ -379,9 +392,9 @@ function createColumns(
 								<>
 									{isActionable && <DropdownMenuSeparator />}
 									<DropdownMenuItem asChild>
-										<Link href={`/candidates/${task.subjectId}`}>
+										<Link href={task.subjectType === "placement" ? `/placements/${task.subjectId}` : `/candidates/${task.subjectId}`}>
 											<User className="mr-2 h-4 w-4" />
-											View Candidate
+											{task.subjectType === "placement" ? "View Placement" : "View Candidate"}
 										</Link>
 									</DropdownMenuItem>
 								</>

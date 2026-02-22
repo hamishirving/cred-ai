@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import faIcon from "@/app/FA-icon.png";
-import { toast } from "@/components/toast";
 import {
 	ArrowLeft,
 	CheckCircle2,
@@ -18,8 +17,6 @@ import {
 	Building2,
 	ChevronDown,
 	ChevronRight,
-	RefreshCw,
-	ArrowUpRight,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -28,7 +25,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { ActivityTimeline, type TimelineData } from "@/components/candidate/activity-timeline";
 import { FacilityDetailDialog } from "@/components/facility/facility-detail-dialog";
+import { NextActionsSection } from "@/components/placement/next-actions-section";
 
 // ============================================
 // Types
@@ -109,6 +108,23 @@ interface PlacementContext {
 	isLapseDeal?: boolean;
 }
 
+interface PlacementTask {
+	id: string;
+	title: string;
+	description: string | null;
+	priority: "urgent" | "high" | "medium" | "low";
+	category: string | null;
+	status: "pending" | "in_progress" | "completed" | "dismissed" | "snoozed";
+	source: string;
+	agentId: string | null;
+	executionId: string | null;
+	scheduledFor: string | null;
+	complianceElementSlugs: string[];
+	dueAt: string | null;
+	snoozedUntil: string | null;
+	createdAt: string;
+}
+
 interface PlacementData {
 	placement: PlacementDetail;
 	context: PlacementContext;
@@ -117,6 +133,18 @@ interface PlacementData {
 		items: ComplianceItem[];
 		summary: ComplianceSummary;
 	};
+	timeline: {
+		activities: Array<{
+			id: string;
+			summary: string;
+			actor: string;
+			createdAt: string;
+			[key: string]: unknown;
+		}>;
+		startDate: string;
+		endDate: string;
+	};
+	tasks: PlacementTask[];
 }
 
 // ============================================
@@ -516,8 +544,6 @@ export default function PlacementDetailPage() {
 	const [data, setData] = useState<PlacementData | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [screeningInProgress, setScreeningInProgress] = useState(false);
-	const [submittingScreening, setSubmittingScreening] = useState(false);
 
 	useEffect(() => {
 		async function fetchData() {
@@ -553,11 +579,16 @@ export default function PlacementDetailPage() {
 		return map;
 	}, [data]);
 
-	const missingFaItems = useMemo(() => {
-		if (!data) return 0;
-		return data.compliance.items.filter(
-			(i) => i.faHandled && (i.status === "missing" || i.status === "expired"),
-		).length;
+	const parsedTimeline = useMemo(() => {
+		if (!data) return null;
+		return {
+			activities: data.timeline.activities.map((a) => ({
+				...a,
+				createdAt: new Date(a.createdAt),
+			})),
+			startDate: new Date(data.timeline.startDate),
+			endDate: new Date(data.timeline.endDate),
+		};
 	}, [data]);
 
 	// Element definition lookup by slug (from requirementGroups)
@@ -595,85 +626,6 @@ export default function PlacementDetailPage() {
 		if (!selectedItemSlug) return null;
 		return elementLookup.get(selectedItemSlug) ?? null;
 	}, [selectedItemSlug, elementLookup]);
-
-	async function handleInitiateScreening() {
-		if (!data) return;
-		setSubmittingScreening(true);
-		setScreeningInProgress(false);
-
-		try {
-			const { placement, context } = data;
-
-			const response = await fetch("/api/agents/background-screening/execute", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					candidateSearch: placement.candidateName,
-					targetState: context.jurisdiction,
-					facilityName: placement.facilityName,
-					dealType: placement.dealType || "standard",
-				}),
-			});
-
-			if (!response.ok || !response.body) {
-				toast({ type: "error", description: "Failed to initiate screening" });
-				return;
-			}
-
-			// Listen for execution ID from SSE stream
-			const reader = response.body.getReader();
-			const decoder = new TextDecoder();
-			let buffer = "";
-			let gotExecutionId = false;
-
-			const processStream = async () => {
-				while (true) {
-					const { done, value } = await reader.read();
-					if (done) break;
-
-					buffer += decoder.decode(value, { stream: true });
-					const lines = buffer.split("\n");
-					buffer = lines.pop() || "";
-
-					for (const line of lines) {
-						if (line.startsWith("data: ")) {
-							try {
-								const eventData = JSON.parse(line.slice(6));
-								if (eventData.executionId) {
-									gotExecutionId = true;
-									setScreeningInProgress(true);
-									const execId = eventData.executionId;
-									toast({
-										type: "success",
-										description: "FA screening initiated",
-										action: {
-											label: "View →",
-											onClick: () => router.push(`/agents/background-screening/executions/${execId}`),
-										},
-									});
-									reader.cancel();
-									return;
-								}
-							} catch {
-								// Skip malformed events
-							}
-						}
-					}
-				}
-			};
-
-			await processStream();
-
-			if (!gotExecutionId) {
-				toast({ type: "error", description: "Screening failed to start" });
-			}
-		} catch (err) {
-			console.error("Failed to initiate screening:", err);
-			toast({ type: "error", description: "Failed to initiate screening" });
-		} finally {
-			setSubmittingScreening(false);
-		}
-	}
 
 	if (loading) return <DetailSkeleton />;
 
@@ -736,12 +688,6 @@ export default function PlacementDetailPage() {
 									{DEAL_TYPE_LABELS[placement.dealType] || placement.dealType}
 								</span>
 							)}
-							{screeningInProgress && (
-								<Badge variant="info" className="text-xs font-medium">
-									<RefreshCw className="size-3 mr-1 animate-spin" />
-									Screening in progress
-								</Badge>
-							)}
 						</div>
 						<p className="mt-1 text-xs text-muted-foreground">
 							Start date:{" "}
@@ -784,42 +730,26 @@ export default function PlacementDetailPage() {
 				<SummaryStatCard label="Carry Forward" value={carryForwardCount} />
 			</div>
 
-			{/* Send to FA action */}
-			{missingFaItems > 0 && (
-				<Card className="shadow-none! bg-card flex items-center justify-between px-4 py-3">
-					<div>
-						<p className="text-sm font-medium">
-							{missingFaItems} missing item{missingFaItems !== 1 ? "s" : ""} handled by First Advantage
-						</p>
-						<p className="text-xs text-muted-foreground mt-0.5">
-							Initiate background screening to resolve these items
-						</p>
-					</div>
-					<Button
-						onClick={handleInitiateScreening}
-						disabled={submittingScreening || screeningInProgress}
-						variant={screeningInProgress ? "outline" : "default"}
-						className="shrink-0"
-					>
-						{submittingScreening ? (
-							<>
-								<RefreshCw className="size-3.5 mr-2 animate-spin" />
-								Starting…
-							</>
-						) : screeningInProgress ? (
-							<>
-								<RefreshCw className="size-3.5 mr-2 animate-spin" />
-								Screening in progress
-							</>
-						) : (
-							<>
-								Initiate FA Screening
-								<ArrowUpRight className="size-3.5 ml-2" />
-							</>
-						)}
-					</Button>
-				</Card>
+			{/* Activity timeline */}
+			{parsedTimeline && parsedTimeline.activities.length > 0 && (
+				<ActivityTimeline
+					data={parsedTimeline as TimelineData}
+					profileId={placement.profileId}
+					showViewAllLink={false}
+				/>
 			)}
+
+			{/* Next Actions */}
+			<NextActionsSection
+				tasks={data.tasks}
+				placement={{
+					id: placement.id,
+					candidateName: placement.candidateName,
+					facilityName: placement.facilityName,
+					dealType: placement.dealType,
+				}}
+				context={data.context}
+			/>
 
 			{/* Compliance requirements — list-detail layout */}
 			<div className="space-y-4">

@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPlacementById, updatePlacementStatus } from "@/lib/db/queries";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { tasks } from "@/lib/db/schema";
+import { getPlacementById, getProfileTimeline, updatePlacementStatus } from "@/lib/db/queries";
 import {
 	checkPlacementCompliance,
 	resolvePlacementRequirements,
 	type PlacementContext,
 } from "@/lib/compliance/resolve-requirements";
+
+const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+if (!databaseUrl) {
+	throw new Error("DATABASE_URL is not defined");
+}
+const client = postgres(databaseUrl);
+const db = drizzle(client);
 
 const VALID_STATUSES = [
 	"pending",
@@ -40,13 +51,29 @@ export async function GET(
 		};
 
 		// Resolve requirements and check compliance
-		const [groups, compliance] = await Promise.all([
+		const priorityOrder = sql`CASE ${tasks.priority}
+			WHEN 'urgent' THEN 1
+			WHEN 'high' THEN 2
+			WHEN 'medium' THEN 3
+			WHEN 'low' THEN 4
+			ELSE 5
+		END`;
+
+		const [groups, compliance, timeline, placementTasks] = await Promise.all([
 			resolvePlacementRequirements(placement.organisationId, context),
 			checkPlacementCompliance(
 				placement.organisationId,
 				placement.profileId,
 				context,
 			),
+			getProfileTimeline({ profileId: placement.profileId, days: 7 }),
+			db.select()
+				.from(tasks)
+				.where(and(
+					eq(tasks.subjectType, "placement"),
+					eq(tasks.subjectId, params.id),
+				))
+				.orderBy(priorityOrder, desc(tasks.createdAt)),
 		]);
 
 		return NextResponse.json({
@@ -54,6 +81,8 @@ export async function GET(
 			context,
 			requirementGroups: groups,
 			compliance,
+			timeline,
+			tasks: placementTasks,
 		});
 	} catch (error) {
 		console.error("Failed to fetch placement:", error);

@@ -6,6 +6,7 @@
  * @see docs/PRD-AI-AGENTS.md#tasks-system
  */
 import {
+	jsonb,
 	pgTable,
 	text,
 	timestamp,
@@ -101,8 +102,14 @@ export const tasks = pgTable("tasks", {
 	/** Link to the insight that generated this task */
 	insightId: uuid("insight_id"),
 
+	/** Link to agent execution (when delegated to an agent) */
+	executionId: uuid("execution_id"),
+
 	/** AI reasoning for this task (if AI-generated) */
 	aiReasoning: text("ai_reasoning"),
+
+	/** Compliance element slugs this task relates to */
+	complianceElementSlugs: jsonb("compliance_element_slugs").$type<string[]>().default([]),
 
 	// ============================================
 	// Status Tracking
@@ -118,6 +125,9 @@ export const tasks = pgTable("tasks", {
 
 	/** When this task is due */
 	dueAt: timestamp("due_at"),
+
+	/** When this task is scheduled for agent execution */
+	scheduledFor: timestamp("scheduled_for"),
 
 	/** When task was snoozed until (if snoozed) */
 	snoozedUntil: timestamp("snoozed_until"),

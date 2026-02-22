@@ -170,6 +170,17 @@ export async function PATCH(
 			updateData.dueAt = body.dueAt ? new Date(body.dueAt) : null;
 		}
 
+		// Handle agent delegation fields
+		if (body.agentId !== undefined) {
+			updateData.agentId = body.agentId;
+		}
+		if (body.executionId !== undefined) {
+			updateData.executionId = body.executionId;
+		}
+		if (body.scheduledFor !== undefined) {
+			updateData.scheduledFor = body.scheduledFor ? new Date(body.scheduledFor) : null;
+		}
+
 		// Update task
 		const [updatedTask] = await db
 			.update(tasks)
