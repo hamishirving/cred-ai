@@ -64,6 +64,13 @@
       "when": 1771777012745,
       "tag": "0008_hot_princess_powerful",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1771839276177,
+      "tag": "0009_narrow_ricochet",
+      "breakpoints": true
     }
   ]
 }

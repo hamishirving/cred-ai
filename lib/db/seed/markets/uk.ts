@@ -279,30 +279,35 @@ export const ukPackageTemplates: Omit<NewCompliancePackage, "organisationId">[] 
 		description: "Essential requirements for all candidates",
 		category: "core",
 		isDefault: true,
+		version: 1,
 	},
 	{
 		name: "Nursing Package",
 		slug: "nursing-package",
 		description: "Additional requirements for registered nurses",
 		category: "professional",
+		version: 1,
 	},
 	{
 		name: "Healthcare Assistant Package",
 		slug: "hca-package",
 		description: "Requirements for healthcare assistants",
 		category: "professional",
+		version: 1,
 	},
 	{
 		name: "Care Worker Package",
 		slug: "care-worker-package",
 		description: "Requirements for domiciliary care workers",
 		category: "professional",
+		version: 1,
 	},
 	{
 		name: "NHS Trust Package",
 		slug: "nhs-trust-package",
 		description: "NHS Trust specific requirements",
 		category: "client",
+		version: 1,
 	},
 	{
 		name: "Scotland Package",
@@ -310,6 +315,21 @@ export const ukPackageTemplates: Omit<NewCompliancePackage, "organisationId">[] 
 		description: "Scotland-specific requirements (PVG instead of DBS)",
 		category: "jurisdiction",
 		onlyJurisdictions: ["scotland"],
+		version: 1,
+	},
+	{
+		name: "Doctor Package",
+		slug: "doctor-package",
+		description: "Additional requirements for medical doctors",
+		category: "professional",
+		version: 1,
+	},
+	{
+		name: "Care Home Package",
+		slug: "care-home-package",
+		description: "Care home specific orientation and training",
+		category: "client",
+		version: 1,
 	},
 ];
 
@@ -354,6 +374,16 @@ export const ukPackageContents: Record<string, string[]> = {
 	"scotland-package": [
 		"pvg-scheme",
 	],
+	"doctor-package": [
+		"gmc-registration",
+		"bls-uk",
+		"safeguarding-adults",
+		"safeguarding-children",
+	],
+	"care-home-package": [
+		"care-certificate",
+		"safeguarding-adults",
+	],
 };
 
 /**
@@ -394,3 +424,38 @@ export const ukRoles: Omit<NewRole, "organisationId">[] = [
 		professionalBody: "gmc",
 	},
 ];
+
+/**
+ * Which packages a role requires (role slug -> package slugs).
+ */
+export const ukRolePackages: Record<string, string[]> = {
+	"band-5-nurse": ["core-package", "nursing-package"],
+	"band-6-nurse": ["core-package", "nursing-package"],
+	"healthcare-assistant": ["core-package", "hca-package"],
+	"care-worker": ["core-package", "care-worker-package"],
+	"senior-care-worker": ["core-package", "care-worker-package"],
+	doctor: ["core-package", "doctor-package"],
+};
+
+/**
+ * Which package a jurisdiction requires (jurisdiction -> package slug).
+ */
+export const ukJurisdictionPackages: Record<string, string> = {
+	scotland: "scotland-package",
+};
+
+/**
+ * Which package a facility type requires (facility type -> package slug).
+ */
+export const ukFacilityPackages: Record<string, string> = {
+	"nhs-trust": "nhs-trust-package",
+	"care-home": "care-home-package",
+};
+
+/**
+ * Elements handled by external screening providers (DBS service, etc).
+ */
+export const ukExternallyHandledElements = new Set([
+	"enhanced-dbs",
+	"pvg-scheme",
+]);

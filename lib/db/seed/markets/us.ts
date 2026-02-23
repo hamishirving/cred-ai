@@ -374,6 +374,34 @@ export const usComplianceElements: Omit<NewComplianceElement, "organisationId">[
 			validationMode: "none",
 		},
 	},
+
+	// SNF-specific placement elements
+	{
+		name: "SNF Orientation",
+		slug: "snf-orientation",
+		description: "Skilled nursing facility orientation and onboarding",
+		category: "orientation",
+		scope: "placement",
+		evidenceType: "attestation",
+		expiryDays: null,
+		verificationRules: {
+			validationMode: "none",
+		},
+	},
+	{
+		name: "CMS Compliance Training",
+		slug: "cms-compliance-training",
+		description: "Centers for Medicare & Medicaid Services compliance training",
+		category: "training",
+		scope: "placement",
+		evidenceType: "document",
+		expiryDays: 365,
+		expiryWarningDays: 30,
+		verificationRules: {
+			validationMode: "ai_human",
+			aiConfidenceThreshold: 85,
+		},
+	},
 ];
 
 /**
@@ -386,18 +414,21 @@ export const usPackageTemplates: Omit<NewCompliancePackage, "organisationId">[] 
 		description: "Federal requirements for all healthcare workers",
 		category: "core",
 		isDefault: true,
+		version: 1,
 	},
 	{
 		name: "RN Package",
 		slug: "rn-package",
 		description: "Requirements for Registered Nurses",
 		category: "professional",
+		version: 1,
 	},
 	{
 		name: "ICU/Critical Care Package",
 		slug: "icu-package",
 		description: "Additional requirements for critical care assignments",
 		category: "specialty",
+		version: 1,
 	},
 	{
 		name: "California Package",
@@ -405,6 +436,7 @@ export const usPackageTemplates: Omit<NewCompliancePackage, "organisationId">[] 
 		description: "California-specific requirements",
 		category: "jurisdiction",
 		onlyJurisdictions: ["california"],
+		version: 1,
 	},
 	{
 		name: "Texas Package",
@@ -412,6 +444,7 @@ export const usPackageTemplates: Omit<NewCompliancePackage, "organisationId">[] 
 		description: "Texas-specific requirements",
 		category: "jurisdiction",
 		onlyJurisdictions: ["texas"],
+		version: 1,
 	},
 	{
 		name: "Florida Package",
@@ -419,18 +452,28 @@ export const usPackageTemplates: Omit<NewCompliancePackage, "organisationId">[] 
 		description: "Florida-specific requirements",
 		category: "jurisdiction",
 		onlyJurisdictions: ["florida"],
+		version: 1,
 	},
 	{
 		name: "Hospital Package",
 		slug: "hospital-package",
 		description: "Hospital facility requirements",
 		category: "facility",
+		version: 1,
+	},
+	{
+		name: "SNF Package",
+		slug: "snf-package",
+		description: "Skilled nursing facility requirements",
+		category: "facility",
+		version: 1,
 	},
 	{
 		name: "Exclusion Checks Package",
 		slug: "exclusion-checks-package",
 		description: "OIG/SAM exclusion screening",
 		category: "screening",
+		version: 1,
 	},
 ];
 
@@ -475,6 +518,11 @@ export const usPackageContents: Record<string, string[]> = {
 	"hospital-package": [
 		"hospital-credentialing",
 		"hospital-orientation",
+		"unit-competency",
+	],
+	"snf-package": [
+		"snf-orientation",
+		"cms-compliance-training",
 		"unit-competency",
 	],
 };
@@ -541,6 +589,7 @@ export const usStatePackages: Record<string, string> = {
  */
 export const usFacilityPackages: Record<string, string> = {
 	hospital: "hospital-package",
+	"skilled-nursing": "snf-package",
 };
 
 /**

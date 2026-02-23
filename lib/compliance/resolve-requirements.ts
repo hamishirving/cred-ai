@@ -22,6 +22,20 @@ import {
 	usPackageContents,
 	faHandledElements,
 } from "@/lib/db/seed/markets/us";
+import {
+	ukRolePackages,
+	ukJurisdictionPackages,
+	ukFacilityPackages,
+	ukPackageContents,
+	ukExternallyHandledElements,
+} from "@/lib/db/seed/markets/uk";
+
+// Merged mappings — slugs don't overlap between markets
+const allRolePackages: Record<string, string[]> = { ...usRolePackages, ...ukRolePackages };
+const allStatePackages: Record<string, string> = { ...usStatePackages, ...ukJurisdictionPackages };
+const allFacilityPackages: Record<string, string> = { ...usFacilityPackages, ...ukFacilityPackages };
+const allPackageContents: Record<string, string[]> = { ...usPackageContents, ...ukPackageContents };
+const allExternalElements = new Set([...faHandledElements, ...ukExternallyHandledElements]);
 
 // ============================================
 // Types
@@ -177,7 +191,7 @@ export async function resolvePlacementRequirements(
 		if (!pkg) return null;
 
 		// Get element slugs from the static mapping
-		const elementSlugs = usPackageContents[packageSlug] || [];
+		const elementSlugs = allPackageContents[packageSlug] || [];
 		if (elementSlugs.length === 0) return null;
 
 		// Filter to jurisdiction-appropriate elements and deduplicate
@@ -221,7 +235,7 @@ export async function resolvePlacementRequirements(
 				evidenceType: el.evidenceType,
 				expiryDays: el.expiryDays,
 				expiryWarningDays: el.expiryWarningDays,
-				faHandled: faHandledElements.has(el.slug),
+				faHandled: allExternalElements.has(el.slug),
 			};
 		});
 
@@ -234,21 +248,21 @@ export async function resolvePlacementRequirements(
 	};
 
 	// 1. Role packages (federal core + role-specific + specialty)
-	const rolePackageSlugs = usRolePackages[context.roleSlug] || [];
+	const rolePackageSlugs = allRolePackages[context.roleSlug] || [];
 	for (const pkgSlug of rolePackageSlugs) {
 		const group = await resolvePackage(pkgSlug, `role:${context.roleSlug}`);
 		if (group) groups.push(group);
 	}
 
 	// 2. State/jurisdiction package
-	const statePackageSlug = usStatePackages[context.jurisdiction];
+	const statePackageSlug = allStatePackages[context.jurisdiction];
 	if (statePackageSlug) {
 		const group = await resolvePackage(statePackageSlug, `state:${context.jurisdiction}`);
 		if (group) groups.push(group);
 	}
 
 	// 3. Facility package
-	const facilityPackageSlug = usFacilityPackages[context.facilityType];
+	const facilityPackageSlug = allFacilityPackages[context.facilityType];
 	if (facilityPackageSlug) {
 		const group = await resolvePackage(facilityPackageSlug, `facility:${context.facilityType}`);
 		if (group) groups.push(group);

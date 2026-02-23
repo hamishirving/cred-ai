@@ -66,6 +66,10 @@ import {
 	type AgentMemory,
 	referenceContacts,
 	type ReferenceContact,
+	compliancePackages,
+	type CompliancePackage,
+	complianceElements,
+	type ComplianceElement,
 } from "./schema";
 import type {
 	TranscriptMessage,
@@ -1879,4 +1883,44 @@ export async function updatePlacementStatus({
 			"Failed to update placement status",
 		);
 	}
+}
+
+// ============================================
+// Compliance Queries
+// ============================================
+
+export async function getCompliancePackagesByOrganisationId({
+	organisationId,
+}: {
+	organisationId: string;
+}): Promise<CompliancePackage[]> {
+	return db
+		.select()
+		.from(compliancePackages)
+		.where(eq(compliancePackages.organisationId, organisationId))
+		.orderBy(asc(compliancePackages.name));
+}
+
+export async function getComplianceElementsByOrganisationId({
+	organisationId,
+}: {
+	organisationId: string;
+}): Promise<ComplianceElement[]> {
+	return db
+		.select()
+		.from(complianceElements)
+		.where(eq(complianceElements.organisationId, organisationId))
+		.orderBy(asc(complianceElements.name));
+}
+
+export async function getRolesByOrganisationId({
+	organisationId,
+}: {
+	organisationId: string;
+}): Promise<Role[]> {
+	return db
+		.select()
+		.from(roles)
+		.where(eq(roles.organisationId, organisationId))
+		.orderBy(asc(roles.name));
 }
