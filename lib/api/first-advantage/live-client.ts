@@ -94,10 +94,20 @@ export class LiveFAClient implements FAClient {
 	}
 
 	async createCandidate(input: FACreateCandidateInput): Promise<FACandidate> {
-		return this.request<FACandidate>("/candidates", {
-			method: "POST",
-			body: JSON.stringify(input),
-		});
+		try {
+			return await this.request<FACandidate>("/candidates", {
+				method: "POST",
+				body: JSON.stringify(input),
+			});
+		} catch (error) {
+			const msg = error instanceof Error ? error.message : String(error);
+			// 409 = email already in use — look up existing candidate
+			if (msg.includes("409") && input.email) {
+				const existing = await this.findCandidateByEmail(input.email);
+				if (existing) return existing;
+			}
+			throw error;
+		}
 	}
 
 	async initiateScreening(

@@ -60,6 +60,18 @@ The candidate needs: name, email, dob, ssn, address (with ISO 3166-2 regionCode 
 		try {
 			const client = getFAClient();
 
+			// Check if candidate already exists in FA
+			if (input.email) {
+				try {
+					const existing = await client.findCandidateByEmail(input.email);
+					if (existing) {
+						return { data: existing, note: "Candidate already exists in FA" };
+					}
+				} catch {
+					// Lookup failed — proceed with creation
+				}
+			}
+
 			// Build the candidate payload
 			const payload: Record<string, unknown> = {
 				givenName: input.givenName,

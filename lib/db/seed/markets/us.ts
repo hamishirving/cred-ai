@@ -217,32 +217,17 @@ export const usComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		},
 	},
 
-	// OIG/SAM Exclusion Checks (First Advantage handles these)
+	// FACES Sanctions Screening (bundled in every FA background package)
 	{
-		name: "OIG Exclusion Check",
-		slug: "oig-exclusion-check",
-		description: "Office of Inspector General excluded individuals check",
+		name: "FACES Sanctions Screening",
+		slug: "faces-sanctions-screening",
+		description: "FACES sanctions and exclusion database screening — covers 200+ sources including OIG, SAM, GSA, state exclusion lists and FDA debarment. Bundled in every FA background package.",
 		category: "identity",
 		scope: "candidate",
 		evidenceType: "check",
 		fulfilmentProvider: "external_provider",
-		expiryDays: 30,
-		expiryWarningDays: 7,
-		verificationRules: {
-			validationMode: "external",
-			externalIntegration: "first-advantage",
-		},
-	},
-	{
-		name: "SAM Exclusion Check",
-		slug: "sam-exclusion-check",
-		description: "System for Award Management debarment check",
-		category: "identity",
-		scope: "candidate",
-		evidenceType: "check",
-		fulfilmentProvider: "external_provider",
-		expiryDays: 30,
-		expiryWarningDays: 7,
+		expiryDays: 365,
+		expiryWarningDays: 60,
 		verificationRules: {
 			validationMode: "external",
 			externalIntegration: "first-advantage",
@@ -682,9 +667,9 @@ export const usPackageTemplates: Omit<NewCompliancePackage, "organisationId">[] 
 		version: 1,
 	},
 	{
-		name: "Exclusion Checks Package",
+		name: "FACES Sanctions Package",
 		slug: "exclusion-checks-package",
-		description: "OIG/SAM exclusion screening",
+		description: "FACES sanctions screening (200+ sources including OIG/SAM)",
 		category: "screening",
 		version: 1,
 	},
@@ -738,8 +723,7 @@ export const usPackageContents: Record<string, string[]> = {
 		"florida-level2-background",
 	],
 	"exclusion-checks-package": [
-		"oig-exclusion-check",
-		"sam-exclusion-check",
+		"faces-sanctions-screening",
 	],
 	"hospital-package": [
 		"hospital-credentialing",
@@ -946,6 +930,18 @@ export const usAcceptableDocuments: Record<
 				"Facility-specific Hepatitis B declination form. Accepted if titer is negative or equivocal, indicating non-immunity. Must include candidate signature acknowledging the risk, date, and witnessed by facility representative. Candidate must understand they may be required to begin the vaccination series.",
 			clinicianGuidance:
 				"A Hep B declination is accepted if your titer shows you are not immune. You may be asked to start the vaccination series.",
+		},
+	],
+	"drug-screen": [
+		{
+			name: "13-Panel Drug Screen Result",
+			documentType: "screening_result",
+			status: "preferred",
+			priority: 1,
+			acceptanceCriteria:
+				"Drug screen must test for all 13 required analytes: Amphetamines (including Methamphetamine), Barbiturates, Benzodiazepines, Cocaine Metabolites, Marijuana, Methadone, Opiates (Codeine, Morphine), Phencyclidine, Propoxyphene, Fentanyl, Meperidine, Oxycodone, and Tramadol. Result must show Negative for all analytes. Any non-negative result (Positive, Dilute, or Invalid) requires review. Negative Dilute results require immediate recollection. Lab name, collection date, and MRO certification must be visible. FA product code DHS90007 covers all 13 analytes.",
+			clinicianGuidance:
+				"Your drug screen will be ordered through First Advantage and routed to a clinic near you. The test covers 13 substances. You'll receive clinic details via email.",
 		},
 	],
 	"covid-vaccination": [

@@ -117,8 +117,7 @@ const SCREENING_SLUGS = new Set([
 	"tb-test",
 	"physical-examination",
 	"federal-background-check",
-	"oig-exclusion-check",
-	"sam-exclusion-check",
+	"faces-sanctions-screening",
 	"florida-level2-background",
 ]);
 

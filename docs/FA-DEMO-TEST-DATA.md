@@ -38,7 +38,7 @@ Missing:
 - Hospital orientation
 - Unit competency
 
-**FA package:** Package #1 (Standard). No OIG/SAM triggers.
+**FA package:** Package #1 (Standard). FACES sanctions screening bundled in every background package.
 
 **Demo story:** First Florida placement for a new travel ICU nurse. Shows the full gap analysis with grouped requirements. FA handles the background screening, candidate provides the FL license, facility handles orientation.
 
@@ -99,8 +99,7 @@ Missing (expired or never had):
 - Federal background check (expired)
 - Florida Level 2 background check (expired)
 - Drug screen (expired)
-- OIG exclusion check
-- SAM exclusion check
+- FACES sanctions screening
 - Hospital credentialing
 - Hospital orientation
 - Unit competency
@@ -109,9 +108,54 @@ Expiring:
 - BLS certification (expiring soon)
 - TB test (expiring soon)
 
-**FA package:** Package #2 (Standard + OIG/SAM). Tier-2 trigger: lapse deal.
+**FA package:** Package #2 (Standard + FACES sanctions). Tier-2 trigger: lapse deal. FACES covers 200+ sources including OIG, SAM, GSA, state exclusion lists and FDA debarment.
 
-**Demo story:** The worst case. Inactive 6 months, everything has lapsed. Needs full re-screening including OIG/SAM because lapse deals trigger tier-2 package selection. Shows Credentially's intelligence in auto-detecting package escalation.
+**Demo story:** The worst case. Inactive 6 months, everything has lapsed. Needs full re-screening including FACES sanctions package because lapse deals trigger tier-2 package selection. Shows Credentially's intelligence in auto-detecting package escalation.
+
+### Scenario 4: Natasha Smith (Medsol Scorecard, Iowa Compact)
+
+| Field | Value |
+|-------|-------|
+| Name | Natasha Smith |
+| Email | natasha.smith@email.com |
+| DOB | 1992-09-03 |
+| Location | Des Moines, IA |
+| Role | Travel RN |
+| Target State | Iowa |
+| Facility | UnityPoint Health Des Moines |
+| Deal Type | Standard |
+| Professional Reg | Compact nursing license |
+
+**Compliance state:** 35% complete (in_progress)
+
+Has:
+- Compact nursing license (valid)
+- BLS certification
+- Driver's licence
+- Social security card
+- Background auth consent
+- COVID vaccination
+
+Missing:
+- Federal background check
+- State background check
+- Drug screen
+- TB test
+- Physical examination
+- MMR vaccination
+- Varicella vaccination
+- Hepatitis B vaccination
+- TDAP vaccination
+- Skills checklist
+- Professional references
+- Hospital credentialing
+- Hospital orientation
+
+**FA package:** Package #1 (Standard). Iowa is a compact state — no Iowa-specific package needed. FACES sanctions screening bundled in every background package.
+
+**Expected packages:** federal-core + rn-package + hospital-package. No state-specific package (compact licence covers Iowa).
+
+**Demo story:** Medsol scorecard candidate. First-time clinician with Medical Solutions. 13-week contract starting 3/22/2026. Shows the most common onboarding scenario — new clinician needing the full screening pipeline. Key demo moment: intelligent drug test ordering with 13-panel analyte matching (FA product code DHS90007).
 
 ## Agent Input Defaults
 
@@ -178,6 +222,6 @@ Recommended order for the Medsol deep dive:
 
 3. **Screening Status Monitor** with Ashlyn Torres. Checks the screening status, maps reportItems back to compliance elements.
 
-4. **Gap Analyzer** with Peter Walsh (lapse deal). Shows the worst case, auto-escalation to Package #2 with OIG/SAM.
+4. **Gap Analyzer** with Peter Walsh (lapse deal). Shows the worst case, auto-escalation to Package #2 with FACES sanctions.
 
 5. **Gap Analyzer** with Lexie Chen (reassignment). Shows worker passport carrying forward from TX, only CA-specific gaps.

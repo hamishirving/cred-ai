@@ -43,8 +43,8 @@ Use getPlacementCompliance to understand the candidate's current compliance stat
 - State Criminal Repository → florida-level2-background (or the state-specific background element)
 - DOJ Sex Offender Search → florida-level2-background (covered by state Level 2)
 - FACIS L3 → florida-level2-background (covered by state Level 2)
-- OIG-Excluded Parties → oig-exclusion-check
-- GSA-Excluded Parties → sam-exclusion-check
+- OIG-Excluded Parties → faces-sanctions-screening
+- GSA-Excluded Parties → faces-sanctions-screening
 - SSN Trace → federal-background-check (supporting check)
 - Drivers Record → federal-background-check (supporting check)
 - Drug Screen - 13 Panel → drug-screen
