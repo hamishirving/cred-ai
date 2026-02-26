@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import { useRouter } from "next/navigation";
 import {
 	FileText,
 	Upload,
@@ -17,7 +18,9 @@ import {
 	Download,
 	Shield,
 	ImageIcon,
+	ExternalLink,
 } from "lucide-react";
+import { streamAgentExecution } from "@/lib/ai/agents/stream-agent-execution";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -129,6 +132,13 @@ export function DocumentIntelligenceDialog({
 	const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
 	const [uploadedIsPdf, setUploadedIsPdf] = useState(false);
 
+	// Registry verification (BLS agent chain)
+	const router = useRouter();
+	const [verifiedDocumentUrl, setVerifiedDocumentUrl] = useState<string | null>(
+		null,
+	);
+	const [verifyingWithRegistry, setVerifyingWithRegistry] = useState(false);
+
 	// Fetch signed URL for existing document
 	const fetchDocUrl = useCallback(async () => {
 		if (!existingFilePath) return;
@@ -170,6 +180,13 @@ export function DocumentIntelligenceDialog({
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally run on open/data change, not result
 	}, [open, existingExtractedData]);
+
+	// Set verifiedDocumentUrl when reopening with a stored approved result
+	useEffect(() => {
+		if (result?.decision === "approved" && docUrl && !verifiedDocumentUrl) {
+			setVerifiedDocumentUrl(docUrl);
+		}
+	}, [result, docUrl, verifiedDocumentUrl]);
 
 	const showUploadArea = !hasExistingFile || replacing;
 
@@ -302,6 +319,7 @@ export function DocumentIntelligenceDialog({
 
 			const data = await response.json();
 			setResult(data);
+			setVerifiedDocumentUrl(documentUrl);
 
 			// Always refresh parent data so stored results persist
 			onVerified?.();
@@ -322,6 +340,8 @@ export function DocumentIntelligenceDialog({
 			setUploadedFileUrl(null);
 			setDocUrl(null);
 			setDocError(null);
+			setVerifiedDocumentUrl(null);
+			setVerifyingWithRegistry(false);
 		}
 		onOpenChange(openState);
 	}
@@ -341,6 +361,63 @@ export function DocumentIntelligenceDialog({
 		if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
 		setFilePreviewUrl(null);
 		setUploadedFileUrl(null);
+		setVerifiedDocumentUrl(null);
+		setVerifyingWithRegistry(false);
+	}
+
+	// BLS registry verification
+	const isBls = elementSlug.includes("bls");
+	const showRegistryButton =
+		isBls &&
+		result?.decision === "approved" &&
+		!verifyingWithRegistry &&
+		!!profileId &&
+		!!verifiedDocumentUrl;
+
+	async function handleVerifyWithRegistry() {
+		if (!profileId || !verifiedDocumentUrl) return;
+		setVerifyingWithRegistry(true);
+		try {
+			const response = await fetch(
+				"/api/agents/verify-bls-certificate/execute",
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						profileId,
+						organisationId,
+						documentUrl: verifiedDocumentUrl,
+					}),
+				},
+			);
+			if (!response.ok || !response.body) {
+				toast({
+					type: "error",
+					description: "Failed to start registry verification",
+				});
+				return;
+			}
+			await streamAgentExecution(response, (execId) => {
+				toast({
+					type: "success",
+					description: "Verifying with AHA registry…",
+					action: {
+						label: "View →",
+						onClick: () =>
+							router.push(
+								`/agents/verify-bls-certificate/executions/${execId}`,
+							),
+					},
+				});
+			});
+		} catch {
+			toast({
+				type: "error",
+				description: "Failed to verify with registry",
+			});
+		} finally {
+			setVerifyingWithRegistry(false);
+		}
 	}
 
 	return (
@@ -653,13 +730,34 @@ export function DocumentIntelligenceDialog({
 									</Button>
 								)}
 								{result && (
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={resetVerification}
-									>
-										Verify Another
-									</Button>
+									<div className="flex items-center gap-2">
+										{showRegistryButton && (
+											<Button
+												size="sm"
+												onClick={handleVerifyWithRegistry}
+												disabled={verifyingWithRegistry}
+											>
+												{verifyingWithRegistry ? (
+													<>
+														<RefreshCw className="size-3 animate-spin mr-1" />
+														Verifying…
+													</>
+												) : (
+													<>
+														<ExternalLink className="size-3 mr-1" />
+														Verify with registry
+													</>
+												)}
+											</Button>
+										)}
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={resetVerification}
+										>
+											Verify Another
+										</Button>
+									</div>
 								)}
 							</div>
 						)}

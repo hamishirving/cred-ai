@@ -21,6 +21,7 @@ import { updateDocumentStatus } from "@/lib/ai/tools/update-document-status";
 import { getAgentMemoryTool } from "@/lib/ai/tools/get-agent-memory";
 import { saveAgentMemoryTool } from "@/lib/ai/tools/save-agent-memory";
 import { draftEmail } from "@/lib/ai/tools/draft-email";
+import { sendSms } from "@/lib/ai/tools/send-sms";
 import { getCompliancePackages } from "@/lib/ai/tools/get-compliance-packages";
 import { getReferenceContactsTool } from "@/lib/ai/tools/get-reference-contacts";
 import { initiateVoiceCallTool } from "@/lib/ai/tools/initiate-voice-call";
@@ -29,7 +30,7 @@ import { updateReferenceStatusTool } from "@/lib/ai/tools/update-reference-statu
 import { getLocalProfile } from "@/lib/ai/tools/get-local-profile";
 import { getLocalCompliance } from "@/lib/ai/tools/get-local-compliance";
 import { searchLocalCandidates } from "@/lib/ai/tools/search-local-candidates";
-import { searchKnowledge } from "@/lib/ai/tools/search-knowledge";
+import { createSearchKnowledge, searchKnowledge } from "@/lib/ai/tools/search-knowledge";
 import { resolvePlacementRequirementsTool } from "@/lib/ai/tools/resolve-placement-requirements";
 import { getPlacementComplianceTool } from "@/lib/ai/tools/get-placement-compliance";
 import { faGetPackages } from "@/lib/ai/tools/fa-get-packages";
@@ -62,6 +63,7 @@ const toolRegistry: Record<string, Tool> = {
 	getAgentMemory: getAgentMemoryTool as Tool,
 	saveAgentMemory: saveAgentMemoryTool as Tool,
 	draftEmail: draftEmail as Tool,
+	sendSms: sendSms as Tool,
 	getCompliancePackages: getCompliancePackages as Tool,
 	getReferenceContacts: getReferenceContactsTool as Tool,
 	initiateVoiceCall: initiateVoiceCallTool as Tool,
@@ -92,6 +94,8 @@ export interface ToolResolverCallbacks {
 	onBrowserAction?: BrowserActionCallback;
 	/** Email attachments — when present, storeAttachment uses the index-based factory */
 	attachments?: EmailAttachment[];
+	/** Organisation context for tools that need tenant-aware routing */
+	organisationId?: string;
 }
 
 /**
@@ -134,6 +138,12 @@ export function resolveTools(
 			callbacks.attachments.length > 0
 		) {
 			resolved[name] = createStoreAttachment(callbacks.attachments) as Tool;
+			continue;
+		}
+
+		// Context-aware factory for searchKnowledge to route Ragie partition by org
+		if (name === "searchKnowledge" && callbacks?.organisationId) {
+			resolved[name] = createSearchKnowledge(callbacks.organisationId) as Tool;
 			continue;
 		}
 

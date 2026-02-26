@@ -124,6 +124,7 @@ export async function GET(
 		return NextResponse.json({
 			placement,
 			context,
+			facilityDrugTestRequirements: placement.facilityDrugTestRequirements ?? [],
 			requirementGroups: groups,
 			compliance,
 			timeline,

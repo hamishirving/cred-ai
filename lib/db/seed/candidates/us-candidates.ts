@@ -4,7 +4,11 @@
  * Named candidates with varied compliance states for realistic demos.
  */
 import type { NewProfile } from "../../schema";
-import { generateUSPhone, generateUSNursingLicense, generateSSN } from "../utils";
+import {
+	generateUSPhone,
+	generateUSNursingLicense,
+	generateSSN,
+} from "../utils";
 import type { CandidateProfile, CandidateState } from "./uk-candidates";
 
 /**
@@ -34,7 +38,8 @@ export const travelNurseCandidates: CandidateProfile[] = [
 		state: {
 			status: "compliant",
 			daysSinceActivity: 3,
-			notes: "Active assignment at UCLA Medical Center ICU. California licensed. Fully compliant.",
+			notes:
+				"Active assignment at UCLA Medical Center ICU. California licensed. Fully compliant.",
 		},
 		referenceContacts: [
 			{
@@ -85,7 +90,8 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			missingElements: ["texas-rn-license"],
 			startDateDays: 14,
 			daysSinceActivity: 2,
-			notes: "Has Florida license, needs Texas license for upcoming Houston Methodist assignment.",
+			notes:
+				"Has Florida license, needs Texas license for upcoming Houston Methodist assignment.",
 		},
 		referenceContacts: [
 			{
@@ -130,7 +136,8 @@ export const travelNurseCandidates: CandidateProfile[] = [
 				"hospital-credentialing",
 			],
 			daysSinceActivity: 1,
-			notes: "New to travel nursing. First assignment in progress. Good engagement.",
+			notes:
+				"New to travel nursing. First assignment in progress. Good engagement.",
 		},
 	},
 	{
@@ -210,7 +217,8 @@ export const travelNurseCandidates: CandidateProfile[] = [
 		state: {
 			status: "compliant",
 			daysSinceActivity: 7,
-			notes: "Multi-state compact license holder. Can work in 41 states. Very experienced.",
+			notes:
+				"Multi-state compact license holder. Can work in 41 states. Very experienced.",
 		},
 	},
 	{
@@ -265,7 +273,8 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			missingElements: ["hospital-credentialing"],
 			startDateDays: 7,
 			daysSinceActivity: 1,
-			notes: "Candidate-scoped items complete. Waiting on Cedars-Sinai credentialing.",
+			notes:
+				"Candidate-scoped items complete. Waiting on Cedars-Sinai credentialing.",
 		},
 	},
 	{
@@ -291,7 +300,8 @@ export const travelNurseCandidates: CandidateProfile[] = [
 		state: {
 			status: "compliant",
 			daysSinceActivity: 14,
-			notes: "Highly experienced. 5+ years travel nursing. All certifications current.",
+			notes:
+				"Highly experienced. 5+ years travel nursing. All certifications current.",
 		},
 	},
 	// === FA DEMO CANDIDATES ===
@@ -335,7 +345,8 @@ export const travelNurseCandidates: CandidateProfile[] = [
 				"unit-competency",
 			],
 			daysSinceActivity: 1,
-			notes: "New travel ICU RN. First Florida placement. Has compact license, BLS, ACLS, PALS from Tennessee assignment. Health records and background screening still needed. Standard deal — Package #1. FACES bundled in background package.",
+			notes:
+				"New travel ICU RN. First Florida placement. Has compact license, BLS, ACLS, PALS from Tennessee assignment. Health records and background screening still needed. Standard deal — Package #1. FACIS bundled in background package.",
 		},
 	},
 
@@ -371,7 +382,8 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			],
 			startDateDays: 21,
 			daysSinceActivity: 2,
-			notes: "Reassignment from Texas to California. Compact license holder. Federal background, drug screen, BLS, ACLS, health records all carry forward from TX assignment. Only needs CA-specific items and facility onboarding.",
+			notes:
+				"Reassignment from Texas to California. Compact license holder. Federal background, drug screen, BLS, ACLS, health records all carry forward from TX assignment. Only needs CA-specific items and facility onboarding.",
 		},
 	},
 
@@ -402,14 +414,15 @@ export const travelNurseCandidates: CandidateProfile[] = [
 				"federal-background-check",
 				"florida-level2-background",
 				"drug-screen",
-				"faces-sanctions-screening",
+				"facis-sanctions-screening",
 				"hospital-credentialing",
 				"hospital-orientation",
 				"unit-competency",
 			],
 			expiringElements: ["bls-certification", "tb-test"],
 			daysSinceActivity: 0,
-			notes: "Lapse deal. Inactive for 6 months. Background check expired, drug screen expired, BLS expiring. Needs full re-screening with FACES sanctions package (Package #2 — tier-2 trigger: lapse deal). Has FL license (still current).",
+			notes:
+				"Lapse deal. Inactive for 6 months. Background check expired, drug screen expired, BLS expiring. Needs full re-screening with FACIS sanctions package (Package #2 — tier-2 trigger: lapse deal). Has FL license (still current).",
 		},
 	},
 
@@ -452,7 +465,43 @@ export const travelNurseCandidates: CandidateProfile[] = [
 				"hospital-orientation",
 			],
 			daysSinceActivity: 0,
-			notes: "Medsol scorecard candidate. First-time clinician with Medical Solutions. Iowa compact licence. 13-week contract. Has DL, some health docs, signed consent. Needs background, drug screen, health items, and facility onboarding.",
+			notes:
+				"Medsol scorecard candidate. First-time clinician with Medical Solutions. Iowa compact licence. 13-week contract. Has DL, some health docs, signed consent. Needs background, drug screen, health items, and facility onboarding.",
+		},
+	},
+
+	// Scenario 5: BLS verification demo — cert on hand, needs registry check
+	{
+		profile: {
+			email: "spencer.evans@email.com",
+			firstName: "Spencer",
+			lastName: "Evans",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1993-04-17"),
+			sex: "male",
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("COMPACT"),
+			address: {
+				line1: "1220 Summit Drive",
+				city: "Portland",
+				state: "OR",
+				postcode: "97201",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-rn",
+		state: {
+			status: "in_progress",
+			missingElements: [
+				"bls-certification",
+				"drug-screen",
+				"physical-examination",
+				"professional-references",
+			],
+			daysSinceActivity: 2,
+			notes:
+				"BLS cert uploaded but not yet verified against AHA registry. Drug screen and physical pending. Has compact license and most health records from previous Oregon assignment.",
 		},
 	},
 
@@ -687,7 +736,8 @@ export const lakesideCandidates: CandidateProfile[] = [
 			status: "stuck",
 			missingElements: ["drug-screen"],
 			daysSinceActivity: 8,
-			notes: "Missed drug screen appointment. Rescheduled twice. Needs follow-up.",
+			notes:
+				"Missed drug screen appointment. Rescheduled twice. Needs follow-up.",
 		},
 	},
 	{

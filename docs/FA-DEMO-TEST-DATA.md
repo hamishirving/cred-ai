@@ -38,7 +38,7 @@ Missing:
 - Hospital orientation
 - Unit competency
 
-**FA package:** Package #1 (Standard). FACES sanctions screening bundled in every background package.
+**FA package:** Package #1 (Standard). FACIS sanctions screening bundled in every background package.
 
 **Demo story:** First Florida placement for a new travel ICU nurse. Shows the full gap analysis with grouped requirements. FA handles the background screening, candidate provides the FL license, facility handles orientation.
 
@@ -99,7 +99,7 @@ Missing (expired or never had):
 - Federal background check (expired)
 - Florida Level 2 background check (expired)
 - Drug screen (expired)
-- FACES sanctions screening
+- FACIS sanctions screening
 - Hospital credentialing
 - Hospital orientation
 - Unit competency
@@ -108,9 +108,9 @@ Expiring:
 - BLS certification (expiring soon)
 - TB test (expiring soon)
 
-**FA package:** Package #2 (Standard + FACES sanctions). Tier-2 trigger: lapse deal. FACES covers 200+ sources including OIG, SAM, GSA, state exclusion lists and FDA debarment.
+**FA package:** Package #2 (Standard + FACIS sanctions). Tier-2 trigger: lapse deal. FACIS covers 200+ sources including OIG, SAM, GSA, state exclusion lists and FDA debarment.
 
-**Demo story:** The worst case. Inactive 6 months, everything has lapsed. Needs full re-screening including FACES sanctions package because lapse deals trigger tier-2 package selection. Shows Credentially's intelligence in auto-detecting package escalation.
+**Demo story:** The worst case. Inactive 6 months, everything has lapsed. Needs full re-screening including FACIS sanctions package because lapse deals trigger tier-2 package selection. Shows Credentially's intelligence in auto-detecting package escalation.
 
 ### Scenario 4: Natasha Smith (Medsol Scorecard, Iowa Compact)
 
@@ -151,7 +151,7 @@ Missing:
 - Hospital credentialing
 - Hospital orientation
 
-**FA package:** Package #1 (Standard). Iowa is a compact state — no Iowa-specific package needed. FACES sanctions screening bundled in every background package.
+**FA package:** Package #1 (Standard). Iowa is a compact state — no Iowa-specific package needed. FACIS sanctions screening bundled in every background package.
 
 **Expected packages:** federal-core + rn-package + hospital-package. No state-specific package (compact licence covers Iowa).
 
@@ -222,6 +222,6 @@ Recommended order for the Medsol deep dive:
 
 3. **Screening Status Monitor** with Ashlyn Torres. Checks the screening status, maps reportItems back to compliance elements.
 
-4. **Gap Analyzer** with Peter Walsh (lapse deal). Shows the worst case, auto-escalation to Package #2 with FACES sanctions.
+4. **Gap Analyzer** with Peter Walsh (lapse deal). Shows the worst case, auto-escalation to Package #2 with FACIS sanctions.
 
 5. **Gap Analyzer** with Lexie Chen (reassignment). Shows worker passport carrying forward from TX, only CA-specific gaps.

@@ -1499,6 +1499,54 @@ export async function logEmailActivity({
 	});
 }
 
+/**
+ * Log a sent/failed SMS as an activity for audit trail.
+ */
+export async function logSmsActivity({
+	organisationId,
+	profileId,
+	recipientPhone,
+	recipientName,
+	body,
+	twilioSid,
+	status,
+	errorMessage,
+	reasoning,
+}: {
+	organisationId: string;
+	profileId: string;
+	recipientPhone: string;
+	recipientName: string;
+	body: string;
+	twilioSid?: string;
+	status: string;
+	errorMessage?: string;
+	reasoning?: string;
+}): Promise<void> {
+	const normalizedStatus = status.toLowerCase();
+	const isFailure = normalizedStatus === "failed";
+	const summary = isFailure ? "SMS failed to send" : "SMS sent";
+
+	await db.insert(activities).values({
+		organisationId,
+		profileId,
+		activityType: "message_sent",
+		actor: "ai",
+		channel: "sms",
+		summary,
+		details: {
+			recipientPhone,
+			recipientName,
+			body,
+			status,
+			twilioSid,
+			errorMessage,
+		},
+		aiReasoning: reasoning,
+		visibleToCandidate: "true",
+	});
+}
+
 // ============================================
 // Reference Contacts
 // ============================================
@@ -1687,7 +1735,13 @@ export interface PlacementDetail {
 	compliancePercentage: number;
 	isCompliant: boolean;
 	dealType: string | null;
+	facilityDrugTestRequirements: string[];
 	notes: string | null;
+}
+
+function getStringArray(value: unknown): string[] {
+	if (!Array.isArray(value)) return [];
+	return value.filter((entry): entry is string => typeof entry === "string");
 }
 
 /**
@@ -1713,6 +1767,7 @@ export async function getPlacementById({
 				facilityName: workNodes.name,
 				typeId: workNodes.typeId,
 				jurisdiction: workNodes.jurisdiction,
+				workNodeCustomFields: workNodes.customFields,
 				startDate: placements.startDate,
 				endDate: placements.endDate,
 				status: placements.status,
@@ -1760,6 +1815,9 @@ export async function getPlacementById({
 			compliancePercentage: result.compliancePercentage,
 			isCompliant: result.isCompliant,
 			dealType: (result.customFields as Record<string, unknown>)?.dealType as string | null ?? null,
+			facilityDrugTestRequirements: getStringArray(
+				(result.workNodeCustomFields as Record<string, unknown> | null | undefined)?.drugTestRequirements,
+			),
 			notes: result.notes,
 		};
 	} catch (error) {
@@ -1781,6 +1839,7 @@ export interface WorkNodeDetail {
 	typeName: string;
 	jurisdiction: string | null;
 	address: string | null;
+	drugTestRequirements: string[];
 	hierarchyPath: { id: string; name: string; typeName: string }[];
 	activePlacements: {
 		id: string;
@@ -1808,6 +1867,7 @@ export async function getWorkNodeDetail({
 				parentId: workNodes.parentId,
 				jurisdiction: workNodes.jurisdiction,
 				address: workNodes.address,
+				customFields: workNodes.customFields,
 				typeName: workNodeTypes.name,
 			})
 			.from(workNodes)
@@ -1884,6 +1944,9 @@ export async function getWorkNodeDetail({
 			typeName: node.typeName,
 			jurisdiction: node.jurisdiction,
 			address: node.address,
+			drugTestRequirements: getStringArray(
+				(node.customFields as Record<string, unknown> | null | undefined)?.drugTestRequirements,
+			),
 			hierarchyPath,
 			activePlacements: activePlacementRows.map((r) => ({
 				id: r.id,

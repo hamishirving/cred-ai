@@ -13,6 +13,21 @@ import type { FAAlacarteItem } from "./types";
 // ============================================
 
 export type DHSCategory = "drug_screen" | "clinical" | "physical" | "alcohol";
+export type DrugAnalyte =
+	| "amphetamines"
+	| "barbiturates"
+	| "benzodiazepines"
+	| "cocaine_metabolites"
+	| "marijuana"
+	| "methadone"
+	| "opiates"
+	| "phencyclidine"
+	| "propoxyphene"
+	| "fentanyl"
+	| "meperidine"
+	| "oxycodone"
+	| "tramadol"
+	| "etg";
 
 export interface DHSProduct {
 	code: string;
@@ -22,6 +37,12 @@ export interface DHSProduct {
 	description: string;
 	/** Which compliance element slugs this product fulfils */
 	fulfilsElements: string[];
+	/** Drug analytes covered by this product (for intelligent matching) */
+	analytes?: DrugAnalyte[];
+}
+
+export interface DHSRecommendationOptions {
+	requiredDrugAnalytes?: string[];
 }
 
 // ============================================
@@ -33,9 +54,25 @@ export const DHS_PRODUCTS: Record<string, DHSProduct> = {
 		code: "DHS90007",
 		category: "drug_screen",
 		type: "Drug Screen",
-		name: "5 Panel Urine Drug Screen",
-		description: "Standard 5-panel urine drug test (AMP, COC, MAR, OPI, PCP)",
+		name: "13 Panel Urine Drug Screen",
+		description:
+			"13-panel urine drug test covering Medsol's required analytes (including fentanyl, meperidine, and tramadol)",
 		fulfilsElements: ["drug-screen"],
+		analytes: [
+			"amphetamines",
+			"barbiturates",
+			"benzodiazepines",
+			"cocaine_metabolites",
+			"marijuana",
+			"methadone",
+			"opiates",
+			"phencyclidine",
+			"propoxyphene",
+			"fentanyl",
+			"meperidine",
+			"oxycodone",
+			"tramadol",
+		],
 	},
 	DHS90008: {
 		code: "DHS90008",
@@ -44,6 +81,18 @@ export const DHS_PRODUCTS: Record<string, DHSProduct> = {
 		name: "10 Panel Urine Drug Screen",
 		description: "Extended 10-panel urine drug test",
 		fulfilsElements: ["drug-screen"],
+		analytes: [
+			"amphetamines",
+			"barbiturates",
+			"benzodiazepines",
+			"cocaine_metabolites",
+			"marijuana",
+			"methadone",
+			"opiates",
+			"phencyclidine",
+			"propoxyphene",
+			"oxycodone",
+		],
 	},
 	DHS90009: {
 		code: "DHS90009",
@@ -52,6 +101,20 @@ export const DHS_PRODUCTS: Record<string, DHSProduct> = {
 		name: "12 Panel Urine Drug Screen",
 		description: "Comprehensive 12-panel urine drug test",
 		fulfilsElements: ["drug-screen"],
+		analytes: [
+			"amphetamines",
+			"barbiturates",
+			"benzodiazepines",
+			"cocaine_metabolites",
+			"marijuana",
+			"methadone",
+			"opiates",
+			"phencyclidine",
+			"propoxyphene",
+			"fentanyl",
+			"oxycodone",
+			"tramadol",
+		],
 	},
 	DHS90010: {
 		code: "DHS90010",
@@ -60,6 +123,21 @@ export const DHS_PRODUCTS: Record<string, DHSProduct> = {
 		name: "Urine Drug Screen + Alcohol",
 		description: "Urine drug screen with alcohol metabolite (EtG)",
 		fulfilsElements: ["drug-screen"],
+		analytes: [
+			"amphetamines",
+			"barbiturates",
+			"benzodiazepines",
+			"cocaine_metabolites",
+			"marijuana",
+			"methadone",
+			"opiates",
+			"phencyclidine",
+			"propoxyphene",
+			"fentanyl",
+			"oxycodone",
+			"tramadol",
+			"etg",
+		],
 	},
 	DHS90011: {
 		code: "DHS90011",
@@ -68,6 +146,13 @@ export const DHS_PRODUCTS: Record<string, DHSProduct> = {
 		name: "Hair Follicle Drug Screen",
 		description: "90-day detection window hair follicle test",
 		fulfilsElements: ["drug-screen"],
+		analytes: [
+			"amphetamines",
+			"cocaine_metabolites",
+			"marijuana",
+			"opiates",
+			"phencyclidine",
+		],
 	},
 	DHS30063: {
 		code: "DHS30063",
@@ -153,6 +238,75 @@ export const DHS_CATEGORY_LABELS: Record<DHSCategory, string> = {
 	alcohol: "Alcohol Testing",
 };
 
+const DRUG_SCREEN_SLUG = "drug-screen";
+
+const DRUG_ANALYTE_ALIAS_MAP: Record<string, DrugAnalyte> = {
+	amphetamines: "amphetamines",
+	amphetamine: "amphetamines",
+	methamphetamine: "amphetamines",
+	barbiturates: "barbiturates",
+	benzodiazepines: "benzodiazepines",
+	"cocaine metabolites": "cocaine_metabolites",
+	cocaine: "cocaine_metabolites",
+	marijuana: "marijuana",
+	methadone: "methadone",
+	opiates: "opiates",
+	codeine: "opiates",
+	morphine: "opiates",
+	phencyclidine: "phencyclidine",
+	pcp: "phencyclidine",
+	propoxyphene: "propoxyphene",
+	fentanyl: "fentanyl",
+	meperidine: "meperidine",
+	oxycodone: "oxycodone",
+	tramadol: "tramadol",
+	etg: "etg",
+	alcohol: "etg",
+};
+
+function normaliseAnalyte(raw: string): DrugAnalyte | null {
+	const cleaned = raw.toLowerCase().replace(/\(.*?\)/g, "").replace(/\s+/g, " ").trim();
+	return DRUG_ANALYTE_ALIAS_MAP[cleaned] ?? null;
+}
+
+export function normaliseDrugAnalytes(analytes: string[]): DrugAnalyte[] {
+	const deduped = new Set<DrugAnalyte>();
+	for (const analyte of analytes) {
+		const normalised = normaliseAnalyte(analyte);
+		if (normalised) deduped.add(normalised);
+	}
+	return [...deduped];
+}
+
+export function matchProductByAnalytes(requiredAnalytes: string[]): DHSProduct | null {
+	const normalisedRequired = normaliseDrugAnalytes(requiredAnalytes);
+	if (normalisedRequired.length === 0) return null;
+
+	const requiredSet = new Set(normalisedRequired);
+	const candidates = Object.values(DHS_PRODUCTS).filter(
+		(product) => product.category === "drug_screen" && (product.analytes?.length ?? 0) > 0,
+	);
+
+	const matches = candidates
+		.map((product) => {
+			const analyteSet = new Set(product.analytes ?? []);
+			const coversAll = [...requiredSet].every((required) => analyteSet.has(required));
+			if (!coversAll) return null;
+			return {
+				product,
+				panelSize: analyteSet.size,
+			};
+		})
+		.filter((match): match is { product: DHSProduct; panelSize: number } => match !== null)
+		.sort(
+			(a, b) =>
+				a.panelSize - b.panelSize ||
+				a.product.code.localeCompare(b.product.code),
+		);
+
+	return matches[0]?.product ?? null;
+}
+
 // ============================================
 // Helpers
 // ============================================
@@ -161,12 +315,23 @@ export const DHS_CATEGORY_LABELS: Record<DHSCategory, string> = {
  * Given missing compliance element slugs, recommend D&OHS products.
  * Returns the product code for the first (default) match per element.
  */
-export function recommendDHSProducts(missingElementSlugs: string[]): string[] {
+export function recommendDHSProducts(
+	missingElementSlugs: string[],
+	options: DHSRecommendationOptions = {},
+): string[] {
 	const slugSet = new Set(missingElementSlugs);
 	const recommended = new Set<string>();
 
 	// For each missing slug, find the first product that fulfils it
 	for (const slug of slugSet) {
+		if (slug === DRUG_SCREEN_SLUG) {
+			const matchedProduct = matchProductByAnalytes(options.requiredDrugAnalytes ?? []);
+			if (matchedProduct) {
+				recommended.add(matchedProduct.code);
+				continue;
+			}
+		}
+
 		for (const product of Object.values(DHS_PRODUCTS)) {
 			if (product.fulfilsElements.includes(slug)) {
 				recommended.add(product.code);

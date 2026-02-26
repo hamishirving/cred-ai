@@ -2,19 +2,21 @@
 
 import type { ReactNode } from "react";
 // Import all tool handlers
-import { CompliancePackagesTool } from "./handlers/compliance-packages-tool";
 import { DataAgentTool } from "./handlers/data-agent-tool";
 import { DocumentCreateTool } from "./handlers/document-create-tool";
 import { DocumentUpdateTool } from "./handlers/document-update-tool";
-import { DocumentsTool } from "./handlers/documents-tool";
 import { EmailTool } from "./handlers/email-tool";
+import { FAScreeningTool } from "./handlers/fa-screening-tool";
 import { FormTool } from "./handlers/form-tool";
-import { ProfileTool } from "./handlers/profile-tool";
 import { KnowledgeTool } from "./handlers/knowledge-tool";
+import { LocalCandidatesTool } from "./handlers/local-candidates-tool";
+import { LocalComplianceTool } from "./handlers/local-compliance-tool";
+import { LocalDocumentsTool } from "./handlers/local-documents-tool";
+import { LocalProfileTool } from "./handlers/local-profile-tool";
+import { PlacementComplianceTool } from "./handlers/placement-compliance-tool";
+import { SmsTool } from "./handlers/sms-tool";
 import { SuggestionsTool } from "./handlers/suggestions-tool";
 import { TaskTool } from "./handlers/task-tool";
-import { PlacementComplianceTool } from "./handlers/placement-compliance-tool";
-import { FAScreeningTool } from "./handlers/fa-screening-tool";
 import type { ToolHandlerProps } from "./types";
 
 // Type for tool handler components with any input/output
@@ -25,11 +27,13 @@ type ToolHandler = (props: ToolHandlerProps) => ReactNode;
  */
 const toolRegistry: Record<string, ToolHandler> = {
 	"tool-queryDataAgent": DataAgentTool as ToolHandler,
-	"tool-getProfile": ProfileTool as ToolHandler,
-	"tool-getDocuments": DocumentsTool as ToolHandler,
-	"tool-getCompliancePackages": CompliancePackagesTool as ToolHandler,
+	"tool-searchLocalCandidates": LocalCandidatesTool as ToolHandler,
+	"tool-getLocalProfile": LocalProfileTool as ToolHandler,
+	"tool-getLocalDocuments": LocalDocumentsTool as ToolHandler,
+	"tool-getLocalCompliance": LocalComplianceTool as ToolHandler,
 	"tool-createForm": FormTool as ToolHandler,
 	"tool-draftEmail": EmailTool as ToolHandler,
+	"tool-sendSms": SmsTool as ToolHandler,
 	"tool-createDocument": DocumentCreateTool as ToolHandler,
 	"tool-updateDocument": DocumentUpdateTool as ToolHandler,
 	"tool-requestSuggestions": SuggestionsTool as ToolHandler,

@@ -217,11 +217,11 @@ export const usComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		},
 	},
 
-	// FACES Sanctions Screening (bundled in every FA background package)
+	// FACIS Sanctions Screening (bundled in every FA background package)
 	{
-		name: "FACES Sanctions Screening",
-		slug: "faces-sanctions-screening",
-		description: "FACES sanctions and exclusion database screening — covers 200+ sources including OIG, SAM, GSA, state exclusion lists and FDA debarment. Bundled in every FA background package.",
+		name: "FACIS Sanctions Screening",
+		slug: "facis-sanctions-screening",
+		description: "FACIS sanctions and exclusion database screening — covers 200+ sources including OIG, SAM, GSA, state exclusion lists and FDA debarment. Bundled in every FA background package.",
 		category: "identity",
 		scope: "candidate",
 		evidenceType: "check",
@@ -667,9 +667,9 @@ export const usPackageTemplates: Omit<NewCompliancePackage, "organisationId">[] 
 		version: 1,
 	},
 	{
-		name: "FACES Sanctions Package",
+		name: "FACIS Sanctions Package",
 		slug: "exclusion-checks-package",
-		description: "FACES sanctions screening (200+ sources including OIG/SAM)",
+		description: "FACIS sanctions screening (200+ sources including OIG/SAM)",
 		category: "screening",
 		version: 1,
 	},
@@ -723,7 +723,7 @@ export const usPackageContents: Record<string, string[]> = {
 		"florida-level2-background",
 	],
 	"exclusion-checks-package": [
-		"faces-sanctions-screening",
+		"facis-sanctions-screening",
 	],
 	"hospital-package": [
 		"hospital-credentialing",

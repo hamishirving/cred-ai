@@ -10,9 +10,6 @@ import {
 	Square,
 	Loader2,
 	RotateCcw,
-	Clock,
-	Zap,
-	Cpu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExecutionTimeline } from "@/components/agents/execution-timeline";
@@ -182,7 +179,7 @@ export function ExecutionDetail({
 						</Link>
 					</Button>
 				</div>
-				<div className="flex-1 overflow-y-auto">
+				<div className="flex-1 overflow-y-auto min-h-0">
 					{executions.map((run) => {
 						const isActive = run.id === execution.id;
 						const dotClass = statusDotClass[run.status] || "bg-muted-foreground";
@@ -222,134 +219,105 @@ export function ExecutionDetail({
 				</div>
 			</div>
 
-			{/* Right area — metadata bar + steps */}
-			<div className="flex-1 flex flex-col overflow-hidden">
-				{/* Top metadata bar */}
-				<div className="flex items-center gap-4 border-b border-border bg-card px-4 py-3 text-xs">
-					<StatusBadge status={currentStatus} />
+			{/* Right area — header + scrollable steps */}
+			<div className="flex-1 flex flex-col min-h-0 min-w-0">
+				{/* Header bar */}
+				<div className="shrink-0 border-b border-border bg-card px-4 py-2.5">
+					<div className="flex items-center gap-3 text-xs">
+						<StatusBadge status={currentStatus} />
 
-					{/* Input values inline */}
-					{execution.input && Object.keys(execution.input).length > 0 && (
-						<div className="flex items-center gap-2 min-w-0">
-							{Object.entries(execution.input).map(([key, value]) => (
-								<span key={key} className="truncate max-w-48">
-									<span className="text-muted-foreground">{key}: </span>
-									{typeof value === "string" && value.startsWith("http") ? (
-										<a
-											href={value}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="text-primary hover:underline"
-										>
-											{value.length > 40 ? `${value.slice(0, 40)}...` : value}
-										</a>
-									) : (
-										String(value)
-									)}
-								</span>
-							))}
-						</div>
-					)}
+						<span className="text-muted-foreground">{formatDate(execution.startedAt)}</span>
 
-					{/* Timing */}
-					<div className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
-						<Clock className="size-3" />
-						<span>{formatDate(execution.startedAt)}</span>
 						{execution.durationMs != null && (
-							<span>· {(execution.durationMs / 1000).toFixed(1)}s</span>
+							<span className="text-muted-foreground">
+								{(execution.durationMs / 1000).toFixed(1)}s
+							</span>
 						)}
-					</div>
 
-					{/* Usage */}
-					{execution.tokensUsed && (
-						<div className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
-							<Zap className="size-3" />
-							<span>{execution.tokensUsed.totalTokens.toLocaleString()} tokens</span>
-						</div>
-					)}
-					{execution.model && (
-						<div className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
-							<Cpu className="size-3" />
-							<span>{execution.model}</span>
-						</div>
-					)}
-
-					{/* Stop / Re-run — right-aligned */}
-					<div className="ml-auto shrink-0">
-						{currentStatus === "running" ? (
-							<Button
-								variant="destructive"
-								size="sm"
-								className="h-7"
-								onClick={handleStop}
-								disabled={stopping}
-							>
-								{stopping ? (
-									<Loader2 className="size-3 mr-1 animate-spin" />
-								) : (
-									<Square className="size-3 mr-1 fill-current" />
-								)}
-								Stop
-							</Button>
-						) : (
-							<Button
-								variant="outline"
-								size="sm"
-								className="h-7"
-								onClick={handleRerun}
-							>
-								<RotateCcw className="size-3 mr-1" />
-								Re-run
-							</Button>
+						{execution.tokensUsed && (
+							<span className="text-muted-foreground">
+								{execution.tokensUsed.totalTokens.toLocaleString()} tokens
+							</span>
 						)}
+
+						{execution.model && (
+							<span className="text-muted-foreground">{execution.model}</span>
+						)}
+
+						<div className="ml-auto shrink-0">
+							{currentStatus === "running" ? (
+								<Button
+									variant="destructive"
+									size="sm"
+									className="h-7"
+									onClick={handleStop}
+									disabled={stopping}
+								>
+									{stopping ? (
+										<Loader2 className="size-3 mr-1 animate-spin" />
+									) : (
+										<Square className="size-3 mr-1 fill-current" />
+									)}
+									Stop
+								</Button>
+							) : (
+								<Button
+									variant="outline"
+									size="sm"
+									className="h-7"
+									onClick={handleRerun}
+								>
+									<RotateCcw className="size-3 mr-1" />
+									Re-run
+								</Button>
+							)}
+						</div>
 					</div>
 				</div>
 
-				{/* Main content — steps */}
-				<div className="flex-1 overflow-y-auto bg-background px-6 py-4">
+				{/* Steps — this is the only scrollable area */}
+				<div className="flex-1 overflow-y-auto min-h-0 bg-background px-6 py-4">
 					<div className="max-w-[600px] mx-auto pb-12">
-					<h2 className="mb-3 text-base font-semibold tracking-tight text-foreground">Steps</h2>
-					<div className="flex flex-col gap-3">
-						<ExecutionTimeline
-							steps={steps}
-							status={currentStatus === "running" ? "running" : currentStatus === "failed" ? "failed" : "completed"}
-							liveViewUrl={liveViewUrl}
-							browserActions={browserActions}
-						/>
+						<h2 className="mb-3 text-base font-semibold tracking-tight text-foreground">Steps</h2>
+						<div className="flex flex-col gap-3">
+							<ExecutionTimeline
+								steps={steps}
+								status={currentStatus === "running" ? "running" : currentStatus === "failed" ? "failed" : "completed"}
+								liveViewUrl={liveViewUrl}
+								browserActions={browserActions}
+							/>
 
-						{/* Error banner */}
-						{(isFailed || currentStatus === "failed") && (
-							<div className="flex items-start gap-3 rounded-lg border border-destructive/25 bg-destructive/10 p-3">
-								<AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-								<div>
-									<p className="text-sm font-semibold text-foreground">
-										Agent execution failed
-									</p>
-									<p className="mt-1 text-xs text-destructive">
-										{errorMessage || execution.output?.summary || "An unknown error occurred"}
-									</p>
+							{(isFailed || currentStatus === "failed") && (
+								<div className="flex items-start gap-3 rounded-lg border border-destructive/25 bg-destructive/10 p-3">
+									<AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+									<div>
+										<p className="text-sm font-semibold text-foreground">
+											Agent execution failed
+										</p>
+										<p className="mt-1 text-xs text-destructive">
+											{errorMessage || execution.output?.summary || "An unknown error occurred"}
+										</p>
+									</div>
 								</div>
-							</div>
-						)}
-
-						{/* Summary */}
-						{(isCompleted || currentStatus === "completed") &&
-							execution.durationMs &&
-							execution.tokensUsed && (
-								<ExecutionSummary
-									result={{
-										status: "completed",
-										summary: execution.output?.summary || "",
-										steps,
-										usage: execution.tokensUsed,
-										durationMs: execution.durationMs,
-										executionId: execution.id,
-									}}
-								/>
 							)}
 
-						<div ref={bottomRef} />
-					</div>
+							{(isCompleted || currentStatus === "completed") &&
+								execution.durationMs &&
+								execution.tokensUsed && (
+									<ExecutionSummary
+										result={{
+											status: "completed",
+											summary: execution.output?.summary || "",
+											steps,
+											usage: execution.tokensUsed,
+											durationMs: execution.durationMs,
+											executionId: execution.id,
+										}}
+									/>
+								)}
+
+							<div ref={bottomRef} />
+						</div>
 					</div>
 				</div>
 			</div>

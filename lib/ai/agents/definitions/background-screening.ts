@@ -2,8 +2,8 @@
  * Background Screening Agent
  *
  * Creates a candidate in First Advantage, selects the appropriate
- * screening package via faSelectPackage, and initiates the background
- * check. Saves the screening ID to agent memory for status tracking.
+ * screening package via faSelectPackage, initiates the background
+ * check, and sends a candidate update via SMS/email.
  */
 
 import { z } from "zod";
@@ -13,8 +13,8 @@ export const backgroundScreeningAgent: AgentDefinition = {
 	id: "background-screening",
 	name: "Background Screening",
 	description:
-		"Creates a candidate in First Advantage, selects the appropriate screening package (background + drug/health when needed), and initiates the screening. Saves screening details for status tracking.",
-	version: "1.1",
+		"Creates a candidate in First Advantage, selects the appropriate screening package (background + drug/health when needed), initiates screening, and sends a concise candidate update via SMS/email.",
+	version: "1.2",
 
 	dynamicContext: async (ctx) => `Organisation ID: ${ctx.orgId}`,
 
@@ -68,12 +68,22 @@ FA uses this to route the candidate to the nearest collection clinic for their d
 
 Note: The screening record is automatically persisted to the database by faInitiateScreening — no need to save it to agent memory. The Screening Status Monitor agent will find it via faListScreenings.
 
-STEP 6 — SUMMARISE:
+STEP 6 — CANDIDATE COMMUNICATION:
+After successful screening initiation, send a candidate confirmation:
+- Preferred: use sendSms if profile phone exists and is in E.164 format
+- SMS should be short and actionable (for example: "Your drug screen has been ordered. Check your email for clinic details.")
+- Pass profileId and organisationId for activity logging
+
+If sendSms fails and candidate email exists, fallback to draftEmail with a concise equivalent message.
+If both channels are unavailable, mention that in your summary.
+
+STEP 7 — SUMMARISE:
 Report what was initiated:
 - Candidate name and FA candidate ID
 - Package selected and why (cite faSelectPackage output)
 - Screening components included (background checks, and drug/health if applicable)
 - If drug/health included: mention clinic routing based on candidate address
+- Communication sent (SMS or email fallback)
 - Expected turnaround time (3-5 business days)
 - Next steps: use the Screening Status Monitor agent to track progress
 
@@ -87,6 +97,8 @@ Be methodical. Explain each decision briefly so the audience understands why thi
 		"faSelectPackage",
 		"faCreateCandidate",
 		"faInitiateScreening",
+		"sendSms",
+		"draftEmail",
 		"createTask",
 	],
 

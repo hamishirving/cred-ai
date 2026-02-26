@@ -10,6 +10,7 @@ import { generateObject, stepCountIs, streamText } from "ai";
 import { myProvider } from "@/lib/ai/providers";
 import {
 	createAgentExecution,
+	upsertAgentMemory,
 	updateAgentExecution,
 } from "@/lib/db/queries";
 import type {
@@ -134,6 +135,198 @@ function buildInvocationMessage(
 	return parts.join("\n");
 }
 
+const REQUIRED_TOOL_CALLS_BY_AGENT: Record<
+	string,
+	{ always: string[]; withAttachments?: string[] }
+> = {
+	"inbound-email-responder": {
+		always: ["draftEmail"],
+		withAttachments: ["verifyDocumentEvidence"],
+	},
+};
+
+function mergeUsage(
+	acc: { inputTokens: number; outputTokens: number; totalTokens: number },
+	usage: { inputTokens?: number; outputTokens?: number; totalTokens?: number },
+): void {
+	acc.inputTokens += usage.inputTokens ?? 0;
+	acc.outputTokens += usage.outputTokens ?? 0;
+	acc.totalTokens += usage.totalTokens ?? 0;
+}
+
+function getMissingRequiredTools(
+	agent: AgentDefinition,
+	ctx: AgentExecutionContext,
+	steps: AgentStep[],
+): string[] {
+	const rules = REQUIRED_TOOL_CALLS_BY_AGENT[agent.id];
+	if (!rules) return [];
+
+	const calledTools = new Set(
+		steps
+			.filter((s) => s.type === "tool-call" && s.toolName)
+			.map((s) => s.toolName as string),
+	);
+
+	const required = [...rules.always];
+	if (
+		Array.isArray(ctx.input.attachments) &&
+		ctx.input.attachments.length > 0 &&
+		rules.withAttachments
+	) {
+		required.push(...rules.withAttachments);
+	}
+
+	return required.filter((toolName) => !calledTools.has(toolName));
+}
+
+function buildCompletionFollowupMessage(
+	agent: AgentDefinition,
+	steps: AgentStep[],
+	missingTools: string[],
+): string {
+	const recentToolSummary = steps
+		.filter((s) => s.type === "tool-call")
+		.slice(-12)
+		.map((s) => {
+			const input = s.toolInput ? JSON.stringify(s.toolInput) : "{}";
+			const output = s.toolOutput ? JSON.stringify(s.toolOutput) : "{}";
+			return `Tool: ${s.toolName}\nInput: ${input.slice(0, 500)}\nOutput: ${output.slice(0, 1000)}`;
+		})
+		.join("\n\n");
+
+	return `Continue the "${agent.name}" task. You are not done yet.
+
+REQUIRED REMAINING TOOL CALLS (must complete before finishing):
+- ${missingTools.join("\n- ")}
+
+After completing these required calls, provide your normal concise completion text.
+
+Recent execution context:
+${recentToolSummary || "No prior tool calls."}`;
+}
+
+function isUuid(value: unknown): value is string {
+	return (
+		typeof value === "string" &&
+		/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+			value,
+		)
+	);
+}
+
+function findMostRecentUuidInput(
+	steps: AgentStep[],
+	keys: string[],
+): string | null {
+	for (let i = steps.length - 1; i >= 0; i--) {
+		const step = steps[i];
+		if (step.type !== "tool-call" || !step.toolInput) continue;
+
+		for (const key of keys) {
+			const value = step.toolInput[key];
+			if (isUuid(value)) {
+				return value;
+			}
+		}
+	}
+
+	return null;
+}
+
+async function ensureMemoryPersisted({
+	agent,
+	ctx,
+	steps,
+	stepIndex,
+	onStep,
+}: {
+	agent: AgentDefinition;
+	ctx: AgentExecutionContext;
+	steps: AgentStep[];
+	stepIndex: number;
+	onStep: (step: AgentStep) => void;
+}): Promise<number> {
+	if (!agent.tools.includes("saveAgentMemory")) return stepIndex;
+
+	const alreadySaved = steps.some(
+		(s) => s.type === "tool-call" && s.toolName === "saveAgentMemory",
+	);
+	if (alreadySaved) return stepIndex;
+
+	const subjectId = findMostRecentUuidInput(steps, ["subjectId", "profileId"]);
+	const orgId = isUuid(ctx.orgId)
+		? ctx.orgId
+		: findMostRecentUuidInput(steps, ["orgId", "organisationId"]);
+
+	if (!subjectId || !orgId) {
+		console.warn(
+			"[agent-runner] Skipping auto-memory save: missing subjectId/orgId",
+			{ agentId: agent.id, subjectId, orgId },
+		);
+		return stepIndex;
+	}
+
+	const latestText =
+		steps
+			.filter((s) => s.type === "text" && s.content?.trim())
+			.map((s) => s.content)
+			.pop() || "";
+	const recentTools = steps
+		.filter((s) => s.type === "tool-call" && s.toolName)
+		.map((s) => s.toolName as string)
+		.slice(-8);
+
+	const memory: Record<string, unknown> = {
+		autoSavedByRunner: true,
+		timestamp: new Date().toISOString(),
+		summary: latestText || "Agent execution completed.",
+		recentTools,
+		input: {
+			senderEmail:
+				typeof ctx.input.senderEmail === "string" ? ctx.input.senderEmail : null,
+			subject: typeof ctx.input.subject === "string" ? ctx.input.subject : null,
+		},
+	};
+
+	try {
+		const saved = await upsertAgentMemory({
+			agentId: agent.id,
+			subjectId,
+			orgId,
+			memory,
+		});
+
+		const timestamp = new Date().toISOString();
+		const autoSaveStep: AgentStep = {
+			index: stepIndex + 1,
+			type: "tool-call",
+			toolName: "saveAgentMemory",
+			toolInput: {
+				agentId: agent.id,
+				subjectId,
+				orgId,
+				memory,
+			},
+			toolOutput: {
+				data: {
+					success: true,
+					autoSavedByRunner: true,
+					runCount: saved.runCount,
+				},
+			},
+			timestamp,
+		};
+
+		steps.push(autoSaveStep);
+		onStep(autoSaveStep);
+		return stepIndex + 1;
+	} catch (error) {
+		console.warn("[agent-runner] Auto-memory save failed:", error);
+		return stepIndex;
+	}
+}
+
 export interface AgentStreamCallbacks {
 	/** Called when a step completes */
 	onStep: (step: AgentStep) => void;
@@ -226,6 +419,7 @@ export async function executeAgent(
 		const tools = resolveTools(agent.tools, {
 			onBrowserAction: handleBrowserAction,
 			attachments,
+			organisationId: ctx.orgId || undefined,
 		});
 		console.log("[agent-runner] Resolved tools:", Object.keys(tools));
 
@@ -307,16 +501,94 @@ export async function executeAgent(
 			onFinish: async ({ usage }) => {
 				console.log("[agent-runner] onFinish called, steps:", steps.length);
 				// Store usage for later — onComplete is called after structured output phase
-				streamUsage = {
-					inputTokens: usage.inputTokens ?? 0,
-					outputTokens: usage.outputTokens ?? 0,
-					totalTokens: usage.totalTokens ?? 0,
-				};
+				mergeUsage(streamUsage, usage);
 			},
 		});
 
 		// Consume the stream to trigger execution
 		await result.consumeStream();
+
+		// Completion guard: if required tools were skipped, run a short follow-up pass.
+		// This prevents early termination before critical side effects (e.g. draftEmail).
+		let missingRequiredTools = getMissingRequiredTools(agent, ctx, steps);
+		let completionPasses = 0;
+		while (missingRequiredTools.length > 0 && completionPasses < 2) {
+			completionPasses++;
+			console.warn(
+				"[agent-runner] Missing required tool calls, running completion pass:",
+				{ agentId: agent.id, missingRequiredTools, pass: completionPasses },
+			);
+
+			const followupResult = streamText({
+				model: myProvider.languageModel("chat-model"),
+				system,
+				messages: [
+					{
+						role: "user",
+						content: buildCompletionFollowupMessage(
+							agent,
+							steps,
+							missingRequiredTools,
+						),
+					},
+				],
+				tools,
+				maxRetries: 1,
+				timeout: {
+					totalMs: 60_000,
+					chunkMs: 60_000,
+				},
+				stopWhen: stepCountIs(8),
+				onStepFinish: async (event) => {
+					stepIndex++;
+					const stepTimestamp = new Date().toISOString();
+
+					if (event.toolCalls && event.toolCalls.length > 0) {
+						for (const toolCall of event.toolCalls) {
+							const toolResult = event.toolResults?.find(
+								(r) => r.toolCallId === toolCall.toolCallId,
+							);
+
+							const step: AgentStep = {
+								index: stepIndex,
+								type: "tool-call",
+								toolName: toolCall.toolName,
+								toolInput: toolCall.input as Record<string, unknown>,
+								toolOutput: toolResult?.output,
+								timestamp: stepTimestamp,
+							};
+
+							steps.push(step);
+							callbacks.onStep(step);
+						}
+					}
+
+					if (event.text && event.text.trim()) {
+						const step: AgentStep = {
+							index: stepIndex,
+							type: "text",
+							content: event.text,
+							timestamp: stepTimestamp,
+						};
+						steps.push(step);
+						callbacks.onStep(step);
+					}
+
+					updateAgentExecution({
+						id: executionId,
+						steps: [...steps],
+					}).catch((err) =>
+						console.warn("[agent-runner] Failed to update steps:", err),
+					);
+				},
+				onFinish: async ({ usage }) => {
+					mergeUsage(streamUsage, usage);
+				},
+			});
+
+			await followupResult.consumeStream();
+			missingRequiredTools = getMissingRequiredTools(agent, ctx, steps);
+		}
 
 		// Phase 2: If agent has outputSchema, make a separate generateObject call
 		// to structure the collected tool results into the desired shape.
@@ -349,6 +621,16 @@ export async function executeAgent(
 				console.warn("[agent-runner] Failed to generate structured output:", err);
 			}
 		}
+
+		// Ensure memory is persisted when the agent has memory tools, even if the
+		// model forgot to call saveAgentMemory explicitly.
+		stepIndex = await ensureMemoryPersisted({
+			agent,
+			ctx,
+			steps,
+			stepIndex,
+			onStep: callbacks.onStep,
+		});
 
 		// Now finalise: send onComplete and update DB
 		const durationMs = Date.now() - startTime;

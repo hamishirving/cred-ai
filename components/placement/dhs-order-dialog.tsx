@@ -38,6 +38,8 @@ interface DHSOrderDialogProps {
 	candidateName: string;
 	candidateAddress: CandidateAddress | null;
 	preSelectedCodes: string[];
+	facilityDrugTestRequirements?: string[];
+	recommendedReasons?: Record<string, string>;
 	onOrderComplete: () => void;
 }
 
@@ -52,6 +54,8 @@ export function DHSOrderDialog({
 	candidateName,
 	candidateAddress,
 	preSelectedCodes,
+	facilityDrugTestRequirements = [],
+	recommendedReasons = {},
 	onOrderComplete,
 }: DHSOrderDialogProps) {
 	const [selectedCodes, setSelectedCodes] = useState<Set<string>>(
@@ -146,6 +150,13 @@ export function DHSOrderDialog({
 							<h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
 								{label}
 							</h3>
+							{category === "drug_screen" &&
+								facilityDrugTestRequirements.length > 0 && (
+									<p className="text-[10px] text-muted-foreground mb-2 leading-relaxed">
+										Facility analytes ({facilityDrugTestRequirements.length}):{" "}
+										{facilityDrugTestRequirements.join(", ")}
+									</p>
+								)}
 							<div className="space-y-1">
 								{products.map((product) => (
 									<ProductRow
@@ -153,6 +164,7 @@ export function DHSOrderDialog({
 										product={product}
 										checked={selectedCodes.has(product.code)}
 										required={preSelectedSet.has(product.code)}
+										recommendationReason={recommendedReasons[product.code]}
 										onToggle={() => toggleCode(product.code)}
 									/>
 								))}
@@ -199,11 +211,13 @@ function ProductRow({
 	product,
 	checked,
 	required,
+	recommendationReason,
 	onToggle,
 }: {
 	product: DHSProduct;
 	checked: boolean;
 	required: boolean;
+	recommendationReason?: string;
 	onToggle: () => void;
 }) {
 	return (
@@ -225,6 +239,11 @@ function ProductRow({
 				<p className="text-[10px] text-muted-foreground mt-0.5">
 					{product.description}
 				</p>
+				{recommendationReason && (
+					<p className="text-[10px] text-primary mt-0.5 font-medium">
+						{recommendationReason}; {product.code} recommended
+					</p>
+				)}
 			</div>
 			<span className="text-[10px] text-muted-foreground tabular-nums shrink-0">
 				{product.code}

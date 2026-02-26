@@ -36,7 +36,7 @@ Use browseAndVerify with the extracted eCard code against the AHA verification p
 If the eCard code is missing, skip this step.
 
 CROSS-REFERENCE:
-Use getProfile with the candidate email. Compare the holder name against the candidate's name on file, and check the expiry/renewal date.
+Use getLocalProfile with the profileId and organisationId. Compare the holder name against the candidate's name on file, and check the expiry/renewal date.
 
 DECIDE:
 Based on all evidence, use updateDocumentStatus:
@@ -51,17 +51,20 @@ End with a brief summary of findings and the action taken.`,
 		"classifyDocument",
 		"extractDocumentData",
 		"browseAndVerify",
-		"getProfile",
+		"getLocalProfile",
 		"updateDocumentStatus",
 		"createTask",
 	],
 
 	inputSchema: z.object({
-		candidateEmail: z
+		profileId: z
 			.string()
-			.email()
-			.default("hamish.irving+spencer@credentially.io")
-			.describe("Email address of the candidate whose certificate to verify"),
+			.uuid()
+			.describe("Profile ID of the candidate whose certificate to verify"),
+		organisationId: z
+			.string()
+			.uuid()
+			.describe("Organisation ID the candidate belongs to"),
 		documentUrl: z
 			.string()
 			.url()

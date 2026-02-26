@@ -164,6 +164,7 @@ interface AcceptableDocumentInfo {
 interface PlacementData {
 	placement: PlacementDetail;
 	context: PlacementContext;
+	facilityDrugTestRequirements?: string[];
 	requirementGroups: RequirementGroup[];
 	compliance: {
 		items: ComplianceItem[];
@@ -1095,6 +1096,7 @@ export default function PlacementDetailPage() {
 				}}
 				context={data.context}
 				candidateAddress={data.candidateProfile?.address ?? null}
+				facilityDrugTestRequirements={data.facilityDrugTestRequirements ?? []}
 				onRefresh={refreshData}
 			/>
 

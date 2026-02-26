@@ -20,7 +20,7 @@ export const inboundEmailResponderAgent: AgentDefinition = {
 
 IDENTIFY CANDIDATE:
 Use searchLocalCandidates with the sender's email address (do NOT pass organisationId — search across all orgs).
-Note the organisationId from the result — you'll need it for draftEmail and createTask.
+Note the organisationId from the result — you'll need it for searchKnowledge, draftEmail, and createTask.
 If no match is found, skip to COMPOSE REPLY with a polite response explaining you couldn't locate their record and suggesting they contact their recruiter.
 
 LOAD CONTEXT:
@@ -32,14 +32,14 @@ Use getAgentMemory to check for any previous interactions with this candidate.
 
 UNDERSTAND REQUEST:
 Categorise the candidate's question. Common categories:
-- Document status enquiry (DBS, references, right to work)
+- Document or check status enquiry (background checks, references, work authorisation/right to work, licence/certification evidence, immunisation records)
 - Timeline question (how long something takes)
 - Process question (what they need to do next)
 - Update/change request (new address, name change)
 - General enquiry
 
 RESEARCH:
-Use searchKnowledge to find relevant compliance requirements, policies, or guidance that help answer the candidate's question. This is critical — always search before replying so your answer is grounded in actual documentation.
+Use searchKnowledge to find relevant compliance requirements, policies, or guidance that help answer the candidate's question. Pass organisationId explicitly so the correct Ragie partition is used, and use the tool's returned market/partition context to avoid market mismatches. This is critical — always search before replying so your answer is grounded in actual documentation.
 
 PROCESS ATTACHMENTS:
 If the email has attachments, you MUST process each one before composing your reply:
@@ -132,8 +132,8 @@ IMPORTANT: Never use "me" as the assignee — you are an automated agent with no
 
 	dynamicContext: async (ctx) => {
 		if (ctx.orgId) {
-			return `Organisation ID: ${ctx.orgId}\nIMPORTANT: When calling draftEmail or createTask, always pass organisationId: "${ctx.orgId}" explicitly.`;
+			return `Organisation ID: ${ctx.orgId}\nIMPORTANT: When calling searchKnowledge, draftEmail, or createTask, always pass organisationId: "${ctx.orgId}" explicitly.`;
 		}
-		return `No organisation ID provided. After finding the candidate with searchLocalCandidates, use the organisationId from the result when calling draftEmail or createTask.`;
+		return `No organisation ID provided. After finding the candidate with searchLocalCandidates, use the organisationId from the result when calling searchKnowledge, draftEmail, and createTask.`;
 	},
 };

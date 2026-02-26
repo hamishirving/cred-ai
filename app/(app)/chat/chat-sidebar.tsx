@@ -65,13 +65,14 @@ export function ChatSidebar({ user, children }: ChatSidebarProps) {
 	return (
 		<SidebarProvider
 			defaultOpen={true}
+			className="h-svh !min-h-0 overflow-hidden"
 			style={
 				{
 					"--sidebar-width": "280px",
 				} as React.CSSProperties
 			}
 		>
-			<Sidebar collapsible="none" className="border-r border-sidebar-border bg-sidebar">
+			<Sidebar collapsible="none" className="border-r border-sidebar-border bg-sidebar min-h-0">
 				<SidebarHeader>
 					<SidebarMenu>
 						<div className="flex flex-row items-center justify-between px-2 py-1">

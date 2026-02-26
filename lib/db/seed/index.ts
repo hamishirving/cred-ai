@@ -65,7 +65,14 @@ interface OrgConfig {
 	orgPrompt?: string;
 	terminology?: Record<string, string>;
 	workNodeTypes: { name: string; level: number }[];
-	workNodes: { name: string; type: string; parent?: string; jurisdiction?: string; address?: string }[];
+	workNodes: {
+		name: string;
+		type: string;
+		parent?: string;
+		jurisdiction?: string;
+		address?: string;
+		customFields?: Record<string, unknown>;
+	}[];
 	candidates: CandidateProfile[];
 }
 
@@ -84,16 +91,65 @@ const orgConfigs: OrgConfig[] = [
 		],
 		workNodes: [
 			{ name: "NHS Trust North", type: "NHS Trust", jurisdiction: "england" },
-			{ name: "City Hospital", type: "Hospital", parent: "NHS Trust North", jurisdiction: "england", address: "Kingsway, Derby DE22 3NE" },
-			{ name: "A&E", type: "Ward", parent: "City Hospital", jurisdiction: "england" },
-			{ name: "ICU", type: "Ward", parent: "City Hospital", jurisdiction: "england" },
-			{ name: "Medical Ward", type: "Ward", parent: "City Hospital", jurisdiction: "england" },
-			{ name: "Community Hospital", type: "Hospital", parent: "NHS Trust North", jurisdiction: "england", address: "London Road, Buxton SK17 9NJ" },
+			{
+				name: "City Hospital",
+				type: "Hospital",
+				parent: "NHS Trust North",
+				jurisdiction: "england",
+				address: "Kingsway, Derby DE22 3NE",
+			},
+			{
+				name: "A&E",
+				type: "Ward",
+				parent: "City Hospital",
+				jurisdiction: "england",
+			},
+			{
+				name: "ICU",
+				type: "Ward",
+				parent: "City Hospital",
+				jurisdiction: "england",
+			},
+			{
+				name: "Medical Ward",
+				type: "Ward",
+				parent: "City Hospital",
+				jurisdiction: "england",
+			},
+			{
+				name: "Community Hospital",
+				type: "Hospital",
+				parent: "NHS Trust North",
+				jurisdiction: "england",
+				address: "London Road, Buxton SK17 9NJ",
+			},
 			{ name: "NHS Trust South", type: "NHS Trust", jurisdiction: "england" },
-			{ name: "General Hospital", type: "Hospital", parent: "NHS Trust South", jurisdiction: "england", address: "Bristol Road South, Birmingham B31 2AP" },
-			{ name: "Private Care Group", type: "Care Group", jurisdiction: "england" },
-			{ name: "Sunrise Care Home", type: "Care Home", parent: "Private Care Group", jurisdiction: "england", address: "45 Willow Lane, Cheltenham GL50 3PR" },
-			{ name: "Oak Lodge Care Home", type: "Care Home", parent: "Private Care Group", jurisdiction: "england", address: "12 The Green, Solihull B91 3QR" },
+			{
+				name: "General Hospital",
+				type: "Hospital",
+				parent: "NHS Trust South",
+				jurisdiction: "england",
+				address: "Bristol Road South, Birmingham B31 2AP",
+			},
+			{
+				name: "Private Care Group",
+				type: "Care Group",
+				jurisdiction: "england",
+			},
+			{
+				name: "Sunrise Care Home",
+				type: "Care Home",
+				parent: "Private Care Group",
+				jurisdiction: "england",
+				address: "45 Willow Lane, Cheltenham GL50 3PR",
+			},
+			{
+				name: "Oak Lodge Care Home",
+				type: "Care Home",
+				parent: "Private Care Group",
+				jurisdiction: "england",
+				address: "12 The Green, Solihull B91 3QR",
+			},
 		],
 		candidates: meridianCandidates,
 	},
@@ -110,19 +166,73 @@ const orgConfigs: OrgConfig[] = [
 		workNodes: [
 			// England - North West
 			{ name: "North West", type: "Region", jurisdiction: "england" },
-			{ name: "Manchester Dom Care", type: "Branch", parent: "North West", jurisdiction: "england", address: "Unit 4, Salford Enterprise Park, M6 5FT" },
-			{ name: "Liverpool Dom Care", type: "Branch", parent: "North West", jurisdiction: "england", address: "8 Crown Street, Liverpool L7 3QD" },
-			{ name: "Willow House Residential", type: "Branch", parent: "North West", jurisdiction: "england", address: "Willow House, 15 Park Avenue, Bolton BL1 4RD" },
+			{
+				name: "Manchester Dom Care",
+				type: "Branch",
+				parent: "North West",
+				jurisdiction: "england",
+				address: "Unit 4, Salford Enterprise Park, M6 5FT",
+			},
+			{
+				name: "Liverpool Dom Care",
+				type: "Branch",
+				parent: "North West",
+				jurisdiction: "england",
+				address: "8 Crown Street, Liverpool L7 3QD",
+			},
+			{
+				name: "Willow House Residential",
+				type: "Branch",
+				parent: "North West",
+				jurisdiction: "england",
+				address: "Willow House, 15 Park Avenue, Bolton BL1 4RD",
+			},
 			// England - South East
 			{ name: "South East", type: "Region", jurisdiction: "england" },
-			{ name: "London Dom Care", type: "Branch", parent: "South East", jurisdiction: "england", address: "3rd Floor, 100 Borough High Street, SE1 1LB" },
-			{ name: "Kent Dom Care", type: "Branch", parent: "South East", jurisdiction: "england", address: "2 Station Road, Maidstone ME14 1QQ" },
-			{ name: "Oakwood Manor Residential", type: "Branch", parent: "South East", jurisdiction: "england", address: "Oakwood Manor, Canterbury CT2 7HE" },
+			{
+				name: "London Dom Care",
+				type: "Branch",
+				parent: "South East",
+				jurisdiction: "england",
+				address: "3rd Floor, 100 Borough High Street, SE1 1LB",
+			},
+			{
+				name: "Kent Dom Care",
+				type: "Branch",
+				parent: "South East",
+				jurisdiction: "england",
+				address: "2 Station Road, Maidstone ME14 1QQ",
+			},
+			{
+				name: "Oakwood Manor Residential",
+				type: "Branch",
+				parent: "South East",
+				jurisdiction: "england",
+				address: "Oakwood Manor, Canterbury CT2 7HE",
+			},
 			// Scotland
 			{ name: "Scotland", type: "Region", jurisdiction: "scotland" },
-			{ name: "Edinburgh Dom Care", type: "Branch", parent: "Scotland", jurisdiction: "scotland", address: "14 Leith Walk, Edinburgh EH6 5DT" },
-			{ name: "Glasgow Dom Care", type: "Branch", parent: "Scotland", jurisdiction: "scotland", address: "250 West George Street, Glasgow G2 4QY" },
-			{ name: "Heather Glen Residential", type: "Branch", parent: "Scotland", jurisdiction: "scotland", address: "Heather Glen, Stirling FK8 2BX" },
+			{
+				name: "Edinburgh Dom Care",
+				type: "Branch",
+				parent: "Scotland",
+				jurisdiction: "scotland",
+				address: "14 Leith Walk, Edinburgh EH6 5DT",
+			},
+			{
+				name: "Glasgow Dom Care",
+				type: "Branch",
+				parent: "Scotland",
+				jurisdiction: "scotland",
+				address: "250 West George Street, Glasgow G2 4QY",
+			},
+			{
+				name: "Heather Glen Residential",
+				type: "Branch",
+				parent: "Scotland",
+				jurisdiction: "scotland",
+				address: "Heather Glen, Stirling FK8 2BX",
+			},
 		],
 		orgPrompt: `You're writing on behalf of Oakwood Care Group, a family-run care provider delivering domiciliary and residential care across England and Scotland.
 
@@ -153,19 +263,128 @@ Sign off as: "The Oakwood Care Team"`,
 		],
 		workNodes: [
 			{ name: "California", type: "State", jurisdiction: "california" },
-			{ name: "UCLA Medical Center", type: "Hospital", parent: "California", jurisdiction: "california", address: "757 Westwood Plaza, Los Angeles, CA 90095" },
-			{ name: "Emergency Dept", type: "Unit", parent: "UCLA Medical Center", jurisdiction: "california" },
-			{ name: "ICU", type: "Unit", parent: "UCLA Medical Center", jurisdiction: "california" },
-			{ name: "Cedars-Sinai", type: "Hospital", parent: "California", jurisdiction: "california", address: "8700 Beverly Blvd, Los Angeles, CA 90048" },
+			{
+				name: "UCLA Medical Center",
+				type: "Hospital",
+				parent: "California",
+				jurisdiction: "california",
+				address: "757 Westwood Plaza, Los Angeles, CA 90095",
+			},
+			{
+				name: "Emergency Dept",
+				type: "Unit",
+				parent: "UCLA Medical Center",
+				jurisdiction: "california",
+			},
+			{
+				name: "ICU",
+				type: "Unit",
+				parent: "UCLA Medical Center",
+				jurisdiction: "california",
+			},
+			{
+				name: "Cedars-Sinai",
+				type: "Hospital",
+				parent: "California",
+				jurisdiction: "california",
+				address: "8700 Beverly Blvd, Los Angeles, CA 90048",
+			},
 			{ name: "Texas", type: "State", jurisdiction: "texas" },
-			{ name: "Houston Methodist", type: "Hospital", parent: "Texas", jurisdiction: "texas", address: "6565 Fannin St, Houston, TX 77030" },
-			{ name: "UT Southwestern", type: "Hospital", parent: "Texas", jurisdiction: "texas", address: "5323 Harry Hines Blvd, Dallas, TX 75390" },
+			{
+				name: "Houston Methodist",
+				type: "Hospital",
+				parent: "Texas",
+				jurisdiction: "texas",
+				address: "6565 Fannin St, Houston, TX 77030",
+			},
+			{
+				name: "UT Southwestern",
+				type: "Hospital",
+				parent: "Texas",
+				jurisdiction: "texas",
+				address: "5323 Harry Hines Blvd, Dallas, TX 75390",
+			},
 			{ name: "Florida", type: "State", jurisdiction: "florida" },
-			{ name: "Memorial Hospital Jacksonville", type: "Hospital", parent: "Florida", jurisdiction: "florida", address: "3625 University Blvd S, Jacksonville, FL 32216" },
-			{ name: "Tampa General", type: "Hospital", parent: "Florida", jurisdiction: "florida", address: "1 Tampa General Cir, Tampa, FL 33606" },
-			{ name: "Baptist Health Miami", type: "Hospital", parent: "Florida", jurisdiction: "florida", address: "8900 N Kendall Dr, Miami, FL 33176" },
+			{
+				name: "Memorial Hospital Jacksonville",
+				type: "Hospital",
+				parent: "Florida",
+				jurisdiction: "florida",
+				address: "3625 University Blvd S, Jacksonville, FL 32216",
+				customFields: {
+					drugTestRequirements: [
+						"Amphetamines",
+						"Barbiturates",
+						"Benzodiazepines",
+						"Cocaine Metabolites",
+						"Marijuana",
+						"Methadone",
+						"Opiates",
+						"Phencyclidine",
+						"Propoxyphene",
+						"Fentanyl",
+						"Meperidine",
+						"Oxycodone",
+						"Tramadol",
+					],
+				},
+			},
+			{
+				name: "Tampa General",
+				type: "Hospital",
+				parent: "Florida",
+				jurisdiction: "florida",
+				address: "1 Tampa General Cir, Tampa, FL 33606",
+			},
+			{
+				name: "Baptist Health Miami",
+				type: "Hospital",
+				parent: "Florida",
+				jurisdiction: "florida",
+				address: "8900 N Kendall Dr, Miami, FL 33176",
+				customFields: {
+					drugTestRequirements: [
+						"Amphetamines",
+						"Barbiturates",
+						"Benzodiazepines",
+						"Cocaine Metabolites",
+						"Marijuana",
+						"Methadone",
+						"Opiates",
+						"Phencyclidine",
+						"Propoxyphene",
+						"Fentanyl",
+						"Meperidine",
+						"Oxycodone",
+						"Tramadol",
+					],
+				},
+			},
 			{ name: "Iowa", type: "State", jurisdiction: "iowa" },
-			{ name: "UnityPoint Health Des Moines", type: "Hospital", parent: "Iowa", jurisdiction: "iowa", address: "1200 Pleasant St, Des Moines, IA 50309" },
+			{
+				name: "UnityPoint Health Des Moines",
+				type: "Hospital",
+				parent: "Iowa",
+				jurisdiction: "iowa",
+				address: "1200 Pleasant St, Des Moines, IA 50309",
+				customFields: {
+					drugTestRequirements: [
+						"Amphetamines",
+						"Barbiturates",
+						"Benzodiazepines",
+						"Cocaine Metabolites",
+						"Marijuana",
+						"Methadone",
+						"Opiates",
+						"Phencyclidine",
+						"Propoxyphene",
+						"Fentanyl",
+						"Meperidine",
+						"Oxycodone",
+						"Tramadol",
+					],
+				},
+			},
 		],
 		terminology: { candidate: "Talent", placement: "Assignment" },
 		candidates: travelNurseCandidates,
@@ -180,16 +399,66 @@ Sign off as: "The Oakwood Care Team"`,
 			{ name: "Department", level: 1 },
 		],
 		workNodes: [
-			{ name: "Lakeside Medical Center", type: "Facility", jurisdiction: "texas", address: "2100 Lakeside Boulevard, Plano, TX 75024" },
-			{ name: "Emergency Services", type: "Department", parent: "Lakeside Medical Center", jurisdiction: "texas" },
-			{ name: "Surgical Services", type: "Department", parent: "Lakeside Medical Center", jurisdiction: "texas" },
-			{ name: "Critical Care", type: "Department", parent: "Lakeside Medical Center", jurisdiction: "texas" },
-			{ name: "Medical/Surgical Units", type: "Department", parent: "Lakeside Medical Center", jurisdiction: "texas" },
-			{ name: "Lakeside Community Hospital", type: "Facility", jurisdiction: "texas", address: "850 Main Street, McKinney, TX 75069" },
-			{ name: "General Care", type: "Department", parent: "Lakeside Community Hospital", jurisdiction: "texas" },
-			{ name: "Lakeside Clinics", type: "Facility", jurisdiction: "texas", address: "4500 Elm Avenue, Frisco, TX 75034" },
-			{ name: "Downtown Clinic", type: "Department", parent: "Lakeside Clinics", jurisdiction: "texas" },
-			{ name: "Suburban Clinic", type: "Department", parent: "Lakeside Clinics", jurisdiction: "texas" },
+			{
+				name: "Lakeside Medical Center",
+				type: "Facility",
+				jurisdiction: "texas",
+				address: "2100 Lakeside Boulevard, Plano, TX 75024",
+			},
+			{
+				name: "Emergency Services",
+				type: "Department",
+				parent: "Lakeside Medical Center",
+				jurisdiction: "texas",
+			},
+			{
+				name: "Surgical Services",
+				type: "Department",
+				parent: "Lakeside Medical Center",
+				jurisdiction: "texas",
+			},
+			{
+				name: "Critical Care",
+				type: "Department",
+				parent: "Lakeside Medical Center",
+				jurisdiction: "texas",
+			},
+			{
+				name: "Medical/Surgical Units",
+				type: "Department",
+				parent: "Lakeside Medical Center",
+				jurisdiction: "texas",
+			},
+			{
+				name: "Lakeside Community Hospital",
+				type: "Facility",
+				jurisdiction: "texas",
+				address: "850 Main Street, McKinney, TX 75069",
+			},
+			{
+				name: "General Care",
+				type: "Department",
+				parent: "Lakeside Community Hospital",
+				jurisdiction: "texas",
+			},
+			{
+				name: "Lakeside Clinics",
+				type: "Facility",
+				jurisdiction: "texas",
+				address: "4500 Elm Avenue, Frisco, TX 75034",
+			},
+			{
+				name: "Downtown Clinic",
+				type: "Department",
+				parent: "Lakeside Clinics",
+				jurisdiction: "texas",
+			},
+			{
+				name: "Suburban Clinic",
+				type: "Department",
+				parent: "Lakeside Clinics",
+				jurisdiction: "texas",
+			},
 		],
 		terminology: { candidate: "Provider", placement: "Assignment" },
 		candidates: lakesideCandidates,
@@ -205,40 +474,46 @@ async function seedOrganisation(config: OrgConfig) {
 
 	// Build org settings
 	const marketLabel = config.market === "uk" ? "UK" : "US";
-	const typeLabel = config.type === "agency" ? "Healthcare Agency" : "Healthcare Provider";
+	const typeLabel =
+		config.type === "agency" ? "Healthcare Agency" : "Healthcare Provider";
 	const defaultDescription = `${marketLabel} ${typeLabel}`;
 
 	const orgSettings = {
 		defaultDataOwnership: "organisation" as const,
-		terminology: config.terminology || (config.market === "uk"
-			? { candidate: "Candidate", placement: "Booking" }
-			: { candidate: "Traveler", placement: "Assignment" }),
-		complianceContact: config.market === "uk"
-			? {
-					name: "Sarah Jones",
-					email: `compliance@${config.slug}.com`,
-					phone: "0800 123 4567",
-				}
-			: {
-					name: "Michael Chen",
-					email: `compliance@${config.slug}.com`,
-					phone: "1-800-555-0123",
-				},
+		terminology:
+			config.terminology ||
+			(config.market === "uk"
+				? { candidate: "Candidate", placement: "Booking" }
+				: { candidate: "Traveler", placement: "Assignment" }),
+		complianceContact:
+			config.market === "uk"
+				? {
+						name: "Sarah Jones",
+						email: `compliance@${config.slug}.com`,
+						phone: "0800 123 4567",
+					}
+				: {
+						name: "Michael Chen",
+						email: `compliance@${config.slug}.com`,
+						phone: "1-800-555-0123",
+					},
 		supportContact: {
 			email: `support@${config.slug}.com`,
 			phone: config.market === "uk" ? "0800 999 8888" : "1-800-555-0199",
 		},
 		aiCompanion: {
 			enabled: true,
-			orgPrompt: config.orgPrompt || (config.market === "uk"
-				? `You're writing on behalf of ${config.name}, a leading healthcare staffing partner in the UK.
+			orgPrompt:
+				config.orgPrompt ||
+				(config.market === "uk"
+					? `You're writing on behalf of ${config.name}, a leading healthcare staffing partner in the UK.
 
 Tone: Warm, supportive, and professional. We help healthcare professionals find flexible work opportunities across NHS trusts and private care providers.
 
 Be encouraging about the shifts and opportunities available once compliant. Mention that we have roles at NHS trusts and private care homes across the country.
 
 Sign off as: "${config.name} Compliance Team"`
-				: `You're writing on behalf of ${config.name}, a premier healthcare staffing agency serving facilities across the United States.
+					: `You're writing on behalf of ${config.name}, a premier healthcare staffing agency serving facilities across the United States.
 
 Tone: Friendly, professional, and supportive. We connect healthcare professionals with rewarding travel and permanent positions at top facilities.
 
@@ -320,6 +595,7 @@ Sign off as: "${config.name} Credentialing Team"`),
 				name: nodeConfig.name,
 				jurisdiction: nodeConfig.jurisdiction,
 				address: nodeConfig.address,
+				customFields: nodeConfig.customFields,
 			})
 			.returning();
 		nodeMap.set(nodeConfig.name, node.id);
@@ -335,6 +611,7 @@ Sign off as: "${config.name} Credentialing Team"`),
 				parentId: nodeMap.get(nodeConfig.parent!),
 				jurisdiction: nodeConfig.jurisdiction,
 				address: nodeConfig.address,
+				customFields: nodeConfig.customFields,
 			})
 			.returning();
 		nodeMap.set(nodeConfig.name, node.id);
@@ -358,10 +635,34 @@ Sign off as: "${config.name} Credentialing Team"`),
 
 	// 4b. Create user roles (permission roles)
 	const defaultUserRoles = [
-		{ name: "Admin", slug: "admin", description: "Full system access", permissions: ["*"], isDefault: false },
-		{ name: "Compliance Officer", slug: "compliance-officer", description: "Manage compliance and evidence", permissions: ["profiles:*", "evidence:*", "escalations:*"], isDefault: false },
-		{ name: "Recruiter", slug: "recruiter", description: "Manage candidates and applications", permissions: ["profiles:read", "profiles:create", "applications:*"], isDefault: false },
-		{ name: "Candidate", slug: "candidate", description: "View and manage own data", permissions: ["own:*"], isDefault: true },
+		{
+			name: "Admin",
+			slug: "admin",
+			description: "Full system access",
+			permissions: ["*"],
+			isDefault: false,
+		},
+		{
+			name: "Compliance Officer",
+			slug: "compliance-officer",
+			description: "Manage compliance and evidence",
+			permissions: ["profiles:*", "evidence:*", "escalations:*"],
+			isDefault: false,
+		},
+		{
+			name: "Recruiter",
+			slug: "recruiter",
+			description: "Manage candidates and applications",
+			permissions: ["profiles:read", "profiles:create", "applications:*"],
+			isDefault: false,
+		},
+		{
+			name: "Candidate",
+			slug: "candidate",
+			description: "View and manage own data",
+			permissions: ["own:*"],
+			isDefault: true,
+		},
 	];
 	const userRoleMap = new Map<string, string>();
 	for (const userRoleTemplate of defaultUserRoles) {
@@ -377,7 +678,8 @@ Sign off as: "${config.name} Credentialing Team"`),
 	console.log(`   ✓ Created ${defaultUserRoles.length} user roles`);
 
 	// 5. Create compliance elements
-	const elementTemplates = config.market === "uk" ? ukComplianceElements : usComplianceElements;
+	const elementTemplates =
+		config.market === "uk" ? ukComplianceElements : usComplianceElements;
 	const elementMap = new Map<string, string>();
 	for (const elementTemplate of elementTemplates) {
 		const [element] = await db
@@ -409,8 +711,10 @@ Sign off as: "${config.name} Credentialing Team"`),
 	}
 
 	// 6. Create compliance packages and link elements
-	const packageTemplates = config.market === "uk" ? ukPackageTemplates : usPackageTemplates;
-	const packageContents = config.market === "uk" ? ukPackageContents : usPackageContents;
+	const packageTemplates =
+		config.market === "uk" ? ukPackageTemplates : usPackageTemplates;
+	const packageContents =
+		config.market === "uk" ? ukPackageContents : usPackageContents;
 	const packageMap = new Map<string, string>();
 
 	for (const packageTemplate of packageTemplates) {
@@ -464,7 +768,9 @@ Sign off as: "${config.name} Credentialing Team"`),
 			.returning();
 		stageMap.set(stageNames[i], stage.id);
 	}
-	console.log(`   ✓ Created onboarding pipeline with ${stageNames.length} stages`);
+	console.log(
+		`   ✓ Created onboarding pipeline with ${stageNames.length} stages`,
+	);
 
 	// 8. Create candidates with evidence and activities
 	let userCount = 0;
@@ -491,11 +797,12 @@ Sign off as: "${config.name} Credentialing Team"`),
 
 		// Create Profile (compliance data)
 		// Set createdAt in the past to simulate realistic onboarding duration
-		const onboardingDays = candidateConfig.state.status === "compliant"
-			? randomInt(30, 60) // Compliant candidates have been around longer
-			: candidateConfig.state.status === "stuck"
-				? randomInt(14, 30) // Stuck candidates have been waiting
-				: randomInt(5, 20); // Others are more recent
+		const onboardingDays =
+			candidateConfig.state.status === "compliant"
+				? randomInt(30, 60) // Compliant candidates have been around longer
+				: candidateConfig.state.status === "stuck"
+					? randomInt(14, 30) // Stuck candidates have been waiting
+					: randomInt(5, 20); // Others are more recent
 
 		const [profile] = await db
 			.insert(profiles)
@@ -508,16 +815,14 @@ Sign off as: "${config.name} Credentialing Team"`),
 		profileCount++;
 
 		// Create OrgMembership (links user to org with role and profile)
-		await db
-			.insert(orgMemberships)
-			.values({
-				userId: user.id,
-				organisationId: org.id,
-				userRoleId: userRoleMap.get("candidate")!,
-				profileId: profile.id,
-				status: "active",
-				joinedAt: new Date(),
-			});
+		await db.insert(orgMemberships).values({
+			userId: user.id,
+			organisationId: org.id,
+			userRoleId: userRoleMap.get("candidate")!,
+			profileId: profile.id,
+			status: "active",
+			joinedAt: new Date(),
+		});
 
 		// Determine pipeline stage based on status
 		let stageName: string;
@@ -550,14 +855,24 @@ Sign off as: "${config.name} Credentialing Team"`),
 
 		// Create placement for compliant/near-complete candidates
 		// FA demo candidates get special-cased below with specific work nodes and deal types
-		const faDemoPlacements: Record<string, {
-			workNodeName: string;
-			roleSlug: string;
-			status: "pending" | "onboarding" | "compliance" | "ready" | "active" | "completed" | "cancelled";
-			dealType: "standard" | "lapse" | "reassignment";
-			compliancePercentage: number;
-			startDateDays?: number;
-		}> = {
+		const faDemoPlacements: Record<
+			string,
+			{
+				workNodeName: string;
+				roleSlug: string;
+				status:
+					| "pending"
+					| "onboarding"
+					| "compliance"
+					| "ready"
+					| "active"
+					| "completed"
+					| "cancelled";
+				dealType: "standard" | "lapse" | "reassignment";
+				compliancePercentage: number;
+				startDateDays?: number;
+			}
+		> = {
 			"ashlyn.torres@email.com": {
 				workNodeName: "Memorial Hospital Jacksonville",
 				roleSlug: "travel-icu-rn",
@@ -590,6 +905,14 @@ Sign off as: "${config.name} Credentialing Team"`),
 				compliancePercentage: 35,
 				startDateDays: 24,
 			},
+			"spencer.evans@email.com": {
+				workNodeName: "Baptist Health Miami",
+				roleSlug: "travel-rn",
+				status: "compliance",
+				dealType: "standard",
+				compliancePercentage: 60,
+				startDateDays: 18,
+			},
 		};
 
 		const faPlacement = faDemoPlacements[candidateConfig.profile.email];
@@ -601,50 +924,69 @@ Sign off as: "${config.name} Credentialing Team"`),
 			const roleId = roleMap.get(faPlacement.roleSlug);
 
 			if (workNodeId && roleId) {
-				const [pl] = await db.insert(placements).values({
-					organisationId: org.id,
-					profileId: profile.id,
-					workNodeId,
-					roleId,
-					status: faPlacement.status,
-					compliancePercentage: faPlacement.compliancePercentage,
-					isCompliant: false,
-					startDate: faPlacement.startDateDays
-						? daysFromNow(faPlacement.startDateDays)
-						: null,
-					customFields: { dealType: faPlacement.dealType },
-				}).returning();
+				const [pl] = await db
+					.insert(placements)
+					.values({
+						organisationId: org.id,
+						profileId: profile.id,
+						workNodeId,
+						roleId,
+						status: faPlacement.status,
+						compliancePercentage: faPlacement.compliancePercentage,
+						isCompliant: false,
+						startDate: faPlacement.startDateDays
+							? daysFromNow(faPlacement.startDateDays)
+							: null,
+						customFields: { dealType: faPlacement.dealType },
+					})
+					.returning();
 				placementId = pl.id;
 			}
-		} else if (["compliant", "near_complete", "expiring"].includes(candidateConfig.state.status)) {
-			const workNodeNames = config.workNodes.filter(n => n.parent).map(n => n.name);
+		} else {
+			const workNodeNames = config.workNodes
+				.filter((n) => n.parent)
+				.map((n) => n.name);
 			const randomWorkNode = randomPick(workNodeNames);
 			const workNodeId = nodeMap.get(randomWorkNode);
 			const roleId = roleMap.get(candidateConfig.roleSlug);
 
 			if (workNodeId && roleId) {
-				const [pl] = await db.insert(placements).values({
-					organisationId: org.id,
-					profileId: profile.id,
-					workNodeId,
-					roleId,
-					status: candidateConfig.state.status === "compliant" ? "active" : "compliance",
-					compliancePercentage: candidateConfig.state.status === "compliant" ? 100 : randomInt(70, 95),
-					isCompliant: candidateConfig.state.status === "compliant",
-					startDate: candidateConfig.state.startDateDays
-						? daysFromNow(candidateConfig.state.startDateDays)
-						: daysFromNow(-randomInt(1, 90)),
-				}).returning();
+				const [pl] = await db
+					.insert(placements)
+					.values({
+						organisationId: org.id,
+						profileId: profile.id,
+						workNodeId,
+						roleId,
+						status:
+							candidateConfig.state.status === "compliant"
+								? "active"
+								: "compliance",
+						compliancePercentage:
+							candidateConfig.state.status === "compliant"
+								? 100
+								: randomInt(70, 95),
+						isCompliant: candidateConfig.state.status === "compliant",
+						startDate: candidateConfig.state.startDateDays
+							? daysFromNow(candidateConfig.state.startDateDays)
+							: daysFromNow(-randomInt(1, 90)),
+					})
+					.returning();
 				placementId = pl.id;
 			}
 		}
 
 		// Create evidence for elements NOT in missing list
-		const allElements = config.market === "uk" ? ukComplianceElements : usComplianceElements;
+		const allElements =
+			config.market === "uk" ? ukComplianceElements : usComplianceElements;
 		const missingSet = new Set(candidateConfig.state.missingElements || []);
 		const expiringSet = new Set(candidateConfig.state.expiringElements || []);
-		const pendingAdminSet = new Set(candidateConfig.state.pendingAdminReview || []);
-		const pendingThirdPartySet = new Set(candidateConfig.state.pendingThirdParty || []);
+		const pendingAdminSet = new Set(
+			candidateConfig.state.pendingAdminReview || [],
+		);
+		const pendingThirdPartySet = new Set(
+			candidateConfig.state.pendingThirdParty || [],
+		);
 
 		for (const element of allElements) {
 			if (element.scope === "placement") continue; // Skip placement-scoped for now
@@ -654,9 +996,26 @@ Sign off as: "${config.name} Credentialing Team"`),
 			if (!elementId) continue;
 
 			// Determine status and source based on blocking state
-			let status: "pending" | "processing" | "requires_review" | "approved" | "rejected" | "expired" = "approved";
-			let source: "user_upload" | "cv_extraction" | "document_extraction" | "external_check" | "ai_extraction" | "admin_entry" | "attestation" = randomPick(["user_upload", "admin_entry"]);
-			let verificationStatus: "unverified" | "auto_verified" | "human_verified" | "external_verified" = "human_verified";
+			let status:
+				| "pending"
+				| "processing"
+				| "requires_review"
+				| "approved"
+				| "rejected"
+				| "expired" = "approved";
+			let source:
+				| "user_upload"
+				| "cv_extraction"
+				| "document_extraction"
+				| "external_check"
+				| "ai_extraction"
+				| "admin_entry"
+				| "attestation" = randomPick(["user_upload", "admin_entry"]);
+			let verificationStatus:
+				| "unverified"
+				| "auto_verified"
+				| "human_verified"
+				| "external_verified" = "human_verified";
 			let verifiedAt: Date | null = daysFromNow(-randomInt(1, 30));
 
 			if (pendingAdminSet.has(element.slug)) {
@@ -671,7 +1030,10 @@ Sign off as: "${config.name} Credentialing Team"`),
 				source = "external_check";
 				verificationStatus = "unverified";
 				verifiedAt = null;
-			} else if (expiringSet.has(element.slug) && candidateConfig.state.status === "non_compliant") {
+			} else if (
+				expiringSet.has(element.slug) &&
+				candidateConfig.state.status === "non_compliant"
+			) {
 				// Already expired
 				status = "expired";
 			}
@@ -720,7 +1082,10 @@ Sign off as: "${config.name} Credentialing Team"`),
 			actor: "ai",
 			channel: "email",
 			summary: `Sent welcome email to ${profile.firstName}`,
-			details: { template: "welcome", subject: "Welcome to your onboarding journey" },
+			details: {
+				template: "welcome",
+				subject: "Welcome to your onboarding journey",
+			},
 			createdAt: daysFromNow(-randomInt(30, 60)),
 		});
 		activityCount++;
@@ -747,7 +1112,8 @@ Sign off as: "${config.name} Credentialing Team"`),
 				status: "pending",
 				priority: "high",
 				question: `${profile.firstName} ${profile.lastName} has not responded to multiple outreach attempts. Manual follow-up required.`,
-				aiReasoning: "Candidate has not responded to 3 automated reminders over 14 days.",
+				aiReasoning:
+					"Candidate has not responded to 3 automated reminders over 14 days.",
 				aiRecommendation: "Recommend phone call or alternative contact method.",
 				dueAt: daysFromNow(2),
 				createdAt: daysFromNow(-1),
@@ -766,7 +1132,8 @@ Sign off as: "${config.name} Credentialing Team"`),
 			});
 			activityCount++;
 		} else if (candidateConfig.state.status === "expiring") {
-			const expiring = candidateConfig.state.expiringElements?.[0] || "document";
+			const expiring =
+				candidateConfig.state.expiringElements?.[0] || "document";
 			await db.insert(activities).values({
 				organisationId: org.id,
 				profileId: profile.id,
@@ -774,7 +1141,11 @@ Sign off as: "${config.name} Credentialing Team"`),
 				actor: "ai",
 				channel: "email",
 				summary: `Sent expiry warning for ${expiring}`,
-				details: { template: "expiry_warning", element: expiring, daysRemaining: randomInt(7, 20) },
+				details: {
+					template: "expiry_warning",
+					element: expiring,
+					daysRemaining: randomInt(7, 20),
+				},
 				createdAt: daysFromNow(-activityDays),
 			});
 			activityCount++;
@@ -799,7 +1170,11 @@ Sign off as: "${config.name} Credentialing Team"`),
 		// This demonstrates the speed of the onboarding process
 
 		// Helper to create a timestamp with specific hours/minutes offset from a base date
-		const createTimestamp = (daysAgo: number, hours: number, minutes: number) => {
+		const createTimestamp = (
+			daysAgo: number,
+			hours: number,
+			minutes: number,
+		) => {
 			const date = new Date();
 			date.setDate(date.getDate() - daysAgo);
 			date.setHours(hours, minutes, randomInt(0, 59), 0);
@@ -810,59 +1185,223 @@ Sign off as: "${config.name} Credentialing Team"`),
 		const activityBursts = [
 			// Document upload -> AI processing -> Admin review burst
 			[
-				{ type: "document_uploaded", actor: "candidate", channel: "portal", summary: `${profile.firstName} uploaded passport`, offsetMins: 0 },
-				{ type: "system_action", actor: "ai", channel: "api", summary: `AI extracted data from ${profile.firstName}'s passport`, offsetMins: 1 },
-				{ type: "document_reviewed", actor: "ai", channel: "portal", summary: `AI verified ${profile.firstName}'s passport authenticity`, offsetMins: 2 },
-				{ type: "status_changed", actor: "ai", channel: "portal", summary: `${profile.firstName}'s ID verification complete`, offsetMins: 3 },
+				{
+					type: "document_uploaded",
+					actor: "candidate",
+					channel: "portal",
+					summary: `${profile.firstName} uploaded passport`,
+					offsetMins: 0,
+				},
+				{
+					type: "system_action",
+					actor: "ai",
+					channel: "api",
+					summary: `AI extracted data from ${profile.firstName}'s passport`,
+					offsetMins: 1,
+				},
+				{
+					type: "document_reviewed",
+					actor: "ai",
+					channel: "portal",
+					summary: `AI verified ${profile.firstName}'s passport authenticity`,
+					offsetMins: 2,
+				},
+				{
+					type: "status_changed",
+					actor: "ai",
+					channel: "portal",
+					summary: `${profile.firstName}'s ID verification complete`,
+					offsetMins: 3,
+				},
 			],
 			// Reference request flow
 			[
-				{ type: "message_sent", actor: "ai", channel: "email", summary: `Reference request sent for ${profile.firstName}`, offsetMins: 0 },
-				{ type: "system_action", actor: "system", channel: "api", summary: `Reference portal link generated`, offsetMins: 1 },
+				{
+					type: "message_sent",
+					actor: "ai",
+					channel: "email",
+					summary: `Reference request sent for ${profile.firstName}`,
+					offsetMins: 0,
+				},
+				{
+					type: "system_action",
+					actor: "system",
+					channel: "api",
+					summary: `Reference portal link generated`,
+					offsetMins: 1,
+				},
 			],
 			// Reference response burst
 			[
-				{ type: "check_completed", actor: "integration", channel: "api", summary: `Reference received for ${profile.firstName}`, offsetMins: 0 },
-				{ type: "system_action", actor: "ai", channel: "api", summary: `AI analysed reference content`, offsetMins: 2 },
-				{ type: "status_changed", actor: "ai", channel: "portal", summary: `Reference verified for ${profile.firstName}`, offsetMins: 3 },
+				{
+					type: "check_completed",
+					actor: "integration",
+					channel: "api",
+					summary: `Reference received for ${profile.firstName}`,
+					offsetMins: 0,
+				},
+				{
+					type: "system_action",
+					actor: "ai",
+					channel: "api",
+					summary: `AI analysed reference content`,
+					offsetMins: 2,
+				},
+				{
+					type: "status_changed",
+					actor: "ai",
+					channel: "portal",
+					summary: `Reference verified for ${profile.firstName}`,
+					offsetMins: 3,
+				},
 			],
 			// DBS check flow
 			[
-				{ type: "check_initiated", actor: "system", channel: "api", summary: `DBS check initiated for ${profile.firstName}`, offsetMins: 0 },
-				{ type: "message_sent", actor: "ai", channel: "email", summary: `DBS application link sent to ${profile.firstName}`, offsetMins: 1 },
+				{
+					type: "check_initiated",
+					actor: "system",
+					channel: "api",
+					summary: `DBS check initiated for ${profile.firstName}`,
+					offsetMins: 0,
+				},
+				{
+					type: "message_sent",
+					actor: "ai",
+					channel: "email",
+					summary: `DBS application link sent to ${profile.firstName}`,
+					offsetMins: 1,
+				},
 			],
 			// Candidate engagement burst
 			[
-				{ type: "message_sent", actor: "ai", channel: "sms", summary: `SMS reminder sent to ${profile.firstName}`, offsetMins: 0 },
-				{ type: "message_received", actor: "candidate", channel: "portal", summary: `${profile.firstName} logged into portal`, offsetMins: 15 },
-				{ type: "document_uploaded", actor: "candidate", channel: "portal", summary: `${profile.firstName} uploaded proof of address`, offsetMins: 22 },
-				{ type: "system_action", actor: "ai", channel: "api", summary: `AI verified address document`, offsetMins: 23 },
+				{
+					type: "message_sent",
+					actor: "ai",
+					channel: "sms",
+					summary: `SMS reminder sent to ${profile.firstName}`,
+					offsetMins: 0,
+				},
+				{
+					type: "message_received",
+					actor: "candidate",
+					channel: "portal",
+					summary: `${profile.firstName} logged into portal`,
+					offsetMins: 15,
+				},
+				{
+					type: "document_uploaded",
+					actor: "candidate",
+					channel: "portal",
+					summary: `${profile.firstName} uploaded proof of address`,
+					offsetMins: 22,
+				},
+				{
+					type: "system_action",
+					actor: "ai",
+					channel: "api",
+					summary: `AI verified address document`,
+					offsetMins: 23,
+				},
 			],
 			// Admin review burst
 			[
-				{ type: "note_added", actor: "admin", channel: "portal", summary: `Admin reviewed ${profile.firstName}'s application`, offsetMins: 0 },
-				{ type: "status_changed", actor: "admin", channel: "portal", summary: `${profile.firstName} moved to final checks`, offsetMins: 5 },
+				{
+					type: "note_added",
+					actor: "admin",
+					channel: "portal",
+					summary: `Admin reviewed ${profile.firstName}'s application`,
+					offsetMins: 0,
+				},
+				{
+					type: "status_changed",
+					actor: "admin",
+					channel: "portal",
+					summary: `${profile.firstName} moved to final checks`,
+					offsetMins: 5,
+				},
 			],
 			// Quick AI chase sequence
 			[
-				{ type: "system_action", actor: "ai", channel: "api", summary: `AI detected missing Right to Work for ${profile.firstName}`, offsetMins: 0 },
-				{ type: "message_sent", actor: "ai", channel: "email", summary: `Reminder sent: Please upload Right to Work`, offsetMins: 1 },
+				{
+					type: "system_action",
+					actor: "ai",
+					channel: "api",
+					summary: `AI detected missing Right to Work for ${profile.firstName}`,
+					offsetMins: 0,
+				},
+				{
+					type: "message_sent",
+					actor: "ai",
+					channel: "email",
+					summary: `Reminder sent: Please upload Right to Work`,
+					offsetMins: 1,
+				},
 			],
 		];
 
 		// Create single activities spread evenly across the last 14 days
 		// Each activity on a different day for clear visualization
 		const activityPool = [
-			{ type: "document_uploaded", actor: "candidate", channel: "portal", summary: `${profile.firstName} uploaded passport` },
-			{ type: "system_action", actor: "ai", channel: "api", summary: `AI verified ${profile.firstName}'s document` },
-			{ type: "message_sent", actor: "ai", channel: "email", summary: `Onboarding update sent to ${profile.firstName}` },
-			{ type: "check_initiated", actor: "system", channel: "api", summary: `DBS check initiated for ${profile.firstName}` },
-			{ type: "message_received", actor: "candidate", channel: "portal", summary: `${profile.firstName} logged into portal` },
-			{ type: "document_reviewed", actor: "admin", channel: "portal", summary: `Admin reviewed ${profile.firstName}'s documents` },
-			{ type: "check_completed", actor: "integration", channel: "api", summary: `Reference received for ${profile.firstName}` },
-			{ type: "status_changed", actor: "ai", channel: "portal", summary: `${profile.firstName}'s status updated` },
-			{ type: "message_sent", actor: "ai", channel: "sms", summary: `SMS reminder sent to ${profile.firstName}` },
-			{ type: "note_added", actor: "admin", channel: "portal", summary: `Admin added note about ${profile.firstName}` },
+			{
+				type: "document_uploaded",
+				actor: "candidate",
+				channel: "portal",
+				summary: `${profile.firstName} uploaded passport`,
+			},
+			{
+				type: "system_action",
+				actor: "ai",
+				channel: "api",
+				summary: `AI verified ${profile.firstName}'s document`,
+			},
+			{
+				type: "message_sent",
+				actor: "ai",
+				channel: "email",
+				summary: `Onboarding update sent to ${profile.firstName}`,
+			},
+			{
+				type: "check_initiated",
+				actor: "system",
+				channel: "api",
+				summary: `DBS check initiated for ${profile.firstName}`,
+			},
+			{
+				type: "message_received",
+				actor: "candidate",
+				channel: "portal",
+				summary: `${profile.firstName} logged into portal`,
+			},
+			{
+				type: "document_reviewed",
+				actor: "admin",
+				channel: "portal",
+				summary: `Admin reviewed ${profile.firstName}'s documents`,
+			},
+			{
+				type: "check_completed",
+				actor: "integration",
+				channel: "api",
+				summary: `Reference received for ${profile.firstName}`,
+			},
+			{
+				type: "status_changed",
+				actor: "ai",
+				channel: "portal",
+				summary: `${profile.firstName}'s status updated`,
+			},
+			{
+				type: "message_sent",
+				actor: "ai",
+				channel: "sms",
+				summary: `SMS reminder sent to ${profile.firstName}`,
+			},
+			{
+				type: "note_added",
+				actor: "admin",
+				channel: "portal",
+				summary: `Admin added note about ${profile.firstName}`,
+			},
 		];
 
 		// Create 30-40 activities spread evenly across last 6 days (not today to avoid future)
@@ -872,7 +1411,10 @@ Sign off as: "${config.name} Credentialing Team"`),
 		// Track how many activities per day for time spacing
 		const activitiesPerDay: Record<number, number> = {};
 		const activityIndexPerDay: Record<number, number> = {};
-		days.forEach(d => { activitiesPerDay[d] = 0; activityIndexPerDay[d] = 0; });
+		days.forEach((d) => {
+			activitiesPerDay[d] = 0;
+			activityIndexPerDay[d] = 0;
+		});
 
 		// First pass: count activities per day (round-robin distribution)
 		for (let i = 0; i < numActivities; i++) {
@@ -889,7 +1431,9 @@ Sign off as: "${config.name} Credentialing Team"`),
 			const countForDay = activitiesPerDay[daysAgo];
 			const indexForDay = activityIndexPerDay[daysAgo]++;
 			const slotSize = totalMinutes / countForDay;
-			const minuteOffset = Math.floor(slotSize * indexForDay + randomInt(0, Math.floor(slotSize * 0.5)));
+			const minuteOffset = Math.floor(
+				slotSize * indexForDay + randomInt(0, Math.floor(slotSize * 0.5)),
+			);
 			const hour = 6 + Math.floor(minuteOffset / 60);
 			const minute = minuteOffset % 60;
 
@@ -899,9 +1443,11 @@ Sign off as: "${config.name} Credentialing Team"`),
 			await db.insert(activities).values({
 				organisationId: org.id,
 				profileId: profile.id,
-				activityType: activity.type as typeof activities.$inferInsert["activityType"],
-				actor: activity.actor as typeof activities.$inferInsert["actor"],
-				channel: activity.channel as typeof activities.$inferInsert["channel"],
+				activityType:
+					activity.type as (typeof activities.$inferInsert)["activityType"],
+				actor: activity.actor as (typeof activities.$inferInsert)["actor"],
+				channel:
+					activity.channel as (typeof activities.$inferInsert)["channel"],
 				summary: activity.summary,
 				details: {},
 				createdAt: timestamp,
@@ -916,14 +1462,25 @@ Sign off as: "${config.name} Credentialing Team"`),
 
 		if (placementId) {
 			// --- Placement-scoped task generation ---
-			const allElementsForMarket = config.market === "uk" ? ukComplianceElements : usComplianceElements;
-			const elementNameMap = new Map(allElementsForMarket.map(e => [e.slug, e.name]));
-			const externalElementSlugs = new Set(allElementsForMarket.filter(e => e.fulfilmentProvider === "external_provider").map(e => e.slug));
+			const allElementsForMarket =
+				config.market === "uk" ? ukComplianceElements : usComplianceElements;
+			const elementNameMap = new Map(
+				allElementsForMarket.map((e) => [e.slug, e.name]),
+			);
+			const externalElementSlugs = new Set(
+				allElementsForMarket
+					.filter((e) => e.fulfilmentProvider === "external_provider")
+					.map((e) => e.slug),
+			);
 			const missingElements = candidateConfig.state.missingElements || [];
 
 			// Split missing elements into FA-handled vs non-FA
-			const missingFa = missingElements.filter(slug => externalElementSlugs.has(slug));
-			const missingNonFa = missingElements.filter(slug => !externalElementSlugs.has(slug));
+			const missingFa = missingElements.filter((slug) =>
+				externalElementSlugs.has(slug),
+			);
+			const missingNonFa = missingElements.filter(
+				(slug) => !externalElementSlugs.has(slug),
+			);
 
 			// FA items → ONE grouped task per placement
 			if (missingFa.length > 0) {
@@ -932,7 +1489,7 @@ Sign off as: "${config.name} Credentialing Team"`),
 					subjectType: "placement",
 					subjectId: placementId,
 					title: `Initiate FA screening — ${missingFa.length} item${missingFa.length !== 1 ? "s" : ""} outstanding`,
-					description: `Missing FA-handled items: ${missingFa.map(s => elementNameMap.get(s) || s).join(", ")}. Submit a single screening order to resolve.`,
+					description: `Missing FA-handled items: ${missingFa.map((s) => elementNameMap.get(s) || s).join(", ")}. Submit a single screening order to resolve.`,
 					priority: "high",
 					category: "general",
 					source: "system",
@@ -954,7 +1511,8 @@ Sign off as: "${config.name} Credentialing Team"`),
 					subjectId: placementId,
 					title: `Chase ${profile.firstName} for ${itemName}`,
 					description: `${candidateName} is missing ${itemName}. Follow up to obtain this document.`,
-					priority: candidateConfig.state.status === "stuck" ? "high" : "medium",
+					priority:
+						candidateConfig.state.status === "stuck" ? "high" : "medium",
 					category: "chase_candidate",
 					source: "system",
 					status: "pending",
@@ -969,9 +1527,9 @@ Sign off as: "${config.name} Credentialing Team"`),
 			}
 
 			// Expired elements → urgent tasks
-			const expiredElements = (candidateConfig.state.expiringElements || []).filter(
-				() => candidateConfig.state.status === "non_compliant",
-			);
+			const expiredElements = (
+				candidateConfig.state.expiringElements || []
+			).filter(() => candidateConfig.state.status === "non_compliant");
 			for (const slug of expiredElements) {
 				const itemName = elementNameMap.get(slug) || slug;
 				await db.insert(tasks).values({
@@ -993,9 +1551,9 @@ Sign off as: "${config.name} Credentialing Team"`),
 			}
 
 			// Expiring elements (not yet expired) → renewal tasks
-			const expiringElements = (candidateConfig.state.expiringElements || []).filter(
-				() => candidateConfig.state.status !== "non_compliant",
-			);
+			const expiringElements = (
+				candidateConfig.state.expiringElements || []
+			).filter(() => candidateConfig.state.status !== "non_compliant");
 			for (const slug of expiringElements) {
 				const itemName = elementNameMap.get(slug) || slug;
 				await db.insert(tasks).values({
@@ -1017,7 +1575,7 @@ Sign off as: "${config.name} Credentialing Team"`),
 			}
 
 			// Pending admin review → review tasks
-			for (const slug of (candidateConfig.state.pendingAdminReview || [])) {
+			for (const slug of candidateConfig.state.pendingAdminReview || []) {
 				const itemName = elementNameMap.get(slug) || slug;
 				await db.insert(tasks).values({
 					organisationId: org.id,
@@ -1038,7 +1596,7 @@ Sign off as: "${config.name} Credentialing Team"`),
 			}
 
 			// Pending third party → follow-up tasks
-			for (const slug of (candidateConfig.state.pendingThirdParty || [])) {
+			for (const slug of candidateConfig.state.pendingThirdParty || []) {
 				const itemName = elementNameMap.get(slug) || slug;
 				await db.insert(tasks).values({
 					organisationId: org.id,
@@ -1070,7 +1628,8 @@ Sign off as: "${config.name} Credentialing Team"`),
 					category: "chase_candidate",
 					source: "ai_agent",
 					agentId: "onboarding-companion",
-					aiReasoning: "Candidate has not responded to 3 automated reminders over 14 days.",
+					aiReasoning:
+						"Candidate has not responded to 3 automated reminders over 14 days.",
 					status: "pending",
 					dueAt: daysFromNow(1),
 					createdAt: daysFromNow(-1),
@@ -1078,7 +1637,8 @@ Sign off as: "${config.name} Credentialing Team"`),
 				});
 				taskCount++;
 			} else if (candidateConfig.state.status === "near_complete") {
-				const missing = candidateConfig.state.missingElements?.[0] || "Right to Work";
+				const missing =
+					candidateConfig.state.missingElements?.[0] || "Right to Work";
 				await db.insert(tasks).values({
 					organisationId: org.id,
 					subjectType: "profile",
@@ -1194,10 +1754,12 @@ async function assignAdmins() {
 			const [adminRole] = await db
 				.select()
 				.from(userRoles)
-				.where(and(
-					eq(userRoles.organisationId, org.id),
-					eq(userRoles.slug, "admin")
-				))
+				.where(
+					and(
+						eq(userRoles.organisationId, org.id),
+						eq(userRoles.slug, "admin"),
+					),
+				)
 				.limit(1);
 
 			if (!adminRole) {
@@ -1209,23 +1771,23 @@ async function assignAdmins() {
 			const [existingMembership] = await db
 				.select()
 				.from(orgMemberships)
-				.where(and(
-					eq(orgMemberships.userId, user.id),
-					eq(orgMemberships.organisationId, org.id)
-				))
+				.where(
+					and(
+						eq(orgMemberships.userId, user.id),
+						eq(orgMemberships.organisationId, org.id),
+					),
+				)
 				.limit(1);
 
 			if (!existingMembership) {
 				// Create membership with admin role
-				await db
-					.insert(orgMemberships)
-					.values({
-						userId: user.id,
-						organisationId: org.id,
-						userRoleId: adminRole.id,
-						status: "active",
-						joinedAt: new Date(),
-					});
+				await db.insert(orgMemberships).values({
+					userId: user.id,
+					organisationId: org.id,
+					userRoleId: adminRole.id,
+					status: "active",
+					joinedAt: new Date(),
+				});
 			}
 		}
 

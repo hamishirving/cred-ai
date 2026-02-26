@@ -20,6 +20,7 @@ interface WorkNodeDetail {
 	typeName: string;
 	jurisdiction: string | null;
 	address: string | null;
+	drugTestRequirements: string[];
 	hierarchyPath: { id: string; name: string; typeName: string }[];
 	activePlacements: {
 		id: string;
@@ -55,6 +56,7 @@ export function FacilityDetailDialog({
 	const [data, setData] = useState<WorkNodeDetail | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(false);
+	const [showAllDrugPanel, setShowAllDrugPanel] = useState(false);
 
 	useEffect(() => {
 		if (!open || data) return;
@@ -86,9 +88,22 @@ export function FacilityDetailDialog({
 	const otherPlacements = data?.activePlacements.filter(
 		(p) => p.id !== currentPlacementId,
 	);
+	const hasCollapsedDrugPanel =
+		(data?.drugTestRequirements.length ?? 0) > 4;
+	const collapsedDrugPanelText = data?.drugTestRequirements
+		.slice(0, 4)
+		.join(", ");
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
+		<Dialog
+			open={open}
+			onOpenChange={(nextOpen) => {
+				setOpen(nextOpen);
+				if (!nextOpen) {
+					setShowAllDrugPanel(false);
+				}
+			}}
+		>
 			<button
 				type="button"
 				onClick={() => setOpen(true)}
@@ -177,6 +192,32 @@ export function FacilityDetailDialog({
 								</div>
 							)}
 						</div>
+						{data.drugTestRequirements.length > 0 && (
+							<div className="border-t border-border px-5 py-3">
+								<div className="flex items-start gap-2">
+									<span className="text-xs text-muted-foreground w-20 shrink-0 pt-0.5">
+										Drug panel
+									</span>
+									<div className="text-sm text-foreground/90">
+										<p>
+											{data.drugTestRequirements.length} analytes:{" "}
+											{showAllDrugPanel || !hasCollapsedDrugPanel
+												? data.drugTestRequirements.join(", ")
+												: `${collapsedDrugPanelText}, ...`}
+										</p>
+										{hasCollapsedDrugPanel && (
+											<button
+												type="button"
+												onClick={() => setShowAllDrugPanel((prev) => !prev)}
+												className="text-xs text-primary hover:underline mt-1"
+											>
+												{showAllDrugPanel ? "Show less" : "Show all"}
+											</button>
+										)}
+									</div>
+								</div>
+							</div>
+						)}
 
 						{/* Active placements */}
 						<div className="border-t border-border px-5 py-3">
