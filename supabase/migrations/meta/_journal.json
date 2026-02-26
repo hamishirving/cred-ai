@@ -71,6 +71,34 @@
       "when": 1771839276177,
       "tag": "0009_narrow_ricochet",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1771883531017,
+      "tag": "0010_petite_viper",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1771938758934,
+      "tag": "0011_ancient_silver_centurion",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1771968082215,
+      "tag": "0012_fair_angel",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1772025295366,
+      "tag": "0013_free_blur",
+      "breakpoints": true
     }
   ]
 }

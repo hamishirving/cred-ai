@@ -18,7 +18,8 @@ import type {
 	FAReportLink,
 } from "./types";
 
-const BASE_URL = process.env.FA_API_BASE_URL || "https://api.us.int.sterlingcheck.app/v2";
+const BASE_URL =
+	process.env.FA_API_BASE_URL || "https://api.us.int.sterlingcheck.app/v2";
 const CLIENT_ID = process.env.FA_CLIENT_ID || "";
 const CLIENT_SECRET = process.env.FA_CLIENT_SECRET || "";
 
@@ -31,7 +32,9 @@ export class LiveFAClient implements FAClient {
 			return this.token;
 		}
 
-		const credentials = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64");
+		const credentials = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString(
+			"base64",
+		);
 
 		const res = await fetch(`${BASE_URL}/oauth`, {
 			method: "POST",
@@ -48,9 +51,10 @@ export class LiveFAClient implements FAClient {
 
 		const data = await res.json();
 		// expires_in comes as string from the API
-		const expiresInSeconds = typeof data.expires_in === "string"
-			? parseInt(data.expires_in, 10)
-			: data.expires_in;
+		const expiresInSeconds =
+			typeof data.expires_in === "string"
+				? parseInt(data.expires_in, 10)
+				: data.expires_in;
 
 		this.token = {
 			access_token: data.access_token,
@@ -62,7 +66,10 @@ export class LiveFAClient implements FAClient {
 		return this.token;
 	}
 
-	private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
+	private async request<T>(
+		path: string,
+		options: RequestInit = {},
+	): Promise<T> {
 		const auth = await this.authenticate();
 		const res = await fetch(`${BASE_URL}${path}`, {
 			...options,
@@ -93,13 +100,20 @@ export class LiveFAClient implements FAClient {
 		});
 	}
 
-	async initiateScreening(input: FAInitiateScreeningInput): Promise<FAScreening> {
+	async initiateScreening(
+		input: FAInitiateScreeningInput,
+	): Promise<FAScreening> {
 		return this.request<FAScreening>("/screenings", {
 			method: "POST",
+			headers: {
+				"idempotency-key": crypto.randomUUID(),
+			},
 			body: JSON.stringify({
 				candidateId: input.candidateId,
-				packageId: input.packageId,
-				...(input.callbackUri ? { callbackUri: input.callbackUri } : {}),
+				...(input.packageId ? { packageId: input.packageId } : {}),
+				...(input.callbackUri ? { callback: { uri: input.callbackUri } } : {}),
+				...(input.alacarte ? { alacarte: input.alacarte } : {}),
+				...(input.drug ? { drug: input.drug } : {}),
 			}),
 		});
 	}
@@ -114,5 +128,21 @@ export class LiveFAClient implements FAClient {
 			`/screenings/${screeningId}/report-links`,
 			{ method: "POST" },
 		);
+	}
+
+	async listScreenings(_candidateName: string): Promise<FAScreening[]> {
+		// Sterling API candidate search not yet implemented — fallback to empty
+		return [];
+	}
+
+	async findCandidateByEmail(email: string): Promise<FACandidate | null> {
+		try {
+			const results = await this.request<FACandidate[]>(
+				`/candidates?email=${encodeURIComponent(email)}`,
+			);
+			return results.length > 0 ? results[0] : null;
+		} catch {
+			return null;
+		}
 	}
 }

@@ -80,6 +80,19 @@ Extract the assignee's first name from the @ mention (e.g., "@Sarah" → "Sarah"
 			.uuid()
 			.optional()
 			.describe("Organisation ID (required when called outside browser context, e.g. from webhooks)"),
+		complianceElementSlugs: z
+			.array(z.string())
+			.optional()
+			.describe("Compliance element slugs this task relates to (e.g. ['drug-screen', 'tb-test'])"),
+		source: z
+			.enum(["ai_agent", "manual", "system"])
+			.optional()
+			.default("ai_agent")
+			.describe("How this task was created. Agents should use 'ai_agent', manual user actions use 'manual'."),
+		agentId: z
+			.string()
+			.optional()
+			.describe("ID of the agent creating this task (e.g. 'screening-status-monitor', 'onboarding-companion'). Defaults to 'chat-companion' for chat context."),
 	}),
 
 	execute: async ({
@@ -92,6 +105,9 @@ Extract the assignee's first name from the @ mention (e.g., "@Sarah" → "Sarah"
 		subjectType,
 		subjectId,
 		organisationId: inputOrgId,
+		complianceElementSlugs,
+		source,
+		agentId,
 	}) => {
 		console.log("[createTask] Creating task:", { title, assigneeFirstName });
 
@@ -165,6 +181,9 @@ Extract the assignee's first name from the @ mention (e.g., "@Sarah" → "Sarah"
 				subjectType,
 				subjectId,
 				organisationId,
+				complianceElementSlugs,
+				source,
+				agentId,
 			});
 
 			return {

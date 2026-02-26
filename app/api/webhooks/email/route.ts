@@ -25,7 +25,14 @@ function parseFrom(from: string): { name: string; email: string } {
 	return { name: from.trim(), email: from.trim() };
 }
 
-function triggerAgent(senderEmail: string, senderName: string, subject: string, bodyText: string) {
+interface EmailAttachment {
+	fileName: string;
+	contentType: string;
+	base64Content: string;
+	contentLength: number;
+}
+
+function triggerAgent(senderEmail: string, senderName: string, subject: string, bodyText: string, attachments: EmailAttachment[] = []) {
 	const agent = getAgentDefinition("inbound-email-responder");
 	if (!agent) {
 		console.error("[email-webhook] Agent definition not found");
@@ -35,7 +42,7 @@ function triggerAgent(senderEmail: string, senderName: string, subject: string, 
 	executeAgent(
 		agent,
 		{
-			input: { senderEmail, senderName, subject, bodyText },
+			input: { senderEmail, senderName, subject, bodyText, attachments },
 			orgId: "",
 			userId: "",
 			triggerType: "event",
@@ -81,8 +88,17 @@ export async function POST(request: Request) {
 			const subject: string = payload.Subject || "(no subject)";
 			const bodyText: string = payload.TextBody || payload.HtmlBody || "";
 
-			console.log("[email-webhook] Postmark inbound from:", senderEmail, "subject:", subject);
-			triggerAgent(senderEmail, senderName, subject, bodyText);
+			// Extract attachments from Postmark payload
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const attachments: EmailAttachment[] = (payload.Attachments || []).map((att: any) => ({
+				fileName: att.Name || att.FileName || "attachment",
+				contentType: att.ContentType || "application/octet-stream",
+				base64Content: att.Content || "",
+				contentLength: att.ContentLength || 0,
+			}));
+
+			console.log("[email-webhook] Postmark inbound from:", senderEmail, "subject:", subject, "attachments:", attachments.length);
+			triggerAgent(senderEmail, senderName, subject, bodyText, attachments);
 			return NextResponse.json({ received: true });
 		}
 

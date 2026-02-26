@@ -78,10 +78,30 @@ export interface FACandidate {
 
 // -- Screenings --
 
+export interface FAAlacarteItem {
+	product: string; // "RDT" for drug/health
+	root: string; // Product code e.g. "DHS90007"
+	description: string;
+}
+
 export interface FAInitiateScreeningInput {
 	candidateId: string;
-	packageId: string;
+	packageId?: string;
 	callbackUri?: string;
+	alacarte?: FAAlacarteItem[];
+	drug?: {
+		sex: "male" | "female";
+		reasonForTest: string;
+		applicantCopy?: boolean;
+		clientCopy?: boolean;
+		siteSelectionAddress: {
+			addressLine: string;
+			municipality: string;
+			regionCode: string; // "US-IA"
+			postalCode: string;
+			countryCode?: string;
+		};
+	};
 }
 
 export interface FAReportItem {
@@ -120,7 +140,7 @@ export interface FAReportLink {
 }
 
 /**
- * FAClient interface — both LiveFAClient and MockFAClient implement this.
+ * FAClient interface — implemented by LiveFAClient.
  */
 export interface FAClient {
 	authenticate(): Promise<FAAuthToken>;
@@ -129,4 +149,6 @@ export interface FAClient {
 	initiateScreening(data: FAInitiateScreeningInput): Promise<FAScreening>;
 	getScreening(screeningId: string): Promise<FAScreening>;
 	getReportLink(screeningId: string): Promise<FAReportLink>;
+	listScreenings(candidateName: string): Promise<FAScreening[]>;
+	findCandidateByEmail(email: string): Promise<FACandidate | null>;
 }

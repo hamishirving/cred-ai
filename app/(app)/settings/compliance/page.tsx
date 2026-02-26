@@ -13,14 +13,12 @@ import {
 	usRolePackages,
 	usStatePackages,
 	usFacilityPackages,
-	faHandledElements,
 } from "@/lib/db/seed/markets/us";
 import {
 	ukPackageContents,
 	ukRolePackages,
 	ukJurisdictionPackages,
 	ukFacilityPackages,
-	ukExternallyHandledElements,
 } from "@/lib/db/seed/markets/uk";
 import { ComplianceSettings } from "@/components/settings/compliance-settings";
 
@@ -84,7 +82,6 @@ export default async function ComplianceSettingsPage() {
 	const rolePackageMapping = market === "uk" ? ukRolePackages : usRolePackages;
 	const jurisdictionPackages = market === "uk" ? ukJurisdictionPackages : usStatePackages;
 	const facilityPackages = market === "uk" ? ukFacilityPackages : usFacilityPackages;
-	const externalElements = market === "uk" ? ukExternallyHandledElements : faHandledElements;
 
 	// Build package-to-elements mapping from static config + DB data
 	const elementsMap = Object.fromEntries(elements.map((e) => [e.slug, e]));
@@ -115,7 +112,7 @@ export default async function ComplianceSettingsPage() {
 					scope: el.scope,
 					evidenceType: el.evidenceType,
 					expiryDays: el.expiryDays,
-					faHandled: externalElements.has(el.slug),
+					faHandled: el.fulfilmentProvider === "external_provider",
 				};
 			})
 			.filter(Boolean) as Array<{

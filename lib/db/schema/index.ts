@@ -27,6 +27,7 @@ export * from "./org-memberships";
 
 // Compliance Domain
 export * from "./compliance-elements";
+export * from "./acceptable-documents";
 export * from "./compliance-packages";
 export * from "./package-elements";
 export * from "./assignment-rules";
@@ -69,3 +70,6 @@ export * from "./tasks";
 export * from "./agents";
 export * from "./agent-executions";
 export * from "./agent-memory";
+
+// External Integrations Domain
+export * from "./fa-screenings";

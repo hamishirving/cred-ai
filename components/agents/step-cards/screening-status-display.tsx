@@ -66,6 +66,8 @@ function ResultBadge({ result }: { result: string | null }) {
 			return <Badge variant="success" className="text-[10px] px-1.5 py-0">Clear</Badge>;
 		case "consider":
 			return <Badge variant="warning" className="text-[10px] px-1.5 py-0">Consider</Badge>;
+		case "negative_dilute":
+			return <Badge variant="warning" className="text-[10px] px-1.5 py-0">Neg. Dilute</Badge>;
 		case "adverse":
 			return <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Adverse</Badge>;
 		default:
@@ -85,6 +87,7 @@ function ItemStatusIcon({ status }: { status: ReportItem["status"] }) {
 }
 
 function ReportItemRow({ item }: { item: ReportItem }) {
+	const isNegDilute = item.result?.toLowerCase() === "negative_dilute";
 	return (
 		<div className="flex items-center gap-2 py-1.5 border-b border-neutral-100 last:border-b-0">
 			<div className="flex-1 min-w-0">
@@ -98,7 +101,11 @@ function ReportItemRow({ item }: { item: ReportItem }) {
 					</p>
 				)}
 			</div>
-			<ItemStatusIcon status={item.status} />
+			{isNegDilute ? (
+				<AlertTriangle className="size-3.5 text-amber-500 shrink-0" />
+			) : (
+				<ItemStatusIcon status={item.status} />
+			)}
 		</div>
 	);
 }

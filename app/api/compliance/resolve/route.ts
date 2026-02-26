@@ -3,7 +3,6 @@ import {
 	resolvePlacementRequirements,
 	type RequirementGroup,
 } from "@/lib/compliance/resolve-requirements";
-import { faHandledElements } from "@/lib/db/seed/markets/us";
 
 export interface ResolveResponse {
 	groups: RequirementGroup[];
@@ -55,9 +54,7 @@ export async function POST(request: NextRequest) {
 		const placementScoped = allElements.filter(
 			(e) => e.scope === "placement",
 		).length;
-		const faHandled = allElements.filter((e) =>
-			faHandledElements.has(e.slug),
-		).length;
+		const faHandled = allElements.filter((e) => e.faHandled).length;
 		const carryForwardEligible = allElements.filter(
 			(e) => e.scope === "candidate" && !e.expiryDays,
 		).length;

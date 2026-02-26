@@ -51,6 +51,9 @@ export const profiles = pgTable("profiles", {
 	/** Date of birth */
 	dateOfBirth: timestamp("date_of_birth"),
 
+	/** Biological sex (required by FA for drug screening orders) */
+	sex: varchar("sex", { enum: ["male", "female"] }),
+
 	/** Current lifecycle status */
 	status: varchar("status", {
 		enum: ["invited", "active", "inactive", "archived"],
@@ -63,6 +66,7 @@ export const profiles = pgTable("profiles", {
 		line1?: string;
 		line2?: string;
 		city?: string;
+		state?: string;
 		postcode?: string;
 		country?: string;
 	}>(),

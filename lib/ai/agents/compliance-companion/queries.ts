@@ -301,6 +301,7 @@ async function getComplianceItemsForProfile(
 				description: null,
 				category: null,
 				dataOwnership: "organisation",
+				fulfilmentProvider: "candidate",
 				evidenceType: "document",
 				expiryDays: null,
 				renewalRequired: true,

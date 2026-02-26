@@ -18,6 +18,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "identity",
 		scope: "candidate",
 		evidenceType: "check",
+		fulfilmentProvider: "external_provider",
 		expiryDays: 1095, // 3 years
 		expiryWarningDays: 90,
 		integrationKey: "dbs",
@@ -33,6 +34,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "identity",
 		scope: "candidate",
 		evidenceType: "check",
+		fulfilmentProvider: "external_provider",
 		expiryDays: null, // Continuous monitoring
 		expiryWarningDays: null,
 		integrationKey: "pvg",
@@ -50,6 +52,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "identity",
 		scope: "candidate",
 		evidenceType: "document",
+		fulfilmentProvider: "candidate",
 		expiryDays: null, // Varies by visa type
 		expiryWarningDays: 90,
 		verificationRules: {
@@ -65,6 +68,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "identity",
 		scope: "candidate",
 		evidenceType: "document",
+		fulfilmentProvider: "candidate",
 		expiryDays: null, // Uses document expiry
 		expiryWarningDays: 90,
 		verificationRules: {
@@ -82,6 +86,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "professional",
 		scope: "candidate",
 		evidenceType: "check",
+		fulfilmentProvider: "system",
 		expiryDays: 365, // Annual renewal
 		expiryWarningDays: 60,
 		integrationKey: "nmc",
@@ -97,6 +102,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "professional",
 		scope: "candidate",
 		evidenceType: "check",
+		fulfilmentProvider: "system",
 		expiryDays: 365,
 		expiryWarningDays: 60,
 		integrationKey: "gmc",
@@ -112,6 +118,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "professional",
 		scope: "candidate",
 		evidenceType: "check",
+		fulfilmentProvider: "system",
 		expiryDays: 730, // 2 years
 		expiryWarningDays: 60,
 		integrationKey: "hcpc",
@@ -129,6 +136,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "training",
 		scope: "candidate",
 		evidenceType: "attestation",
+		fulfilmentProvider: "candidate",
 		expiryDays: 365,
 		expiryWarningDays: 30,
 		verificationRules: {
@@ -142,6 +150,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "training",
 		scope: "candidate",
 		evidenceType: "attestation",
+		fulfilmentProvider: "candidate",
 		expiryDays: 365,
 		expiryWarningDays: 30,
 		verificationRules: {
@@ -155,6 +164,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "training",
 		scope: "candidate",
 		evidenceType: "attestation",
+		fulfilmentProvider: "candidate",
 		expiryDays: 1095, // 3 years
 		expiryWarningDays: 30,
 		verificationRules: {
@@ -168,6 +178,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "training",
 		scope: "candidate",
 		evidenceType: "document",
+		fulfilmentProvider: "candidate",
 		expiryDays: 365,
 		expiryWarningDays: 30,
 		verificationRules: {
@@ -182,6 +193,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "training",
 		scope: "candidate",
 		evidenceType: "attestation",
+		fulfilmentProvider: "candidate",
 		expiryDays: 1095, // 3 years
 		expiryWarningDays: 30,
 		verificationRules: {
@@ -195,6 +207,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "training",
 		scope: "candidate",
 		evidenceType: "attestation",
+		fulfilmentProvider: "candidate",
 		expiryDays: 1095, // 3 years
 		expiryWarningDays: 30,
 		verificationRules: {
@@ -208,6 +221,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "training",
 		scope: "candidate",
 		evidenceType: "attestation",
+		fulfilmentProvider: "candidate",
 		expiryDays: 365,
 		expiryWarningDays: 30,
 		verificationRules: {
@@ -221,6 +235,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "training",
 		scope: "candidate",
 		evidenceType: "document",
+		fulfilmentProvider: "candidate",
 		expiryDays: null, // One-time
 		verificationRules: {
 			validationMode: "ai_human",
@@ -236,6 +251,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "verification",
 		scope: "candidate",
 		evidenceType: "form",
+		fulfilmentProvider: "flexible",
 		expiryDays: null, // One-time
 		verificationRules: {
 			validationMode: "human_required",
@@ -250,6 +266,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "orientation",
 		scope: "placement",
 		evidenceType: "attestation",
+		fulfilmentProvider: "organisation_staff",
 		expiryDays: null, // Per placement
 		verificationRules: {
 			validationMode: "none",
@@ -262,6 +279,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "orientation",
 		scope: "placement",
 		evidenceType: "attestation",
+		fulfilmentProvider: "organisation_staff",
 		expiryDays: null,
 		verificationRules: {
 			validationMode: "none",
@@ -452,10 +470,3 @@ export const ukFacilityPackages: Record<string, string> = {
 	"care-home": "care-home-package",
 };
 
-/**
- * Elements handled by external screening providers (DBS service, etc).
- */
-export const ukExternallyHandledElements = new Set([
-	"enhanced-dbs",
-	"pvg-scheme",
-]);

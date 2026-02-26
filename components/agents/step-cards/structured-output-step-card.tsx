@@ -4,6 +4,7 @@ import { BarChart3 } from "lucide-react";
 import type { AgentStep } from "@/lib/ai/agents/types";
 import { GapAnalysisDisplay } from "./gap-analysis-display";
 import { ScreeningStatusDisplay } from "./screening-status-display";
+import { EscalationDisplay } from "./escalation-display";
 
 interface StructuredOutputStepCardProps {
 	step: AgentStep;
@@ -21,6 +22,14 @@ function isScreeningStatus(data: unknown): boolean {
 	return "screeningId" in d && "reportItems" in d && "overallStatus" in d;
 }
 
+function hasEscalation(data: unknown): data is { escalation: { escalationId: string; type: string; priority: string; question: string; aiReasoning: string; aiRecommendation: string; options: { id: string; label: string; description: string; isRecommended: boolean }[] } } {
+	if (!data || typeof data !== "object") return false;
+	const d = data as Record<string, unknown>;
+	if (!d.escalation || typeof d.escalation !== "object") return false;
+	const e = d.escalation as Record<string, unknown>;
+	return "escalationId" in e && "options" in e;
+}
+
 export function StructuredOutputStepCard({ step }: StructuredOutputStepCardProps) {
 	if (step.type !== "structured-output" || !step.structuredOutput) return null;
 
@@ -29,7 +38,14 @@ export function StructuredOutputStepCard({ step }: StructuredOutputStepCardProps
 	}
 
 	if (isScreeningStatus(step.structuredOutput)) {
-		return <ScreeningStatusDisplay data={step.structuredOutput} />;
+		return (
+			<>
+				<ScreeningStatusDisplay data={step.structuredOutput} />
+				{hasEscalation(step.structuredOutput) && (
+					<EscalationDisplay data={step.structuredOutput.escalation} />
+				)}
+			</>
+		);
 	}
 
 	// Fallback: render as formatted JSON

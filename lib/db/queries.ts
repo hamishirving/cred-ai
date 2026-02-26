@@ -70,6 +70,11 @@ import {
 	type CompliancePackage,
 	complianceElements,
 	type ComplianceElement,
+	faScreenings,
+	type FAScreeningRecord,
+	type NewFAScreeningRecord,
+	acceptableDocuments,
+	type AcceptableDocument,
 } from "./schema";
 import type {
 	TranscriptMessage,
@@ -879,6 +884,18 @@ export interface PipelineWithStages {
 }
 
 /**
+ * Get a profile by ID.
+ */
+export async function getProfileById({ id }: { id: string }): Promise<Profile | null> {
+	const [result] = await db
+		.select()
+		.from(profiles)
+		.where(eq(profiles.id, id))
+		.limit(1);
+	return result ?? null;
+}
+
+/**
  * Get the default profile pipeline for an organisation with its stages.
  */
 export async function getDefaultProfilePipeline({
@@ -1106,6 +1123,9 @@ export async function createTask({
 	subjectType,
 	subjectId,
 	organisationId,
+	complianceElementSlugs,
+	source,
+	agentId,
 }: {
 	title: string;
 	description?: string;
@@ -1122,6 +1142,9 @@ export async function createTask({
 	subjectType?: "profile" | "placement" | "evidence" | "escalation";
 	subjectId?: string;
 	organisationId?: string;
+	complianceElementSlugs?: string[];
+	source?: "ai_agent" | "manual" | "system";
+	agentId?: string;
 }): Promise<Task> {
 	try {
 		// Use a default org ID for demo purposes if not provided
@@ -1140,8 +1163,9 @@ export async function createTask({
 				dueAt,
 				subjectType,
 				subjectId,
-				source: "ai_agent",
-				agentId: "chat-companion",
+				complianceElementSlugs: complianceElementSlugs ?? [],
+				source: source ?? "ai_agent",
+				agentId: agentId ?? "chat-companion",
 				status: "pending",
 			})
 			.returning();
@@ -1923,4 +1947,138 @@ export async function getRolesByOrganisationId({
 		.from(roles)
 		.where(eq(roles.organisationId, organisationId))
 		.orderBy(asc(roles.name));
+}
+
+// ============================================
+// FA Screenings
+// ============================================
+
+/**
+ * Insert or update an FA screening record.
+ * Upserts on fa_screening_id (FA's unique numeric string ID).
+ */
+export async function upsertFAScreening(
+	data: NewFAScreeningRecord,
+): Promise<FAScreeningRecord> {
+	const now = new Date();
+	const [result] = await db
+		.insert(faScreenings)
+		.values({ ...data, createdAt: now, updatedAt: now })
+		.onConflictDoUpdate({
+			target: faScreenings.faScreeningId,
+			set: {
+				status: data.status,
+				result: data.result,
+				reportItems: data.reportItems,
+				portalUrl: data.portalUrl,
+				estimatedCompletionAt: data.estimatedCompletionAt,
+				rawResponse: data.rawResponse,
+				updatedAt: now,
+			},
+		})
+		.returning();
+	return result;
+}
+
+/**
+ * Get all FA screenings for a candidate profile.
+ */
+export async function getFAScreeningsByProfileId({
+	profileId,
+}: {
+	profileId: string;
+}): Promise<FAScreeningRecord[]> {
+	return db
+		.select()
+		.from(faScreenings)
+		.where(eq(faScreenings.profileId, profileId))
+		.orderBy(desc(faScreenings.createdAt));
+}
+
+/**
+ * Get all FA screenings for a placement.
+ */
+export async function getFAScreeningsByPlacementId({
+	placementId,
+}: {
+	placementId: string;
+}): Promise<FAScreeningRecord[]> {
+	return db
+		.select()
+		.from(faScreenings)
+		.where(eq(faScreenings.placementId, placementId))
+		.orderBy(desc(faScreenings.createdAt));
+}
+
+// ============================================
+// Placement Lookup
+// ============================================
+
+/**
+ * Get an active (non-terminal) placement for a profile within an organisation.
+ * Used by inbound document processing to find placement context automatically.
+ */
+export async function getActivePlacementByProfileId({
+	profileId,
+	organisationId,
+}: { profileId: string; organisationId: string }) {
+	const [result] = await db
+		.select({ id: placements.id })
+		.from(placements)
+		.where(
+			and(
+				eq(placements.profileId, profileId),
+				eq(placements.organisationId, organisationId),
+				inArray(placements.status, [
+					"pending",
+					"onboarding",
+					"compliance",
+					"ready",
+					"active",
+				]),
+			),
+		)
+		.limit(1);
+	return result || null;
+}
+
+// ============================================
+// Acceptable Documents
+// ============================================
+
+/**
+ * Get acceptable documents for a set of compliance element IDs.
+ * Returns only active documents, ordered by priority.
+ */
+export async function getAcceptableDocumentsByElementIds({
+	elementIds,
+}: {
+	elementIds: string[];
+}): Promise<AcceptableDocument[]> {
+	if (elementIds.length === 0) return [];
+	return db
+		.select()
+		.from(acceptableDocuments)
+		.where(
+			and(
+				inArray(acceptableDocuments.complianceElementId, elementIds),
+				eq(acceptableDocuments.isActive, true),
+			),
+		)
+		.orderBy(acceptableDocuments.priority);
+}
+
+/**
+ * Get a single acceptable document by ID.
+ */
+export async function getAcceptableDocumentById({
+	id,
+}: {
+	id: string;
+}): Promise<AcceptableDocument | null> {
+	const [result] = await db
+		.select()
+		.from(acceptableDocuments)
+		.where(eq(acceptableDocuments.id, id));
+	return result ?? null;
 }

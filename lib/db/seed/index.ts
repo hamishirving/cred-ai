@@ -22,6 +22,7 @@ import {
 	profiles,
 	placements,
 	evidence,
+	acceptableDocuments,
 	pipelines,
 	pipelineStages,
 	entityStagePositions,
@@ -40,6 +41,7 @@ import {
 	usPackageTemplates,
 	usPackageContents,
 	usRoles,
+	usAcceptableDocuments,
 } from "./markets";
 import {
 	meridianCandidates,
@@ -48,7 +50,6 @@ import {
 	lakesideCandidates,
 	type CandidateProfile,
 } from "./candidates";
-import { faHandledElements } from "./markets/us";
 import { daysFromNow, slugify, randomPick, randomInt, atTime } from "./utils";
 
 // ============================================
@@ -387,6 +388,23 @@ Sign off as: "${config.name} Credentialing Team"`),
 		elementMap.set(elementTemplate.slug, element.id);
 	}
 	console.log(`   ✓ Created ${elementTemplates.length} compliance elements`);
+
+	// 5b. Create acceptable documents (US market only)
+	if (config.market === "us") {
+		let acceptableDocCount = 0;
+		for (const [elementSlug, docs] of Object.entries(usAcceptableDocuments)) {
+			const elementId = elementMap.get(elementSlug);
+			if (!elementId) continue;
+			for (const doc of docs) {
+				await db.insert(acceptableDocuments).values({
+					...doc,
+					complianceElementId: elementId,
+				});
+				acceptableDocCount++;
+			}
+		}
+		console.log(`   ✓ Created ${acceptableDocCount} acceptable documents`);
+	}
 
 	// 6. Create compliance packages and link elements
 	const packageTemplates = config.market === "uk" ? ukPackageTemplates : usPackageTemplates;
@@ -890,11 +908,12 @@ Sign off as: "${config.name} Credentialing Team"`),
 			// --- Placement-scoped task generation ---
 			const allElementsForMarket = config.market === "uk" ? ukComplianceElements : usComplianceElements;
 			const elementNameMap = new Map(allElementsForMarket.map(e => [e.slug, e.name]));
+			const externalElementSlugs = new Set(allElementsForMarket.filter(e => e.fulfilmentProvider === "external_provider").map(e => e.slug));
 			const missingElements = candidateConfig.state.missingElements || [];
 
 			// Split missing elements into FA-handled vs non-FA
-			const missingFa = missingElements.filter(slug => faHandledElements.has(slug));
-			const missingNonFa = missingElements.filter(slug => !faHandledElements.has(slug));
+			const missingFa = missingElements.filter(slug => externalElementSlugs.has(slug));
+			const missingNonFa = missingElements.filter(slug => !externalElementSlugs.has(slug));
 
 			// FA items → ONE grouped task per placement
 			if (missingFa.length > 0) {

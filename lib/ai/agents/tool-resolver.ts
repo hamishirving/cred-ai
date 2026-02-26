@@ -38,6 +38,11 @@ import { faInitiateScreening } from "@/lib/ai/tools/fa-initiate-screening";
 import { faCheckScreening } from "@/lib/ai/tools/fa-check-screening";
 import { faGetReport } from "@/lib/ai/tools/fa-get-report";
 import { faSelectPackage } from "@/lib/ai/tools/fa-select-package";
+import { faListScreenings } from "@/lib/ai/tools/fa-list-screenings";
+import { createEscalation } from "@/lib/ai/tools/create-escalation";
+import { storeAttachment } from "@/lib/ai/tools/store-attachment";
+import { uploadDocumentEvidence } from "@/lib/ai/tools/upload-document-evidence";
+import { verifyDocumentEvidence } from "@/lib/ai/tools/verify-document-evidence";
 
 /**
  * Registry of all tools available to agents, keyed by name.
@@ -73,6 +78,11 @@ const toolRegistry: Record<string, Tool> = {
 	faCheckScreening: faCheckScreening as Tool,
 	faGetReport: faGetReport as Tool,
 	faSelectPackage: faSelectPackage as Tool,
+	faListScreenings: faListScreenings as Tool,
+	createEscalation: createEscalation as Tool,
+	storeAttachment: storeAttachment as Tool,
+	uploadDocumentEvidence: uploadDocumentEvidence as Tool,
+	verifyDocumentEvidence: verifyDocumentEvidence as Tool,
 };
 
 /** Optional callbacks for context-aware tool resolution */

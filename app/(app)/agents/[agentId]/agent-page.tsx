@@ -205,6 +205,13 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 	const [uploadError, setUploadError] = useState("");
 	const [uploadedFileName, setUploadedFileName] = useState("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const attachmentInputRef = useRef<HTMLInputElement>(null);
+	const [attachmentFiles, setAttachmentFiles] = useState<Array<{
+		fileName: string;
+		contentType: string;
+		base64Content: string;
+		contentLength: number;
+	}>>([]);
 	const [sorting, setSorting] = useState<SortingState>([]);
 
 	const { execute, executionId } = useAgentExecution();
@@ -284,14 +291,52 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 		}
 	}
 
+	async function handleAttachmentFiles(e: React.ChangeEvent<HTMLInputElement>) {
+		const files = e.target.files;
+		if (!files || files.length === 0) return;
+
+		const newAttachments: typeof attachmentFiles = [];
+		for (const file of Array.from(files)) {
+			const base64 = await new Promise<string>((resolve, reject) => {
+				const reader = new FileReader();
+				reader.onload = () => {
+					const result = reader.result as string;
+					// Strip the data URL prefix to get raw base64
+					const base64Data = result.includes(",") ? result.split(",")[1] : result;
+					resolve(base64Data);
+				};
+				reader.onerror = reject;
+				reader.readAsDataURL(file);
+			});
+
+			newAttachments.push({
+				fileName: file.name,
+				contentType: file.type || "application/octet-stream",
+				base64Content: base64,
+				contentLength: file.size,
+			});
+		}
+
+		setAttachmentFiles((prev) => [...prev, ...newAttachments]);
+		// Reset the input so the same file can be re-added
+		if (attachmentInputRef.current) {
+			attachmentInputRef.current.value = "";
+		}
+	}
+
 	const handleSubmit = useCallback(
 		(e: React.FormEvent) => {
 			e.preventDefault();
 			setIsSubmitting(true);
 			setDialogOpen(false);
-			execute(agent.id, formData);
+			// Merge string form data with structured attachment data
+			const input: Record<string, unknown> = { ...formData };
+			if (attachmentFiles.length > 0) {
+				input.attachments = attachmentFiles;
+			}
+			execute(agent.id, input);
 		},
-		[agent.id, formData, execute],
+		[agent.id, formData, attachmentFiles, execute],
 	);
 
 	const pageIndex = table.getState().pagination.pageIndex;
@@ -342,6 +387,7 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 										const isUrl = field.key.toLowerCase().includes("url");
 										const isPhoneNumber = field.key.toLowerCase().includes("phone");
 										const isBodyText = field.key.toLowerCase().includes("body");
+										const isAttachment = field.key.toLowerCase().includes("attachment");
 										// Only lock URL fields with defaults (e.g., pre-configured document URLs)
 										const hasDefault = isUrl && !!field.defaultValue;
 
@@ -354,7 +400,65 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 													)}
 												</Label>
 
-												{isUrl ? (
+												{isAttachment ? (
+													<div className="flex flex-col gap-2">
+														{attachmentFiles.length > 0 && (
+															<div className="flex flex-col gap-1">
+																{attachmentFiles.map((att, idx) => (
+																	<div
+																		key={`${att.fileName}-${idx}`}
+																		className="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-1.5"
+																	>
+																		<span className="flex items-center gap-1.5 text-xs text-foreground">
+																			<CheckCircle2 className="size-3 text-[var(--positive)]" />
+																			{att.fileName}
+																			<span className="text-muted-foreground">
+																				({(att.contentLength / 1024).toFixed(0)} KB)
+																			</span>
+																		</span>
+																		<button
+																			type="button"
+																			className="text-muted-foreground hover:text-destructive"
+																			onClick={() =>
+																				setAttachmentFiles((prev) =>
+																					prev.filter((_, i) => i !== idx),
+																				)
+																			}
+																		>
+																			<X className="size-3" />
+																		</button>
+																	</div>
+																))}
+															</div>
+														)}
+														<div
+															className="flex items-center gap-2 rounded-md border border-dashed border-border p-3 cursor-pointer transition-colors duration-150 hover:bg-muted"
+															onClick={() => attachmentInputRef.current?.click()}
+															onKeyDown={(e) => {
+																if (e.key === "Enter" || e.key === " ") {
+																	attachmentInputRef.current?.click();
+																}
+															}}
+															role="button"
+															tabIndex={0}
+														>
+															<input
+																ref={attachmentInputRef}
+																type="file"
+																accept="image/*,application/pdf"
+																multiple
+																className="hidden"
+																onChange={handleAttachmentFiles}
+															/>
+															<Upload className="size-4 text-muted-foreground" />
+															<span className="text-xs text-muted-foreground">
+																{attachmentFiles.length === 0
+																	? "Add files (PDF, images)"
+																	: "Add more files"}
+															</span>
+														</div>
+													</div>
+												) : isUrl ? (
 													<div className="flex flex-col gap-2">
 														<div
 															className={cn(

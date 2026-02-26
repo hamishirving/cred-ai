@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import faIcon from "@/app/FA-icon.png";
+import dynamic from "next/dynamic";
 import {
 	ArrowLeft,
 	CheckCircle2,
@@ -17,6 +18,8 @@ import {
 	Building2,
 	ChevronDown,
 	ChevronRight,
+	FileText,
+	Upload,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -25,9 +28,20 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { ActivityTimeline, type TimelineData } from "@/components/candidate/activity-timeline";
+import { useOrg } from "@/lib/org-context";
+import {
+	ActivityTimeline,
+	type TimelineData,
+} from "@/components/candidate/activity-timeline";
 import { FacilityDetailDialog } from "@/components/facility/facility-detail-dialog";
 import { NextActionsSection } from "@/components/placement/next-actions-section";
+const DocumentIntelligenceDialog = dynamic(
+	() =>
+		import("@/components/placement/document-intelligence-dialog").then(
+			(mod) => mod.DocumentIntelligenceDialog,
+		),
+	{ ssr: false },
+);
 
 // ============================================
 // Types
@@ -59,7 +73,14 @@ interface ComplianceItem {
 	name: string;
 	category: string | null;
 	faHandled: boolean;
-	status: "met" | "expiring" | "expired" | "pending" | "requires_review" | "missing";
+	fulfilmentProvider: string;
+	status:
+		| "met"
+		| "expiring"
+		| "expired"
+		| "pending"
+		| "requires_review"
+		| "missing";
 	carryForward: boolean;
 	expiresAt: string | null;
 	evidenceId: string | null;
@@ -70,6 +91,10 @@ interface ComplianceItem {
 	evidenceVerificationStatus: string | null;
 	evidenceIssuedAt: string | null;
 	evidenceVerifiedAt: string | null;
+	evidenceFilePath: string | null;
+	evidenceFileName: string | null;
+	evidenceMimeType: string | null;
+	evidenceExtractedData: Record<string, unknown> | null;
 }
 
 interface ComplianceSummary {
@@ -98,6 +123,7 @@ interface RequirementGroup {
 		expiryDays: number | null;
 		expiryWarningDays: number | null;
 		faHandled: boolean;
+		fulfilmentProvider: string;
 	}>;
 }
 
@@ -125,6 +151,16 @@ interface PlacementTask {
 	createdAt: string;
 }
 
+interface AcceptableDocumentInfo {
+	id: string;
+	name: string;
+	documentType: string;
+	status: "preferred" | "alternative" | "conditional";
+	acceptanceCriteria: string | null;
+	clinicianGuidance: string | null;
+	priority: number;
+}
+
 interface PlacementData {
 	placement: PlacementDetail;
 	context: PlacementContext;
@@ -145,6 +181,18 @@ interface PlacementData {
 		endDate: string;
 	};
 	tasks: PlacementTask[];
+	acceptableDocuments?: Record<string, AcceptableDocumentInfo[]>;
+	candidateProfile?: {
+		address: {
+			line1?: string;
+			line2?: string;
+			city?: string;
+			state?: string;
+			postcode?: string;
+			country?: string;
+		} | null;
+		sex: "male" | "female" | null;
+	} | null;
 }
 
 // ============================================
@@ -161,7 +209,9 @@ const avatarColors = [
 ];
 
 function getAvatarColor(name: string): string {
-	const hash = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+	const hash = name
+		.split("")
+		.reduce((acc, char) => acc + char.charCodeAt(0), 0);
 	return avatarColors[hash % avatarColors.length];
 }
 
@@ -174,7 +224,10 @@ function getInitials(name: string): string {
 		.slice(0, 2);
 }
 
-const STATUS_BADGE_VARIANT: Record<string, "neutral" | "info" | "warning" | "success" | "danger"> = {
+const STATUS_BADGE_VARIANT: Record<
+	string,
+	"neutral" | "info" | "warning" | "success" | "danger"
+> = {
 	pending: "neutral",
 	onboarding: "info",
 	compliance: "warning",
@@ -190,9 +243,12 @@ const DEAL_TYPE_LABELS: Record<string, string> = {
 	reassignment: "Reassignment",
 };
 
-const COMPLIANCE_STATUS_VARIANT: Record<string, "success" | "danger" | "warning" | "neutral"> = {
+const COMPLIANCE_STATUS_VARIANT: Record<
+	string,
+	"success" | "danger" | "warning" | "neutral"
+> = {
 	met: "success",
-	missing: "danger",
+	missing: "warning",
 	expired: "danger",
 	pending: "warning",
 	requires_review: "warning",
@@ -229,6 +285,20 @@ const VERIFICATION_LABELS: Record<string, string> = {
 	external_verified: "Externally verified",
 };
 
+function getFulfilmentProviderLabel(
+	provider: string,
+	candidateLabel: string,
+): string {
+	const labels: Record<string, string> = {
+		candidate: candidateLabel,
+		organisation_staff: "Internal team",
+		external_provider: "External provider",
+		system: "Automated",
+		flexible: "Flexible",
+	};
+	return labels[provider] || provider;
+}
+
 const SOURCE_ICONS: Record<string, typeof Shield> = {
 	federal: Shield,
 	state: MapPin,
@@ -245,13 +315,16 @@ function getSourceFromReason(reason: string): string {
 }
 
 function getReasonLabel(reason: string): string {
-	if (reason.startsWith("role:")) return `Required for ${reason.split(":")[1]} role`;
+	if (reason.startsWith("role:"))
+		return `Required for ${reason.split(":")[1]} role`;
 	if (reason.startsWith("state:")) {
 		const state = reason.split(":")[1];
 		return `Required in ${state.charAt(0).toUpperCase() + state.slice(1)}`;
 	}
-	if (reason.startsWith("facility:")) return `Required by ${reason.split(":")[1]}`;
-	if (reason.includes("lapse-deal")) return "Required for lapse deals (OIG/SAM)";
+	if (reason.startsWith("facility:"))
+		return `Required by ${reason.split(":")[1]}`;
+	if (reason.includes("lapse-deal"))
+		return "Required for lapse deals (OIG/SAM)";
 	if (reason.includes("state-mandate")) return "Required by state mandate";
 	if (reason.includes("facility-requirement")) return "Required by facility";
 	return reason;
@@ -261,30 +334,49 @@ function getReasonLabel(reason: string): string {
 // Sub-components
 // ============================================
 
-function ComplianceStatusIcon({ status }: { status: ComplianceItem["status"] }) {
+function ComplianceStatusIcon({
+	status,
+}: {
+	status: ComplianceItem["status"];
+}) {
 	switch (status) {
 		case "met":
-			return <CheckCircle2 className="size-4 text-[var(--positive)] shrink-0" />;
-		case "missing":
-			return <Circle className="size-4 text-destructive shrink-0" />;
-		case "expired":
-			return <AlertTriangle className="size-4 text-destructive shrink-0" />;
+			return (
+				<CheckCircle2 className="size-4 text-[var(--positive)] shrink-0" />
+			);
 		case "pending":
 		case "requires_review":
-			return <Clock className="size-4 text-[var(--warning)] shrink-0" />;
+		case "missing":
+			return <Circle className="size-4 text-[var(--warning)] shrink-0" />;
+		case "expired":
+			return <AlertTriangle className="size-4 text-destructive shrink-0" />;
 		case "expiring":
-			return <AlertTriangle className="size-4 text-[var(--warning)] shrink-0" />;
+			return (
+				<AlertTriangle className="size-4 text-[var(--warning)] shrink-0" />
+			);
 	}
 }
+
+const EVIDENCE_TYPE_SHORT: Record<string, string> = {
+	document: "Document",
+	form: "Form",
+	check: "Check",
+	attestation: "Attestation",
+	external: "External",
+};
 
 function ComplianceItemRow({
 	item,
 	isSelected,
 	onSelect,
+	candidateLabel,
+	evidenceType,
 }: {
 	item: ComplianceItem;
 	isSelected: boolean;
 	onSelect: () => void;
+	candidateLabel: string;
+	evidenceType: string | null;
 }) {
 	return (
 		<button
@@ -292,9 +384,7 @@ function ComplianceItemRow({
 			onClick={onSelect}
 			className={cn(
 				"w-full flex items-center gap-3 py-2 px-2 border-b border-border/50 last:border-b-0 text-left transition-colors duration-100 cursor-pointer rounded-sm",
-				isSelected
-					? "bg-muted/40"
-					: "hover:bg-muted/40",
+				isSelected ? "bg-muted/40" : "hover:bg-muted/40",
 			)}
 		>
 			<ComplianceStatusIcon status={item.status} />
@@ -302,27 +392,49 @@ function ComplianceItemRow({
 				<div className="flex items-center gap-2">
 					<span className="text-sm">{item.name}</span>
 					{item.faHandled && (
-						<Image src={faIcon} alt="First Advantage" className="size-4 shrink-0" />
+						<Image
+							src={faIcon}
+							alt="First Advantage"
+							className="size-4 shrink-0"
+						/>
 					)}
-					{item.carryForward && (
-						<span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0 rounded-full shrink-0">
-							Carry-forward
+					{evidenceType && (
+						<span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+							{EVIDENCE_TYPE_SHORT[evidenceType] || evidenceType}
 						</span>
 					)}
 				</div>
-				{item.expiresAt && (
-					<p className="text-xs text-muted-foreground mt-0.5">
-						{item.status === "expired" ? "Expired" : "Expires"}{" "}
-						{format(new Date(item.expiresAt), "dd MMM yyyy")}
-					</p>
-				)}
+				<div className="flex items-center gap-2 mt-0.5">
+					<span className="text-[10px] text-muted-foreground">
+						{getFulfilmentProviderLabel(
+							item.fulfilmentProvider,
+							candidateLabel,
+						)}
+					</span>
+					{item.expiresAt && (
+						<>
+							<span className="text-[10px] text-muted-foreground/40">·</span>
+							<span className="text-[10px] text-muted-foreground">
+								{item.status === "expired" ? "Expired" : "Expires"}{" "}
+								{format(new Date(item.expiresAt), "dd MMM yyyy")}
+							</span>
+						</>
+					)}
+				</div>
 			</div>
-			<Badge
-				variant={COMPLIANCE_STATUS_VARIANT[item.status] || "neutral"}
-				className="text-xs font-medium capitalize shrink-0"
-			>
-				{item.status === "requires_review" ? "Review" : item.status}
-			</Badge>
+			<div className="flex items-center gap-2 shrink-0">
+				{item.carryForward && (
+					<span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+						Carry-forward
+					</span>
+				)}
+				<Badge
+					variant={COMPLIANCE_STATUS_VARIANT[item.status] || "neutral"}
+					className="text-xs font-medium capitalize"
+				>
+					{item.status === "requires_review" ? "Review" : item.status}
+				</Badge>
+			</div>
 		</button>
 	);
 }
@@ -332,11 +444,13 @@ function RequirementGroupCard({
 	items,
 	selectedItemSlug,
 	onSelectItem,
+	candidateLabel,
 }: {
 	group: RequirementGroup;
 	items: ComplianceItem[];
 	selectedItemSlug: string | null;
 	onSelectItem: (slug: string) => void;
+	candidateLabel: string;
 }) {
 	const source = getSourceFromReason(group.reason);
 	const Icon = SOURCE_ICONS[source] || Shield;
@@ -356,7 +470,10 @@ function RequirementGroupCard({
 				) : (
 					<ChevronRight className="size-3.5 text-muted-foreground shrink-0" />
 				)}
-				<Icon className="size-4 text-muted-foreground shrink-0" aria-hidden="true" />
+				<Icon
+					className="size-4 text-muted-foreground shrink-0"
+					aria-hidden="true"
+				/>
 				<div className="flex-1 text-left">
 					<span className="text-sm font-medium">{group.packageName}</span>
 					<span className="text-xs text-muted-foreground ml-2">
@@ -364,7 +481,9 @@ function RequirementGroupCard({
 					</span>
 				</div>
 				{allDone ? (
-					<Badge variant="success" className="text-xs">Complete</Badge>
+					<Badge variant="success" className="text-xs">
+						Complete
+					</Badge>
 				) : (
 					<span className="text-xs tabular-nums text-muted-foreground">
 						{met}/{items.length}
@@ -374,14 +493,19 @@ function RequirementGroupCard({
 
 			{open && (
 				<div className="px-4 pb-3 pl-12">
-					{items.map((item) => (
-						<ComplianceItemRow
-							key={item.slug}
-							item={item}
-							isSelected={selectedItemSlug === item.slug}
-							onSelect={() => onSelectItem(item.slug)}
-						/>
-					))}
+					{items.map((item) => {
+						const el = group.elements.find((e) => e.slug === item.slug);
+						return (
+							<ComplianceItemRow
+								key={item.slug}
+								item={item}
+								isSelected={selectedItemSlug === item.slug}
+								onSelect={() => onSelectItem(item.slug)}
+								candidateLabel={candidateLabel}
+								evidenceType={el?.evidenceType || null}
+							/>
+						);
+					})}
 				</div>
 			)}
 		</Card>
@@ -390,17 +514,42 @@ function RequirementGroupCard({
 
 type ElementDefinition = RequirementGroup["elements"][number];
 
+const ACCEPTABLE_DOC_STATUS_VARIANT: Record<
+	string,
+	"success" | "info" | "warning"
+> = {
+	preferred: "success",
+	alternative: "info",
+	conditional: "warning",
+};
+
 function ComplianceDetailPanel({
 	item,
 	element,
+	candidateLabel,
+	acceptableDocs,
+	placementId,
+	organisationId,
+	profileId,
+	onVerified,
 }: {
 	item: ComplianceItem | null;
 	element: ElementDefinition | null;
+	candidateLabel: string;
+	acceptableDocs: AcceptableDocumentInfo[];
+	placementId: string;
+	organisationId: string;
+	profileId: string;
+	onVerified?: () => void;
 }) {
+	const [docDialogOpen, setDocDialogOpen] = useState(false);
+
 	if (!item) {
 		return (
 			<Card className="shadow-none! bg-card p-4">
-				<p className="text-sm text-muted-foreground">Select a requirement to view details</p>
+				<p className="text-sm text-muted-foreground">
+					Select a requirement to view details
+				</p>
 			</Card>
 		);
 	}
@@ -427,67 +576,201 @@ function ComplianceDetailPanel({
 				</p>
 			)}
 
-			{/* Metadata */}
-			<div className="space-y-2">
-				{element && (
-					<>
+			{/* Requirement definition */}
+			{element && (
+				<div className="space-y-2 border-t border-border pt-4">
+					<h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+						Requirement
+					</h4>
+					<DetailRow
+						label="Scope"
+						value={SCOPE_LABELS[element.scope] || element.scope}
+					/>
+					<DetailRow
+						label="Evidence type"
+						value={
+							EVIDENCE_TYPE_LABELS[element.evidenceType] || element.evidenceType
+						}
+					/>
+					<DetailRow
+						label="Fulfilled by"
+						value={getFulfilmentProviderLabel(
+							element.fulfilmentProvider,
+							candidateLabel,
+						)}
+					/>
+					{item.expiresAt && (
 						<DetailRow
-							label="Scope"
-							value={SCOPE_LABELS[element.scope] || element.scope}
+							label={item.status === "expired" ? "Expired" : "Expires"}
+							value={format(new Date(item.expiresAt), "dd MMM yyyy")}
 						/>
+					)}
+				</div>
+			)}
+
+			{/* Evidence */}
+			{hasEvidence && (
+				<div className="space-y-2 border-t border-border pt-4">
+					<h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+						Evidence
+					</h4>
+					{item.evidenceSource && (
 						<DetailRow
-							label="Evidence type"
-							value={EVIDENCE_TYPE_LABELS[element.evidenceType] || element.evidenceType}
+							label="Source"
+							value={
+								EVIDENCE_SOURCE_LABELS[item.evidenceSource] ||
+								item.evidenceSource
+							}
 						/>
-					</>
-				)}
+					)}
+					{item.evidenceVerificationStatus && (
+						<DetailRow
+							label="Verification"
+							value={
+								VERIFICATION_LABELS[item.evidenceVerificationStatus] ||
+								item.evidenceVerificationStatus
+							}
+						/>
+					)}
+					{item.evidenceIssuedAt && (
+						<DetailRow
+							label="Issued"
+							value={format(new Date(item.evidenceIssuedAt), "dd MMM yyyy")}
+						/>
+					)}
+					{item.evidenceVerifiedAt && (
+						<DetailRow
+							label="Verified"
+							value={format(new Date(item.evidenceVerifiedAt), "dd MMM yyyy")}
+						/>
+					)}
+					{/* Acceptable documents */}
+					{acceptableDocs.length > 0 && (
+						<div className="space-y-2 border-t border-border pt-4">
+							<h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+								Acceptable Documents
+							</h4>
+							<div className="space-y-2">
+								{acceptableDocs.map((doc) => (
+									<AcceptableDocRow key={doc.id} doc={doc} />
+								))}
+							</div>
+						</div>
+					)}
 
-				{hasEvidence && item.evidenceSource && (
-					<DetailRow
-						label="Source"
-						value={EVIDENCE_SOURCE_LABELS[item.evidenceSource] || item.evidenceSource}
-					/>
-				)}
+					{item.evidenceFilePath ? (
+						<Button
+							size="sm"
+							className="w-full mt-2"
+							onClick={() => setDocDialogOpen(true)}
+						>
+							<Shield className="size-3.5 mr-1.5" />
+							View & Verify
+						</Button>
+					) : element?.evidenceType === "document" ? (
+						<Button
+							variant="outline"
+							size="sm"
+							className="w-full mt-2"
+							onClick={() => setDocDialogOpen(true)}
+						>
+							<Upload className="size-3.5 mr-1.5" />
+							Upload & Verify
+						</Button>
+					) : null}
+				</div>
+			)}
 
-				{hasEvidence && item.evidenceVerificationStatus && (
-					<DetailRow
-						label="Verification"
-						value={VERIFICATION_LABELS[item.evidenceVerificationStatus] || item.evidenceVerificationStatus}
-					/>
-				)}
+			{/* Acceptable documents (no evidence yet) */}
+			{!hasEvidence && acceptableDocs.length > 0 && (
+				<div className="space-y-2 border-t border-border pt-4">
+					<h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+						Acceptable Documents
+					</h4>
+					<div className="space-y-2">
+						{acceptableDocs.map((doc) => (
+							<AcceptableDocRow key={doc.id} doc={doc} />
+						))}
+					</div>
+				</div>
+			)}
 
-				{hasEvidence && item.evidenceIssuedAt && (
-					<DetailRow
-						label="Issued"
-						value={format(new Date(item.evidenceIssuedAt), "dd MMM yyyy")}
-					/>
-				)}
-
-				{hasEvidence && item.evidenceVerifiedAt && (
-					<DetailRow
-						label="Verified"
-						value={format(new Date(item.evidenceVerifiedAt), "dd MMM yyyy")}
-					/>
-				)}
-
-				{item.expiresAt && (
-					<DetailRow
-						label={item.status === "expired" ? "Expired" : "Expires"}
-						value={format(new Date(item.expiresAt), "dd MMM yyyy")}
-					/>
-				)}
-			</div>
+			{/* Upload & verify for elements without evidence */}
+			{!hasEvidence && element?.evidenceType === "document" && (
+				<div className="border-t border-border pt-4">
+					<Button
+						variant="outline"
+						size="sm"
+						className="w-full"
+						onClick={() => setDocDialogOpen(true)}
+					>
+						<Upload className="size-3 mr-1.5" />
+						Upload & Verify
+					</Button>
+				</div>
+			)}
 
 			{/* Missing item guidance */}
-			{!hasEvidence && element && (
+			{!hasEvidence && element && element.evidenceType !== "document" && (
 				<div className="rounded-md border border-border bg-muted/30 px-3 py-2">
 					<p className="text-xs text-muted-foreground">
 						<span className="font-medium text-foreground">Required:</span>{" "}
-						{EVIDENCE_TYPE_LABELS[element.evidenceType] || element.evidenceType} needed to fulfil this requirement.
+						{EVIDENCE_TYPE_LABELS[element.evidenceType] || element.evidenceType}{" "}
+						needed to fulfil this requirement.
 					</p>
 				</div>
 			)}
+
+			{/* Unified document intelligence dialog */}
+			<DocumentIntelligenceDialog
+				open={docDialogOpen}
+				onOpenChange={setDocDialogOpen}
+				placementId={placementId}
+				organisationId={organisationId}
+				profileId={profileId}
+				elementSlug={item.slug}
+				elementName={item.name}
+				existingFilePath={item.evidenceFilePath}
+				existingFileName={item.evidenceFileName}
+				existingMimeType={item.evidenceMimeType}
+				existingExtractedData={item.evidenceExtractedData}
+				onVerified={onVerified}
+			/>
 		</Card>
+	);
+}
+
+function AcceptableDocRow({ doc }: { doc: AcceptableDocumentInfo }) {
+	const [expanded, setExpanded] = useState(false);
+
+	return (
+		<div className="rounded-md border border-border bg-muted/20 overflow-hidden">
+			<button
+				type="button"
+				onClick={() => setExpanded(!expanded)}
+				className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/40 transition-colors duration-150 cursor-pointer"
+			>
+				{expanded ? (
+					<ChevronDown className="size-3 text-muted-foreground shrink-0" />
+				) : (
+					<ChevronRight className="size-3 text-muted-foreground shrink-0" />
+				)}
+				<span className="text-xs flex-1">{doc.name}</span>
+				<Badge
+					variant={ACCEPTABLE_DOC_STATUS_VARIANT[doc.status] || "neutral"}
+					className="text-[10px] font-medium capitalize shrink-0"
+				>
+					{doc.status}
+				</Badge>
+			</button>
+			{expanded && doc.acceptanceCriteria && (
+				<div className="px-3 pb-2 pl-8">
+					<p className="text-[10px] text-muted-foreground leading-relaxed">
+						{doc.acceptanceCriteria}
+					</p>
+				</div>
+			)}
+		</div>
 	);
 }
 
@@ -500,10 +783,20 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 	);
 }
 
-function SummaryStatCard({ label, value, color }: { label: string; value: number; color?: string }) {
+function SummaryStatCard({
+	label,
+	value,
+	color,
+}: {
+	label: string;
+	value: number;
+	color?: string;
+}) {
 	return (
 		<div className="flex flex-col items-center gap-1 rounded-lg border bg-card px-4 py-3">
-			<span className={cn("text-2xl font-semibold tabular-nums", color)}>{value}</span>
+			<span className={cn("text-2xl font-semibold tabular-nums", color)}>
+				{value}
+			</span>
 			<span className="text-xs text-muted-foreground">{label}</span>
 		</div>
 	);
@@ -541,9 +834,23 @@ function DetailSkeleton() {
 export default function PlacementDetailPage() {
 	const params = useParams();
 	const router = useRouter();
+	const { selectedOrg } = useOrg();
+	const candidateLabel =
+		selectedOrg?.settings?.terminology?.candidate || "Candidate";
 	const [data, setData] = useState<PlacementData | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+
+	const refreshData = useCallback(async () => {
+		try {
+			const res = await fetch(`/api/placements/${params.id}`);
+			if (!res.ok) return;
+			const json = await res.json();
+			setData(json);
+		} catch (err) {
+			console.error("Failed to refresh placement:", err);
+		}
+	}, [params.id]);
 
 	useEffect(() => {
 		async function fetchData() {
@@ -552,7 +859,11 @@ export default function PlacementDetailPage() {
 			try {
 				const res = await fetch(`/api/placements/${params.id}`);
 				if (!res.ok) {
-					setError(res.status === 404 ? "Placement not found" : "Failed to load placement");
+					setError(
+						res.status === 404
+							? "Placement not found"
+							: "Failed to load placement",
+					);
 					return;
 				}
 				const json = await res.json();
@@ -619,7 +930,9 @@ export default function PlacementDetailPage() {
 
 	const selectedItem = useMemo(() => {
 		if (!data || !selectedItemSlug) return null;
-		return data.compliance.items.find((i) => i.slug === selectedItemSlug) ?? null;
+		return (
+			data.compliance.items.find((i) => i.slug === selectedItemSlug) ?? null
+		);
 	}, [data, selectedItemSlug]);
 
 	const selectedElement = useMemo(() => {
@@ -632,8 +945,14 @@ export default function PlacementDetailPage() {
 	if (error || !data) {
 		return (
 			<div className="flex min-h-full flex-1 flex-col items-center justify-center gap-4 bg-background p-8">
-				<p className="text-sm text-muted-foreground">{error || "Placement not found"}</p>
-				<Button variant="outline" size="sm" onClick={() => router.push("/placements")}>
+				<p className="text-sm text-muted-foreground">
+					{error || "Placement not found"}
+				</p>
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={() => router.push("/placements")}
+				>
 					← Back to Placements
 				</Button>
 			</div>
@@ -642,7 +961,9 @@ export default function PlacementDetailPage() {
 
 	const { placement, compliance } = data;
 	const { summary } = compliance;
-	const carryForwardCount = compliance.items.filter((i) => i.carryForward).length;
+	const carryForwardCount = compliance.items.filter(
+		(i) => i.carryForward,
+	).length;
 
 	return (
 		<div className="flex min-h-full flex-1 flex-col gap-8 bg-background p-8">
@@ -659,7 +980,12 @@ export default function PlacementDetailPage() {
 			<div className="flex items-start justify-between gap-6">
 				<div className="flex items-start gap-4">
 					<Avatar className="h-12 w-12">
-						<AvatarFallback className={cn(getAvatarColor(placement.candidateName), "text-sm text-white")}>
+						<AvatarFallback
+							className={cn(
+								getAvatarColor(placement.candidateName),
+								"text-sm text-white",
+							)}
+						>
 							{getInitials(placement.candidateName)}
 						</AvatarFallback>
 					</Avatar>
@@ -703,9 +1029,11 @@ export default function PlacementDetailPage() {
 					<span
 						className={cn(
 							"text-4xl font-semibold tabular-nums",
-							summary.percentage >= 80 ? "text-[var(--positive)]" :
-							summary.percentage >= 50 ? "text-[var(--warning)]" :
-							"text-destructive",
+							summary.percentage >= 80
+								? "text-[var(--positive)]"
+								: summary.percentage >= 50
+									? "text-[var(--warning)]"
+									: "text-destructive",
 						)}
 					>
 						{summary.percentage}%
@@ -719,13 +1047,29 @@ export default function PlacementDetailPage() {
 			{/* Summary stats */}
 			<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
 				<SummaryStatCard label="Total" value={summary.total} />
-				<SummaryStatCard label="Met" value={summary.met} color="text-[var(--positive)]" />
-				<SummaryStatCard label="Missing" value={summary.missing} color="text-destructive" />
-				<SummaryStatCard label="Pending" value={summary.pending} color="text-[var(--warning)]" />
+				<SummaryStatCard
+					label="Met"
+					value={summary.met}
+					color="text-[var(--positive)]"
+				/>
+				<SummaryStatCard
+					label="Missing"
+					value={summary.missing}
+					color="text-destructive"
+				/>
+				<SummaryStatCard
+					label="Pending"
+					value={summary.pending}
+					color="text-[var(--warning)]"
+				/>
 				<SummaryStatCard
 					label="FA Items"
 					value={summary.faItemsMet}
-					color={summary.faItemsMet === summary.faItemsTotal ? "text-[var(--positive)]" : undefined}
+					color={
+						summary.faItemsMet === summary.faItemsTotal
+							? "text-[var(--positive)]"
+							: undefined
+					}
 				/>
 				<SummaryStatCard label="Carry Forward" value={carryForwardCount} />
 			</div>
@@ -742,6 +1086,7 @@ export default function PlacementDetailPage() {
 			{/* Next Actions */}
 			<NextActionsSection
 				tasks={data.tasks}
+				screeningItems={data.compliance.items.filter((i) => i.faHandled)}
 				placement={{
 					id: placement.id,
 					candidateName: placement.candidateName,
@@ -749,11 +1094,15 @@ export default function PlacementDetailPage() {
 					dealType: placement.dealType,
 				}}
 				context={data.context}
+				candidateAddress={data.candidateProfile?.address ?? null}
+				onRefresh={refreshData}
 			/>
 
 			{/* Compliance requirements — list-detail layout */}
 			<div className="space-y-4">
-				<h2 className="text-xl font-semibold text-foreground">Compliance Requirements</h2>
+				<h2 className="text-xl font-semibold text-foreground">
+					Compliance Requirements
+				</h2>
 				<div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
 					{/* Left: requirement groups list */}
 					<div className="space-y-3">
@@ -767,6 +1116,7 @@ export default function PlacementDetailPage() {
 									items={items}
 									selectedItemSlug={selectedItemSlug}
 									onSelectItem={setSelectedItemSlug}
+									candidateLabel={candidateLabel}
 								/>
 							);
 						})}
@@ -777,6 +1127,16 @@ export default function PlacementDetailPage() {
 						<ComplianceDetailPanel
 							item={selectedItem}
 							element={selectedElement}
+							candidateLabel={candidateLabel}
+							acceptableDocs={
+								selectedItemSlug && data.acceptableDocuments?.[selectedItemSlug]
+									? data.acceptableDocuments[selectedItemSlug]
+									: []
+							}
+							placementId={placement.id}
+							organisationId={placement.organisationId}
+							profileId={placement.profileId}
+							onVerified={refreshData}
 						/>
 					</div>
 				</div>

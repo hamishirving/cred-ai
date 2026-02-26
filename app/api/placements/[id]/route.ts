@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { tasks } from "@/lib/db/schema";
-import { getPlacementById, getProfileTimeline, updatePlacementStatus } from "@/lib/db/queries";
+import { tasks, complianceElements } from "@/lib/db/schema";
+import {
+	getPlacementById,
+	getProfileById,
+	getProfileTimeline,
+	updatePlacementStatus,
+	getAcceptableDocumentsByElementIds,
+} from "@/lib/db/queries";
 import {
 	checkPlacementCompliance,
 	resolvePlacementRequirements,
@@ -59,7 +65,7 @@ export async function GET(
 			ELSE 5
 		END`;
 
-		const [groups, compliance, timeline, placementTasks] = await Promise.all([
+		const [groups, compliance, timeline, placementTasks, profile] = await Promise.all([
 			resolvePlacementRequirements(placement.organisationId, context),
 			checkPlacementCompliance(
 				placement.organisationId,
@@ -74,7 +80,46 @@ export async function GET(
 					eq(tasks.subjectId, params.id),
 				))
 				.orderBy(priorityOrder, desc(tasks.createdAt)),
+			getProfileById({ id: placement.profileId }),
 		]);
+
+		// Collect unique element slugs from resolved groups
+		const elementSlugs = new Set<string>();
+		for (const group of groups) {
+			for (const el of group.elements) {
+				elementSlugs.add(el.slug);
+			}
+		}
+
+		// Look up element IDs by slug, then fetch acceptable documents
+		let acceptableDocsBySlug: Record<string, unknown[]> = {};
+		if (elementSlugs.size > 0) {
+			const elementRows = await db
+				.select({ id: complianceElements.id, slug: complianceElements.slug })
+				.from(complianceElements)
+				.where(
+					and(
+						eq(complianceElements.organisationId, placement.organisationId),
+						inArray(complianceElements.slug, [...elementSlugs]),
+					),
+				);
+
+			const elementIdToSlug = new Map(elementRows.map((e) => [e.id, e.slug]));
+			const elementIds = elementRows.map((e) => e.id);
+
+			if (elementIds.length > 0) {
+				const acceptableDocs = await getAcceptableDocumentsByElementIds({ elementIds });
+
+				// Group by element slug
+				for (const doc of acceptableDocs) {
+					const slug = elementIdToSlug.get(doc.complianceElementId);
+					if (slug) {
+						if (!acceptableDocsBySlug[slug]) acceptableDocsBySlug[slug] = [];
+						acceptableDocsBySlug[slug].push(doc);
+					}
+				}
+			}
+		}
 
 		return NextResponse.json({
 			placement,
@@ -83,6 +128,10 @@ export async function GET(
 			compliance,
 			timeline,
 			tasks: placementTasks,
+			acceptableDocuments: acceptableDocsBySlug,
+			candidateProfile: profile
+				? { address: profile.address ?? null, sex: profile.sex ?? null }
+				: null,
 		});
 	} catch (error) {
 		console.error("Failed to fetch placement:", error);

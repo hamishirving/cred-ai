@@ -92,6 +92,7 @@ function resultBadgeVariant(result: string): "success" | "warning" | "danger" {
 			return "success";
 		case "consider":
 		case "review":
+		case "negative_dilute":
 			return "warning";
 		case "adverse":
 		case "flagged":
@@ -109,6 +110,8 @@ function resultLabel(result: string): string {
 			return "Clear";
 		case "consider":
 			return "Review";
+		case "negative_dilute":
+			return "Neg. Dilute";
 		case "adverse":
 			return "Flagged";
 		default:

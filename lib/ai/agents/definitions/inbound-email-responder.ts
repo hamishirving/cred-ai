@@ -52,6 +52,22 @@ Use draftEmail to send a reply. Pass organisationId explicitly.
 SAVE MEMORY:
 Use saveAgentMemory to record this interaction — include the topic, what was asked, and how you responded.
 
+PROCESS ATTACHMENTS:
+If the email has attachments, process each one:
+1. Use storeAttachment to upload the file and get a signed URL
+2. Use classifyDocument with the signed URL to identify the document type
+3. Compare the classification against outstanding compliance items to find the best match
+4. Use uploadDocumentEvidence to link the file to the matched compliance element
+5. Use verifyDocumentEvidence to verify the document against acceptance criteria
+6. Include the verification results in your reply
+
+When matching documents to compliance elements, use common sense:
+- "titer_result" → likely matches MMR, Varicella, or Hep B elements
+- "vaccination_record" → matches vaccination requirements (MMR, TDAP, COVID, Varicella)
+- "screening_result" → likely matches TB Test
+- "certificate" → likely matches BLS, ACLS, or other certification elements
+If you can't confidently match a document, mention it in the reply and ask which requirement it's for.
+
 ESCALATE IF NEEDED:
 If the request requires human intervention (e.g. document re-upload, account changes, complex queries you can't answer), use createTask to flag it for the compliance team. Pass organisationId explicitly.
 IMPORTANT: Never use "me" as the assignee — you are an automated agent with no user identity. Assign tasks to a specific team member by name (e.g. "Sarah" for compliance queries, "Marcus" for onboarding support).`,
@@ -65,6 +81,10 @@ IMPORTANT: Never use "me" as the assignee — you are an automated agent with no
 		"saveAgentMemory",
 		"draftEmail",
 		"createTask",
+		"storeAttachment",
+		"classifyDocument",
+		"uploadDocumentEvidence",
+		"verifyDocumentEvidence",
 	],
 
 	inputSchema: z.object({
@@ -81,11 +101,23 @@ IMPORTANT: Never use "me" as the assignee — you are an automated agent with no
 		bodyText: z
 			.string()
 			.describe("Plain text body of the inbound email"),
+		attachments: z
+			.array(
+				z.object({
+					fileName: z.string(),
+					contentType: z.string(),
+					base64Content: z.string(),
+					contentLength: z.number(),
+				}),
+			)
+			.optional()
+			.default([])
+			.describe("File attachments from the email"),
 	}),
 
 	constraints: {
-		maxSteps: 16,
-		maxExecutionTime: 90000,
+		maxSteps: 30,
+		maxExecutionTime: 120000,
 	},
 
 	trigger: {

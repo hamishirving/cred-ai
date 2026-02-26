@@ -6,11 +6,15 @@ import Image from "next/image";
 import faIcon from "@/app/FA-icon.png";
 import { toast } from "@/components/toast";
 import {
+	AlertTriangle,
 	ArrowUpRight,
 	Check,
+	CheckCircle2,
+	Circle,
 	Clock,
 	MoreHorizontal,
 	RefreshCw,
+	Search,
 	Sparkles,
 	X,
 } from "lucide-react";
@@ -26,6 +30,8 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { recommendDHSProducts, DHS_ELEMENT_SLUGS } from "@/lib/api/first-advantage/dhs-catalogue";
+import { DHSOrderDialog } from "@/components/placement/dhs-order-dialog";
 
 // ============================================
 // Types
@@ -48,6 +54,13 @@ interface PlacementTask {
 	createdAt: string;
 }
 
+interface ScreeningItem {
+	slug: string;
+	name: string;
+	status: "met" | "expiring" | "expired" | "pending" | "requires_review" | "missing";
+	expiresAt: string | null;
+}
+
 interface PlacementContext {
 	roleSlug: string;
 	jurisdiction: string;
@@ -62,10 +75,20 @@ interface PlacementInfo {
 	dealType: string | null;
 }
 
+interface CandidateAddress {
+	line1?: string;
+	city?: string;
+	state?: string;
+	postcode?: string;
+}
+
 interface NextActionsSectionProps {
 	tasks: PlacementTask[];
+	screeningItems: ScreeningItem[];
 	placement: PlacementInfo;
 	context: PlacementContext;
+	candidateAddress?: CandidateAddress | null;
+	onRefresh?: () => Promise<void>;
 }
 
 // ============================================
@@ -88,38 +111,175 @@ const categoryLabels: Record<string, string> = {
 	escalation: "Escalation",
 };
 
+/** Compliance element slugs associated with FA screening */
+const SCREENING_SLUGS = new Set([
+	"drug-screen",
+	"tb-test",
+	"physical-examination",
+	"federal-background-check",
+	"oig-exclusion-check",
+	"sam-exclusion-check",
+	"florida-level2-background",
+]);
+
 /** Categories that can be delegated to the AI companion */
 const DELEGABLE_CATEGORIES = new Set(["chase_candidate", "follow_up", "expiry"]);
+
+// ============================================
+// Task classification
+// ============================================
+
+/** Detect FA screening tasks */
+const isFaTask = (task: PlacementTask) =>
+	task.category === "general" && task.title.startsWith("Initiate FA screening");
+
+/** Detect screening-related escalation tasks */
+const isScreeningEscalation = (task: PlacementTask) =>
+	task.category === "escalation" &&
+	task.complianceElementSlugs.some((slug) => SCREENING_SLUGS.has(slug));
+
+/** Chase & Follow-up categories (includes expiry now) */
+const isChaseTask = (task: PlacementTask) =>
+	task.category === "chase_candidate" ||
+	task.category === "follow_up" ||
+	task.category === "expiry" ||
+	task.category === "review_document" ||
+	(task.category === "escalation" && !isScreeningEscalation(task));
+
+// ============================================
+// Screening item row
+// ============================================
+
+function ScreeningStatusIcon({ status, ordered }: { status: ScreeningItem["status"]; ordered?: boolean }) {
+	if (ordered) {
+		return <RefreshCw className="size-3.5 text-primary shrink-0" />;
+	}
+	switch (status) {
+		case "met":
+			return <CheckCircle2 className="size-3.5 text-[var(--positive)] shrink-0" />;
+		case "pending":
+		case "requires_review":
+		case "missing":
+			return <Circle className="size-3.5 text-[var(--warning)] shrink-0" />;
+		case "expired":
+			return <AlertTriangle className="size-3.5 text-destructive shrink-0" />;
+		case "expiring":
+			return <AlertTriangle className="size-3.5 text-[var(--warning)] shrink-0" />;
+	}
+}
+
+const SCREENING_STATUS_LABELS: Record<string, string> = {
+	met: "Complete",
+	pending: "Pending",
+	requires_review: "Review",
+	missing: "Missing",
+	expired: "Expired",
+	expiring: "Expiring",
+};
+
+const SCREENING_STATUS_VARIANT: Record<string, "success" | "danger" | "warning" | "neutral"> = {
+	met: "success",
+	missing: "warning",
+	expired: "danger",
+	pending: "warning",
+	requires_review: "warning",
+	expiring: "warning",
+};
+
+function ScreeningItemRow({ item, ordered }: { item: ScreeningItem; ordered?: boolean }) {
+	const showOrdered = ordered && item.status !== "met" && item.status !== "expired";
+
+	return (
+		<div className="flex items-center gap-3 px-4 py-2.5">
+			<ScreeningStatusIcon status={item.status} ordered={showOrdered} />
+			<div className="flex-1 min-w-0">
+				<div className="flex items-center gap-2">
+					<span className="text-sm truncate">{item.name}</span>
+					<Image src={faIcon} alt="First Advantage" className="size-4 shrink-0" />
+				</div>
+				{item.expiresAt && (
+					<p className="text-[10px] text-muted-foreground mt-0.5">
+						{item.status === "expired" ? "Expired" : "Expires"}{" "}
+						{format(new Date(item.expiresAt), "dd MMM yyyy")}
+					</p>
+				)}
+			</div>
+			{showOrdered ? (
+				<Badge variant="info" className="text-[10px] font-medium shrink-0">
+					Ordered
+				</Badge>
+			) : (
+				<Badge
+					variant={SCREENING_STATUS_VARIANT[item.status] || "neutral"}
+					className="text-[10px] font-medium shrink-0"
+				>
+					{SCREENING_STATUS_LABELS[item.status] || item.status}
+				</Badge>
+			)}
+		</div>
+	);
+}
 
 // ============================================
 // Component
 // ============================================
 
-export function NextActionsSection({ tasks: initialTasks, placement, context }: NextActionsSectionProps) {
+export function NextActionsSection({
+	tasks: initialTasks,
+	screeningItems,
+	placement,
+	context,
+	candidateAddress,
+	onRefresh,
+}: NextActionsSectionProps) {
 	const router = useRouter();
 	const [tasks, setTasks] = useState(initialTasks);
 	const [submittingScreening, setSubmittingScreening] = useState(false);
-	const [screeningInProgress, setScreeningInProgress] = useState(false);
+	const [checkingStatus, setCheckingStatus] = useState(false);
 	const [delegating, setDelegating] = useState(false);
+	const [dhsDialogOpen, setDhsDialogOpen] = useState(false);
 
 	// Only show pending + in_progress tasks
 	const activeTasks = tasks.filter(
 		(t) => t.status === "pending" || t.status === "in_progress",
 	);
 
-	if (activeTasks.length === 0) return null;
+	// Find the FA task (drives screening header button state, not rendered as row)
+	const faTask = activeTasks.find(isFaTask);
 
-	// Detect the FA screening task (category: general, title starts with "Initiate FA")
-	const isFaTask = (task: PlacementTask) =>
-		task.category === "general" && task.title.startsWith("Initiate FA screening");
+	// Screening escalation tasks render below screening items
+	const screeningEscalations = activeTasks.filter(isScreeningEscalation);
+
+	// Chase & Follow-up tasks (merged chase + follow-up + expiry)
+	const chaseTasks = activeTasks.filter(
+		(t) => !isFaTask(t) && isChaseTask(t),
+	);
+
+	// Outstanding screening items (not met)
+	const outstandingScreening = screeningItems.filter((i) => i.status !== "met");
+
+	// Show screening section when there are outstanding items or escalation tasks
+	const hasScreeningContent = outstandingScreening.length > 0 || screeningEscalations.length > 0;
 
 	// Tasks that can be delegated to the AI companion
-	const delegableTasks = activeTasks.filter(
+	const delegableTasks = chaseTasks.filter(
 		(t) => DELEGABLE_CATEGORIES.has(t.category || "") && !t.agentId,
 	);
 
+	// Total count for header badge
+	const totalActionCount = outstandingScreening.length + screeningEscalations.length + chaseTasks.length;
+
+	// D&OHS: check if any D&OHS-related items are outstanding
+	const missingDHSSlugs = screeningItems
+		.filter((i) => i.status !== "met" && DHS_ELEMENT_SLUGS.has(i.slug))
+		.map((i) => i.slug);
+	const hasDHSItems = missingDHSSlugs.length > 0;
+	const preSelectedDHSCodes = recommendDHSProducts(missingDHSSlugs);
+
+	// Hide the entire card when there's nothing to show
+	if (!hasScreeningContent && chaseTasks.length === 0 && !faTask) return null;
+
 	async function updateTask(id: string, updates: Record<string, unknown>) {
-		// Optimistic update
 		setTasks((prev) =>
 			prev.map((t) => (t.id === id ? { ...t, ...updates } : t)),
 		);
@@ -132,7 +292,6 @@ export function NextActionsSection({ tasks: initialTasks, placement, context }: 
 			});
 
 			if (!response.ok) {
-				// Revert on failure
 				setTasks(initialTasks);
 				toast({ type: "error", description: "Failed to update task" });
 			}
@@ -142,9 +301,55 @@ export function NextActionsSection({ tasks: initialTasks, placement, context }: 
 		}
 	}
 
-	async function handleInitiateScreening(taskId: string) {
+	/** Shared SSE stream reader — fires onStart when executionId arrives, resolves when agent completes */
+	async function streamAgentExecution(
+		response: Response,
+		onStart: (executionId: string) => void,
+	): Promise<"completed" | "failed" | null> {
+		if (!response.body) return null;
+
+		const reader = response.body.getReader();
+		const decoder = new TextDecoder();
+		let buffer = "";
+		let executionId: string | null = null;
+
+		try {
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+
+				buffer += decoder.decode(value, { stream: true });
+				const lines = buffer.split("\n");
+				buffer = lines.pop() || "";
+
+				for (const line of lines) {
+					if (!line.startsWith("data: ")) continue;
+					try {
+						const eventData = JSON.parse(line.slice(6));
+
+						if (eventData.executionId && !executionId) {
+							executionId = eventData.executionId as string;
+							onStart(executionId);
+						}
+
+						if (eventData.status && (eventData.status === "completed" || eventData.status === "failed")) {
+							return eventData.status;
+						}
+					} catch {
+						// Skip malformed events
+					}
+				}
+			}
+		} finally {
+			reader.cancel();
+		}
+
+		return executionId ? "completed" : null;
+	}
+
+	async function handleInitiateScreening() {
+		if (!faTask) return;
 		setSubmittingScreening(true);
-		setScreeningInProgress(false);
 
 		try {
 			const response = await fetch("/api/agents/background-screening/execute", {
@@ -155,6 +360,7 @@ export function NextActionsSection({ tasks: initialTasks, placement, context }: 
 					targetState: context.jurisdiction,
 					facilityName: placement.facilityName,
 					dealType: placement.dealType || "standard",
+					placementId: placement.id,
 				}),
 			});
 
@@ -163,53 +369,22 @@ export function NextActionsSection({ tasks: initialTasks, placement, context }: 
 				return;
 			}
 
-			const reader = response.body.getReader();
-			const decoder = new TextDecoder();
-			let buffer = "";
-			let gotExecutionId = false;
+			const result = await streamAgentExecution(response, (execId) => {
+				updateTask(faTask.id, { status: "in_progress" });
+				toast({
+					type: "success",
+					description: "FA screening initiated",
+					action: {
+						label: "View \u2192",
+						onClick: () => router.push(`/agents/background-screening/executions/${execId}`),
+					},
+				});
+			});
 
-			const processStream = async () => {
-				while (true) {
-					const { done, value } = await reader.read();
-					if (done) break;
-
-					buffer += decoder.decode(value, { stream: true });
-					const lines = buffer.split("\n");
-					buffer = lines.pop() || "";
-
-					for (const line of lines) {
-						if (line.startsWith("data: ")) {
-							try {
-								const eventData = JSON.parse(line.slice(6));
-								if (eventData.executionId) {
-									gotExecutionId = true;
-									setScreeningInProgress(true);
-									// Mark task as in_progress
-									updateTask(taskId, { status: "in_progress" });
-									const execId = eventData.executionId;
-									toast({
-										type: "success",
-										description: "FA screening initiated",
-										action: {
-											label: "View \u2192",
-											onClick: () => router.push(`/agents/background-screening/executions/${execId}`),
-										},
-									});
-									reader.cancel();
-									return;
-								}
-							} catch {
-								// Skip malformed events
-							}
-						}
-					}
-				}
-			};
-
-			await processStream();
-
-			if (!gotExecutionId) {
+			if (!result) {
 				toast({ type: "error", description: "Screening failed to start" });
+			} else {
+				await onRefresh?.();
 			}
 		} catch (err) {
 			console.error("Failed to initiate screening:", err);
@@ -219,11 +394,51 @@ export function NextActionsSection({ tasks: initialTasks, placement, context }: 
 		}
 	}
 
+	async function handleCheckScreeningStatus() {
+		setCheckingStatus(true);
+
+		try {
+			const response = await fetch("/api/agents/screening-status-monitor/execute", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					candidateSearch: placement.candidateName,
+				}),
+			});
+
+			if (!response.ok || !response.body) {
+				toast({ type: "error", description: "Failed to check screening status" });
+				return;
+			}
+
+			const result = await streamAgentExecution(response, (execId) => {
+				toast({
+					type: "success",
+					description: "Checking screening status\u2026",
+					action: {
+						label: "View \u2192",
+						onClick: () => router.push(`/agents/screening-status-monitor/executions/${execId}`),
+					},
+				});
+			});
+
+			if (!result) {
+				toast({ type: "error", description: "Status check failed to start" });
+			} else {
+				await onRefresh?.();
+			}
+		} catch (err) {
+			console.error("Failed to check screening status:", err);
+			toast({ type: "error", description: "Failed to check screening status" });
+		} finally {
+			setCheckingStatus(false);
+		}
+	}
+
 	async function handleDelegateToAgent() {
 		if (delegableTasks.length === 0) return;
 		setDelegating(true);
 
-		// Optimistic: mark all delegable tasks as in_progress with agentId
 		const taskIds = delegableTasks.map((t) => t.id);
 		setTasks((prev) =>
 			prev.map((t) =>
@@ -253,7 +468,6 @@ export function NextActionsSection({ tasks: initialTasks, placement, context }: 
 			let buffer = "";
 			let executionId: string | null = null;
 
-			// Read SSE stream — first for executionId, then for completion
 			while (true) {
 				const { done, value } = await reader.read();
 				if (done) break;
@@ -267,7 +481,6 @@ export function NextActionsSection({ tasks: initialTasks, placement, context }: 
 					try {
 						const eventData = JSON.parse(line.slice(6));
 
-						// Phase 1: Got executionId — mark tasks in_progress
 						if (eventData.executionId && !executionId) {
 							executionId = eventData.executionId;
 							const inProgressUpdates = {
@@ -299,7 +512,6 @@ export function NextActionsSection({ tasks: initialTasks, placement, context }: 
 							});
 						}
 
-						// Phase 2: Agent finished — mark tasks completed or revert
 						if (eventData.status && executionId) {
 							if (eventData.status === "completed") {
 								const completedUpdates = { status: "completed" as const };
@@ -321,6 +533,7 @@ export function NextActionsSection({ tasks: initialTasks, placement, context }: 
 									type: "success",
 									description: `AI Companion finished — ${taskIds.length} task${taskIds.length !== 1 ? "s" : ""} completed`,
 								});
+								await onRefresh?.();
 							} else if (eventData.status === "failed") {
 								const revertUpdates = { status: "pending" as const, agentId: null, executionId: null };
 								for (const taskId of taskIds) {
@@ -338,6 +551,7 @@ export function NextActionsSection({ tasks: initialTasks, placement, context }: 
 									),
 								);
 								toast({ type: "error", description: "AI Companion failed — tasks reverted" });
+								await onRefresh?.();
 							}
 							reader.cancel();
 							return;
@@ -361,184 +575,269 @@ export function NextActionsSection({ tasks: initialTasks, placement, context }: 
 		}
 	}
 
+	// ============================================
+	// Task row renderer (for chase/escalation tasks)
+	// ============================================
+
+	function renderTaskRow(task: PlacementTask) {
+		const isEscalation = task.category === "escalation";
+		const isDelegated = !!task.agentId && task.agentId === "onboarding-companion";
+
+		return (
+			<div
+				key={task.id}
+				className="flex items-center gap-3 px-4 py-2.5"
+			>
+				{/* Priority indicator: AlertTriangle for escalations, dot for others */}
+				{isEscalation ? (
+					<AlertTriangle className="size-3.5 text-chart-3 shrink-0" />
+				) : (
+					<div
+						className={cn(
+							"w-1.5 h-1.5 rounded-full shrink-0",
+							priorityConfig[task.priority].color,
+						)}
+					/>
+				)}
+
+				{/* Title + meta */}
+				<div className="flex-1 min-w-0">
+					<div className="flex items-center gap-2">
+						<span className="text-sm truncate">{task.title}</span>
+						{isDelegated && (
+							<span className="inline-flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full shrink-0">
+								<Sparkles className="size-2.5" />
+								AI
+							</span>
+						)}
+					</div>
+					<div className="flex items-center gap-2 mt-0.5">
+						{task.category && (
+							<span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0 rounded-full">
+								{categoryLabels[task.category] || task.category}
+							</span>
+						)}
+						{task.dueAt && (
+							<span
+								className={cn(
+									"text-[10px] tabular-nums",
+									new Date(task.dueAt) < new Date()
+										? "text-destructive font-medium"
+										: "text-muted-foreground",
+								)}
+							>
+								Due {format(new Date(task.dueAt), "MMM d")}
+							</span>
+						)}
+						{isDelegated && task.executionId && (
+							<button
+								type="button"
+								onClick={() => router.push(`/agents/onboarding-companion/executions/${task.executionId}`)}
+								className="text-[10px] text-primary hover:text-primary/70 underline underline-offset-2 cursor-pointer transition-colors duration-150"
+							>
+								View execution
+							</button>
+						)}
+					</div>
+				</div>
+
+				{/* Priority badge */}
+				<Badge
+					variant={priorityConfig[task.priority].badgeVariant}
+					className="text-[10px] font-medium shrink-0"
+				>
+					{task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+				</Badge>
+
+				{/* Action menu */}
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="h-7 w-7 shrink-0"
+							aria-label="Task actions"
+						>
+							<MoreHorizontal className="size-3.5" />
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						<DropdownMenuItem
+							onClick={() => updateTask(task.id, { status: "completed" })}
+						>
+							<Check className="mr-2 h-4 w-4" />
+							Complete
+						</DropdownMenuItem>
+						<DropdownMenuItem
+							onClick={() =>
+								updateTask(task.id, {
+									status: "snoozed",
+									snoozedUntil: new Date(
+										Date.now() + 24 * 60 * 60 * 1000,
+									).toISOString(),
+								})
+							}
+						>
+							<Clock className="mr-2 h-4 w-4" />
+							Snooze 1 Day
+						</DropdownMenuItem>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem
+							onClick={() => updateTask(task.id, { status: "dismissed" })}
+							className="text-muted-foreground"
+						>
+							<X className="mr-2 h-4 w-4" />
+							Dismiss
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</div>
+		);
+	}
+
+	// ============================================
+	// Screening section header button
+	// ============================================
+
+	function renderScreeningButtons() {
+		return (
+			<div className="flex items-center gap-1.5">
+				{hasDHSItems && (
+					<Button
+						size="sm"
+						variant="outline"
+						onClick={() => setDhsDialogOpen(true)}
+						className="text-xs gap-1.5 h-6"
+					>
+						Order D&OHS
+						<Image src={faIcon} alt="FA" className="size-3.5" />
+					</Button>
+				)}
+				{faTask && faTask.status === "in_progress" && (
+					<Button
+						size="sm"
+						variant="outline"
+						onClick={handleCheckScreeningStatus}
+						disabled={checkingStatus}
+						className="text-xs gap-1.5 h-6"
+					>
+						{checkingStatus ? (
+							<>
+								<RefreshCw className="size-3 animate-spin" />
+								Checking…
+							</>
+						) : (
+							<>
+								<Search className="size-3" />
+								Check Status
+							</>
+						)}
+					</Button>
+				)}
+				{faTask && faTask.status !== "in_progress" && (
+					<Button
+						size="sm"
+						onClick={handleInitiateScreening}
+						disabled={submittingScreening}
+						className="text-xs gap-1.5 h-6"
+					>
+						{submittingScreening ? (
+							<>
+								<RefreshCw className="size-3 animate-spin" />
+								Starting…
+							</>
+						) : (
+							<>
+								Initiate FA Screening
+								<ArrowUpRight className="size-3" />
+							</>
+						)}
+					</Button>
+				)}
+			</div>
+		);
+	}
+
 	return (
 		<Card className="shadow-none! bg-card overflow-hidden">
 			{/* Header */}
 			<div className="flex items-center justify-between px-4 py-3 border-b border-border">
 				<div className="flex items-center gap-2">
 					<h2 className="text-sm font-semibold">Next Actions</h2>
-					<span className="text-[10px] font-medium tabular-nums bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">
-						{activeTasks.length}
-					</span>
+					{totalActionCount > 0 && (
+						<span className="text-[10px] font-medium tabular-nums bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">
+							{totalActionCount}
+						</span>
+					)}
 				</div>
-
-				{/* Delegate button */}
-				{delegableTasks.length > 0 && (
-					<Button
-						size="sm"
-						variant="outline"
-						onClick={handleDelegateToAgent}
-						disabled={delegating}
-						className="text-xs gap-1.5"
-					>
-						{delegating ? (
-							<>
-								<RefreshCw className="size-3 animate-spin" />
-								Delegating…
-							</>
-						) : (
-							<>
-								<Sparkles className="size-3" />
-								Delegate {delegableTasks.length} to AI
-							</>
-						)}
-					</Button>
-				)}
 			</div>
 
-			{/* Task list */}
 			<div className="divide-y divide-border">
-				{activeTasks.map((task) => {
-					const isFA = isFaTask(task);
-					const isDelegated = !!task.agentId && task.agentId === "onboarding-companion";
+				{/* Screening section */}
+				{hasScreeningContent && (
+					<div>
+						<div className="flex items-center justify-between px-4 py-2 bg-muted/30">
+							<span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+								Screening
+							</span>
+							{renderScreeningButtons()}
+						</div>
+						<div className="divide-y divide-border/50">
+							{outstandingScreening.map((item) => (
+								<ScreeningItemRow key={item.slug} item={item} ordered={faTask?.status === "in_progress"} />
+							))}
+							{screeningEscalations.map(renderTaskRow)}
+						</div>
+					</div>
+				)}
 
-					return (
-						<div
-							key={task.id}
-							className="flex items-center gap-3 px-4 py-2.5"
-						>
-							{/* Priority dot */}
-							<div
-								className={cn(
-									"w-1.5 h-1.5 rounded-full shrink-0",
-									priorityConfig[task.priority].color,
-								)}
-							/>
-
-							{/* Title + meta */}
-							<div className="flex-1 min-w-0">
-								<div className="flex items-center gap-2">
-									<span className="text-sm truncate">{task.title}</span>
-									{isFA && (
-										<Image src={faIcon} alt="First Advantage" className="size-4 shrink-0" />
-									)}
-									{isDelegated && (
-										<span className="inline-flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full shrink-0">
-											<Sparkles className="size-2.5" />
-											AI
-										</span>
-									)}
-								</div>
-								<div className="flex items-center gap-2 mt-0.5">
-									{task.category && (
-										<span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0 rounded-full">
-											{categoryLabels[task.category] || task.category}
-										</span>
-									)}
-									{task.dueAt && (
-										<span
-											className={cn(
-												"text-[10px] tabular-nums",
-												new Date(task.dueAt) < new Date()
-													? "text-destructive font-medium"
-													: "text-muted-foreground",
-											)}
-										>
-											Due {format(new Date(task.dueAt), "MMM d")}
-										</span>
-									)}
-									{isDelegated && task.executionId && (
-										<button
-											type="button"
-											onClick={() => router.push(`/agents/onboarding-companion/executions/${task.executionId}`)}
-											className="text-[10px] text-primary hover:underline"
-										>
-											View execution
-										</button>
-									)}
-								</div>
-							</div>
-
-							{/* Priority badge */}
-							<Badge
-								variant={priorityConfig[task.priority].badgeVariant}
-								className="text-[10px] font-medium shrink-0"
-							>
-								{task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-							</Badge>
-
-							{/* FA screening button or action menu */}
-							{isFA ? (
+				{/* Chase & Follow-up section */}
+				{chaseTasks.length > 0 && (
+					<div>
+						<div className="flex items-center justify-between px-4 py-2 bg-muted/30">
+							<span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+								Chase & Follow-up
+							</span>
+							{delegableTasks.length > 0 && (
 								<Button
 									size="sm"
-									onClick={() => handleInitiateScreening(task.id)}
-									disabled={submittingScreening || screeningInProgress}
-									className="shrink-0"
+									variant="outline"
+									onClick={handleDelegateToAgent}
+									disabled={delegating}
+									className="text-xs gap-1.5 h-6"
 								>
-									{submittingScreening ? (
+									{delegating ? (
 										<>
-											<RefreshCw className="size-3 mr-1.5 animate-spin" />
-											Starting…
-										</>
-									) : screeningInProgress ? (
-										<>
-											<RefreshCw className="size-3 mr-1.5 animate-spin" />
-											In progress
+											<RefreshCw className="size-3 animate-spin" />
+											Delegating…
 										</>
 									) : (
 										<>
-											Initiate FA Screening
-											<ArrowUpRight className="size-3 ml-1.5" />
+											<Sparkles className="size-3" />
+											Delegate {delegableTasks.length} to AI
 										</>
 									)}
 								</Button>
-							) : (
-								<DropdownMenu>
-									<DropdownMenuTrigger asChild>
-										<Button
-											variant="ghost"
-											size="icon"
-											className="h-7 w-7 shrink-0"
-											aria-label="Task actions"
-										>
-											<MoreHorizontal className="size-3.5" />
-										</Button>
-									</DropdownMenuTrigger>
-									<DropdownMenuContent align="end">
-										<DropdownMenuItem
-											onClick={() => updateTask(task.id, { status: "completed" })}
-										>
-											<Check className="mr-2 h-4 w-4" />
-											Complete
-										</DropdownMenuItem>
-										<DropdownMenuItem
-											onClick={() =>
-												updateTask(task.id, {
-													status: "snoozed",
-													snoozedUntil: new Date(
-														Date.now() + 24 * 60 * 60 * 1000,
-													).toISOString(),
-												})
-											}
-										>
-											<Clock className="mr-2 h-4 w-4" />
-											Snooze 1 Day
-										</DropdownMenuItem>
-										<DropdownMenuSeparator />
-										<DropdownMenuItem
-											onClick={() => updateTask(task.id, { status: "dismissed" })}
-											className="text-muted-foreground"
-										>
-											<X className="mr-2 h-4 w-4" />
-											Dismiss
-										</DropdownMenuItem>
-									</DropdownMenuContent>
-								</DropdownMenu>
 							)}
 						</div>
-					);
-				})}
+						<div className="divide-y divide-border/50">
+							{chaseTasks.map(renderTaskRow)}
+						</div>
+					</div>
+				)}
 			</div>
+
+			<DHSOrderDialog
+				open={dhsDialogOpen}
+				onOpenChange={setDhsDialogOpen}
+				placementId={placement.id}
+				candidateName={placement.candidateName}
+				candidateAddress={candidateAddress ?? null}
+				preSelectedCodes={preSelectedDHSCodes}
+				onOrderComplete={async () => {
+					await onRefresh?.();
+				}}
+			/>
 		</Card>
 	);
 }

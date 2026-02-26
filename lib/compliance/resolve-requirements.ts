@@ -20,22 +20,31 @@ import {
 	usStatePackages,
 	usFacilityPackages,
 	usPackageContents,
-	faHandledElements,
 } from "@/lib/db/seed/markets/us";
 import {
 	ukRolePackages,
 	ukJurisdictionPackages,
 	ukFacilityPackages,
 	ukPackageContents,
-	ukExternallyHandledElements,
 } from "@/lib/db/seed/markets/uk";
 
 // Merged mappings — slugs don't overlap between markets
-const allRolePackages: Record<string, string[]> = { ...usRolePackages, ...ukRolePackages };
-const allStatePackages: Record<string, string> = { ...usStatePackages, ...ukJurisdictionPackages };
-const allFacilityPackages: Record<string, string> = { ...usFacilityPackages, ...ukFacilityPackages };
-const allPackageContents: Record<string, string[]> = { ...usPackageContents, ...ukPackageContents };
-const allExternalElements = new Set([...faHandledElements, ...ukExternallyHandledElements]);
+const allRolePackages: Record<string, string[]> = {
+	...usRolePackages,
+	...ukRolePackages,
+};
+const allStatePackages: Record<string, string> = {
+	...usStatePackages,
+	...ukJurisdictionPackages,
+};
+const allFacilityPackages: Record<string, string> = {
+	...usFacilityPackages,
+	...ukFacilityPackages,
+};
+const allPackageContents: Record<string, string[]> = {
+	...usPackageContents,
+	...ukPackageContents,
+};
 
 // ============================================
 // Types
@@ -75,6 +84,8 @@ export interface ResolvedElement {
 	expiryWarningDays: number | null;
 	/** Whether First Advantage handles this element */
 	faHandled: boolean;
+	/** Who is expected to fulfil this requirement */
+	fulfilmentProvider: string;
 }
 
 export interface RequirementGroup {
@@ -97,8 +108,16 @@ export interface PlacementComplianceItem {
 	category: string | null;
 	/** Whether First Advantage handles this */
 	faHandled: boolean;
+	/** Who is expected to fulfil this requirement */
+	fulfilmentProvider: string;
 	/** Current status */
-	status: "met" | "expiring" | "expired" | "pending" | "requires_review" | "missing";
+	status:
+		| "met"
+		| "expiring"
+		| "expired"
+		| "pending"
+		| "requires_review"
+		| "missing";
 	/** Whether this evidence carries forward from a previous assignment */
 	carryForward: boolean;
 	/** Expiry date if applicable */
@@ -119,6 +138,14 @@ export interface PlacementComplianceItem {
 	evidenceIssuedAt: Date | null;
 	/** When the evidence was verified */
 	evidenceVerifiedAt: Date | null;
+	/** Storage path for document file */
+	evidenceFilePath: string | null;
+	/** Original filename */
+	evidenceFileName: string | null;
+	/** MIME type of file */
+	evidenceMimeType: string | null;
+	/** Extracted data including AI verification results */
+	evidenceExtractedData: Record<string, unknown> | null;
 }
 
 // ============================================
@@ -235,7 +262,8 @@ export async function resolvePlacementRequirements(
 				evidenceType: el.evidenceType,
 				expiryDays: el.expiryDays,
 				expiryWarningDays: el.expiryWarningDays,
-				faHandled: allExternalElements.has(el.slug),
+				faHandled: el.fulfilmentProvider === "external_provider",
+				fulfilmentProvider: el.fulfilmentProvider,
 			};
 		});
 
@@ -257,14 +285,20 @@ export async function resolvePlacementRequirements(
 	// 2. State/jurisdiction package
 	const statePackageSlug = allStatePackages[context.jurisdiction];
 	if (statePackageSlug) {
-		const group = await resolvePackage(statePackageSlug, `state:${context.jurisdiction}`);
+		const group = await resolvePackage(
+			statePackageSlug,
+			`state:${context.jurisdiction}`,
+		);
 		if (group) groups.push(group);
 	}
 
 	// 3. Facility package
 	const facilityPackageSlug = allFacilityPackages[context.facilityType];
 	if (facilityPackageSlug) {
-		const group = await resolvePackage(facilityPackageSlug, `facility:${context.facilityType}`);
+		const group = await resolvePackage(
+			facilityPackageSlug,
+			`facility:${context.facilityType}`,
+		);
 		if (group) groups.push(group);
 	}
 
@@ -382,13 +416,10 @@ export async function checkPlacementCompliance(
 							inArray(evidence.complianceElementId, elementIds),
 						),
 					)
-				: [];
+			: [];
 
 	// Index evidence by element ID, keeping the best one per element
-	const bestEvidence = new Map<
-		string,
-		typeof evidenceRows[number]
-	>();
+	const bestEvidence = new Map<string, (typeof evidenceRows)[number]>();
 	for (const ev of evidenceRows) {
 		const existing = bestEvidence.get(ev.complianceElementId);
 		if (!existing) {
@@ -423,6 +454,7 @@ export async function checkPlacementCompliance(
 					name: element.name,
 					category: element.category,
 					faHandled: element.faHandled,
+					fulfilmentProvider: element.fulfilmentProvider,
 					status: "missing" as const,
 					carryForward: false,
 					expiresAt: null,
@@ -434,6 +466,10 @@ export async function checkPlacementCompliance(
 					evidenceVerificationStatus: null,
 					evidenceIssuedAt: null,
 					evidenceVerifiedAt: null,
+					evidenceFilePath: null,
+					evidenceFileName: null,
+					evidenceMimeType: null,
+					evidenceExtractedData: null,
 				};
 			}
 
@@ -473,6 +509,7 @@ export async function checkPlacementCompliance(
 				name: element.name,
 				category: element.category,
 				faHandled: element.faHandled,
+				fulfilmentProvider: element.fulfilmentProvider,
 				status,
 				carryForward: isCarryForward && status === "met",
 				expiresAt: ev.expiresAt,
@@ -484,6 +521,13 @@ export async function checkPlacementCompliance(
 				evidenceVerificationStatus: ev.verificationStatus,
 				evidenceIssuedAt: ev.issuedAt,
 				evidenceVerifiedAt: ev.verifiedAt,
+				evidenceFilePath: ev.filePath,
+				evidenceFileName: ev.fileName,
+				evidenceMimeType: ev.mimeType,
+				evidenceExtractedData: ev.extractedData as Record<
+					string,
+					unknown
+				> | null,
 			};
 		},
 	);
@@ -515,7 +559,8 @@ export async function checkPlacementCompliance(
 			expiring,
 			pending,
 			missing,
-			percentage: items.length > 0 ? Math.round((met / items.length) * 100) : 100,
+			percentage:
+				items.length > 0 ? Math.round((met / items.length) * 100) : 100,
 			faItemsTotal: faItems.length,
 			faItemsMet,
 			faItemsPending,

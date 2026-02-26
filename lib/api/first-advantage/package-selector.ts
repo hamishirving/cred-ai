@@ -2,17 +2,19 @@
  * FA Package Selector
  *
  * Determines which FA screening package to use based on deal context.
- * Only one real package exists (571732 "Medical Solutions Package TEST").
- * Package 587791 is SSN-only and not useful for full screening.
+ * Three Medsol packages configured in QA (25 Feb 2026):
  *
- * For the demo, both tiers map to 571732. In production, Medsol would
- * configure a second package with additional OIG/SAM components.
+ * - Package 1 (539146): Standard background (SSN, county, nationwide, FACIS, sex offender)
+ * - Package 2 (626709): Standard + State Criminal Repository + OIG/GSA exclusion
+ * - Package 3 (626711): Everything + National Wants & Warrants + OIG variant
+ *
+ * D&OHS items are ordered a la carte, not via packages.
  */
 
-// Both tiers use 571732 for now (only full package available in sandbox).
-// Tier distinction is preserved so the agent explains the WHY correctly.
-const PACKAGE_1_ID = "571732"; // Standard: full background package
-const PACKAGE_2_ID = "571732"; // Standard + OIG/SAM: same package in sandbox (already includes EXOIG/GSA)
+const PACKAGE_1_ID = "539146"; // Standard: base background package
+const PACKAGE_2_ID = "626709"; // Enhanced: + state criminal + OIG/GSA
+const PACKAGE_3_ID = "626711"; // Full: + national wants & warrants
+const PACKAGE_DHS_ID = "626639"; // Legacy D&HS test package
 
 const STATES_REQUIRING_STATEWIDE_CRIMINAL = [
 	"california",
@@ -26,50 +28,38 @@ export interface PackageSelectionInput {
 	targetState: string;
 	facilityRequiresOigSam?: boolean;
 	dealType?: "standard" | "lapse" | "quickstart" | "reassignment" | "government";
+	includeDrugHealth?: boolean;
 }
 
 export interface PackageSelection {
 	packageId: string;
 	packageName: string;
 	reason: string;
-	tier: 1 | 2;
+	tier: 1 | 2 | 3;
+	includesDrugHealth: boolean;
 }
 
 export function selectFAPackage(input: PackageSelectionInput): PackageSelection {
-	// Package #2 triggers
+	const dhs = input.includeDrugHealth ?? false;
+
+	// Tier 3: Lapse deals and government placements get the full package
 	if (input.dealType === "lapse") {
 		return {
-			packageId: PACKAGE_2_ID,
-			packageName: "Standard + OIG/SAM",
-			reason: "Lapse deal -- candidate was inactive, full re-screening with exclusion checks required",
-			tier: 2,
-		};
-	}
-
-	if (input.facilityRequiresOigSam) {
-		return {
-			packageId: PACKAGE_2_ID,
-			packageName: "Standard + OIG/SAM",
-			reason: "Facility requires OIG/SAM exclusion checks",
-			tier: 2,
-		};
-	}
-
-	if (STATES_REQUIRING_STATEWIDE_CRIMINAL.includes(input.targetState.toLowerCase())) {
-		return {
-			packageId: PACKAGE_2_ID,
-			packageName: "Standard + OIG/SAM",
-			reason: `${input.targetState} requires statewide criminal search`,
-			tier: 2,
+			packageId: PACKAGE_3_ID,
+			packageName: "Full Screening",
+			reason: "Lapse deal -- candidate was inactive, full re-screening with exclusion checks and wants & warrants required",
+			tier: 3,
+			includesDrugHealth: dhs,
 		};
 	}
 
 	if (input.dealType === "government") {
 		return {
-			packageId: PACKAGE_2_ID,
-			packageName: "Standard + OIG/SAM",
-			reason: "Government-adjacent placement requires exclusion list checks",
-			tier: 2,
+			packageId: PACKAGE_3_ID,
+			packageName: "Full Screening",
+			reason: "Government-adjacent placement requires full screening with exclusion list checks and wants & warrants",
+			tier: 3,
+			includesDrugHealth: dhs,
 		};
 	}
 
@@ -79,19 +69,42 @@ export function selectFAPackage(input: PackageSelectionInput): PackageSelection 
 		const daysSince = Math.floor((Date.now() - endDate.getTime()) / (1000 * 60 * 60 * 24));
 		if (daysSince > 30) {
 			return {
-				packageId: PACKAGE_2_ID,
-				packageName: "Standard + OIG/SAM",
-				reason: `Candidate inactive for ${daysSince} days -- lapse re-screening with exclusion checks`,
-				tier: 2,
+				packageId: PACKAGE_3_ID,
+				packageName: "Full Screening",
+				reason: `Candidate inactive for ${daysSince} days -- lapse re-screening with full checks`,
+				tier: 3,
+				includesDrugHealth: dhs,
 			};
 		}
 	}
 
-	// Default: Package #1
+	// Tier 2: State criminal + OIG/SAM triggers
+	if (input.facilityRequiresOigSam) {
+		return {
+			packageId: PACKAGE_2_ID,
+			packageName: "Enhanced Screening",
+			reason: "Facility requires OIG/SAM exclusion checks and state criminal search",
+			tier: 2,
+			includesDrugHealth: dhs,
+		};
+	}
+
+	if (STATES_REQUIRING_STATEWIDE_CRIMINAL.includes(input.targetState.toLowerCase())) {
+		return {
+			packageId: PACKAGE_2_ID,
+			packageName: "Enhanced Screening",
+			reason: `${input.targetState} requires statewide criminal search`,
+			tier: 2,
+			includesDrugHealth: dhs,
+		};
+	}
+
+	// Tier 1: Standard background
 	return {
 		packageId: PACKAGE_1_ID,
-		packageName: "Standard",
-		reason: "Standard new placement -- full background package",
+		packageName: "Standard Screening",
+		reason: "Standard new placement -- background package",
 		tier: 1,
+		includesDrugHealth: dhs,
 	};
 }

@@ -19,6 +19,9 @@ export const elementToFAComponent: Record<string, string> = {
 	"sam-exclusion-check": "GSA-Excluded Parties",
 	"drivers-record": "Drivers Record",
 	"nationwide-background-check": "Enhanced Nationwide Criminal Search (7 year)",
+	"drug-screen": "Drug Screen - 13 Panel",
+	"tb-test": "TB Test - QuantiFERON",
+	"physical-examination": "Physical Examination",
 };
 
 /** Reverse map: FA reportItem type -> compliance element slug */
@@ -33,6 +36,9 @@ export const faComponentToElement: Record<string, string> = {
 	"FACIS L3": "facis-check",
 	"DOJ Sex Offender Search": "sex-offender-check",
 	"National Wants Warrants": "national-wants-warrants",
+	"Drug Screen - 13 Panel": "drug-screen",
+	"TB Test - QuantiFERON": "tb-test",
+	"Physical Examination": "physical-examination",
 };
 
 /**

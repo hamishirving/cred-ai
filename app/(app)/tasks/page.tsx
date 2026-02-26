@@ -161,6 +161,7 @@ function createColumns(
 	onSnooze: (id: string, until: Date) => void,
 	onReopen: (id: string) => void,
 	statusFilter: string,
+	candidateLabel: string,
 ): ColumnDef<Task>[] {
 	return [
 		{
@@ -201,7 +202,7 @@ function createColumns(
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 					className="-ml-2 h-8 cursor-pointer px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
 				>
-					Subject
+					{candidateLabel}
 					<ArrowUpDown className="ml-2 h-3 w-3" />
 				</Button>
 			),
@@ -218,7 +219,7 @@ function createColumns(
 				return (
 					<Link
 						href={href}
-						className="flex items-center gap-2 hover:underline"
+						className="group flex items-center gap-2"
 					>
 						<Avatar className="h-6 w-6">
 							<AvatarFallback className={cn(getAvatarColor(task.subject.name), "text-[10px] text-white")}>
@@ -226,11 +227,11 @@ function createColumns(
 							</AvatarFallback>
 						</Avatar>
 						<div className="min-w-0">
-							<span className="text-sm">{task.subject.name}</span>
+							<div className="text-sm group-hover:text-primary transition-colors duration-150">{task.subject.name}</div>
 							{task.subject.facility && (
-								<span className="ml-1.5 text-[10px] text-muted-foreground bg-muted px-1.5 py-0 rounded-full">
+								<div className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0 rounded-full w-fit">
 									{task.subject.facility}
-								</span>
+								</div>
 							)}
 						</div>
 					</Link>
@@ -510,10 +511,12 @@ export default function TasksPage() {
 	const handleSnooze = (id: string, until: Date) => updateTask(id, { status: "snoozed", snoozedUntil: until.toISOString() });
 	const handleReopen = (id: string) => updateTask(id, { status: "pending" });
 
+	const candidateLabel = selectedOrg?.settings?.terminology?.candidate || "Candidate";
+
 	const columns = useMemo(
-		() => createColumns(handleComplete, handleDismiss, handleSnooze, handleReopen, statusFilter),
+		() => createColumns(handleComplete, handleDismiss, handleSnooze, handleReopen, statusFilter, candidateLabel),
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[statusFilter],
+		[statusFilter, candidateLabel],
 	);
 
 	const table = useReactTable({
