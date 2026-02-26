@@ -166,6 +166,7 @@ export interface FAClient {
 	authenticate(): Promise<FAAuthToken>;
 	getPackages(): Promise<FAPackage[]>;
 	createCandidate(data: FACreateCandidateInput): Promise<FACandidate>;
+	updateCandidate(candidateId: string, data: FACreateCandidateInput): Promise<FACandidate>;
 	initiateScreening(data: FAInitiateScreeningInput): Promise<FAScreening>;
 	getScreening(screeningId: string): Promise<FAScreening>;
 	getReportLink(screeningId: string): Promise<FAReportLink>;

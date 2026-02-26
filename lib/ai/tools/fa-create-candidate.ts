@@ -73,19 +73,8 @@ For packages 626709 and 626711, a licenses array is required. Pass licenseNumber
 		try {
 			const client = getFAClient();
 
-			// Check if candidate already exists in FA
-			if (input.email) {
-				try {
-					const existing = await client.findCandidateByEmail(input.email);
-					if (existing) {
-						return { data: existing, note: "Candidate already exists in FA" };
-					}
-				} catch {
-					// Lookup failed — proceed with creation
-				}
-			}
-
-			// Build the candidate payload
+			// Build the candidate payload first — we may need it for create or update
+			const buildPayload = () => {
 			const payload: Record<string, unknown> = {
 				givenName: input.givenName,
 				familyName: input.familyName,
@@ -133,6 +122,33 @@ For packages 626709 and 626711, a licenses array is required. Pass licenseNumber
 						status: "active",
 					},
 				];
+			}
+
+				return payload;
+			};
+
+			const payload = buildPayload();
+
+			// Check if candidate already exists in FA
+			if (input.email) {
+				try {
+					const existing = await client.findCandidateByEmail(input.email);
+					if (existing) {
+						// Update the existing candidate with full payload (adds licenses if missing)
+						try {
+							const updated = await client.updateCandidate(
+								existing.id,
+								payload as unknown as Parameters<typeof client.createCandidate>[0],
+							);
+							return { data: updated, note: "Candidate updated in FA with latest data" };
+						} catch {
+							// Update failed — return existing anyway
+							return { data: existing, note: "Candidate already exists in FA (update failed)" };
+						}
+					}
+				} catch {
+					// Lookup failed — proceed with creation
+				}
 			}
 
 			const candidate = await client.createCandidate(payload as unknown as Parameters<typeof client.createCandidate>[0]);
