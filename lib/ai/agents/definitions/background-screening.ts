@@ -55,7 +55,7 @@ All these fields should be available from the candidate's profile. If any are mi
 STEP 5 — INITIATE SCREENING:
 Use faInitiateScreening with the FA candidate ID and the package ID returned by faSelectPackage in step 3.
 
-IMPORTANT: You must also pass organisationId (from context), profileId (the candidate's profile UUID from step 1), and placementId (from input, if provided). These are required for the tool to persist the screening record to the database.
+IMPORTANT: You must also pass organisationId (from context) and profileId (the candidate's profile UUID from step 1). These are required for the tool to persist the screening record to the database. The placement is auto-resolved from the profile.
 
 If the package includes drug/health screening (includesDrugHealth was true), you MUST pass drugScreening with:
 - sex: from the candidate's profile (sex field)

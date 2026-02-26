@@ -8,12 +8,12 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { getFAClient } from "@/lib/api/first-advantage/client";
-import { upsertFAScreening } from "@/lib/db/queries";
+import { upsertFAScreening, getActivePlacementByProfileId } from "@/lib/db/queries";
 
 export const faInitiateScreening = tool({
 	description: `Initiate a background screening through First Advantage.
 Requires a candidate ID (from faCreateCandidate) and a package ID (from faSelectPackage).
-Also requires organisationId, profileId, and optionally placementId for DB persistence.
+Also requires organisationId and profileId for DB persistence. The placement is auto-resolved.
 Returns the screening ID for status tracking.
 
 For drug/health screenings, provide drugScreening with the candidate's sex and address.
@@ -32,10 +32,6 @@ FA uses the address to route the candidate to the nearest collection clinic.`,
 		profileId: z
 			.string()
 			.describe("Candidate profile UUID from local DB"),
-		placementId: z
-			.string()
-			.optional()
-			.describe("Placement UUID to link screening to a placement"),
 		drugScreening: z
 			.object({
 				sex: z.enum(["male", "female"]).describe("Candidate's sex from their profile"),
@@ -71,11 +67,17 @@ FA uses the address to route the candidate to the nearest collection clinic.`,
 				} : {}),
 			});
 
+			// Auto-resolve placement from profile + org
+			const placement = await getActivePlacementByProfileId({
+				profileId: input.profileId,
+				organisationId: input.organisationId,
+			});
+
 			// Persist to DB
 			await upsertFAScreening({
 				organisationId: input.organisationId,
 				profileId: input.profileId,
-				placementId: input.placementId ?? null,
+				placementId: placement?.id ?? null,
 				faScreeningId: screening.id,
 				faCandidateId: screening.candidateId,
 				faPackageId: screening.packageId,
