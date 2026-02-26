@@ -51,6 +51,25 @@ export interface FADriversLicense {
 	issuingAgency: string; // ISO 3166-2: "US-TN"
 }
 
+export interface FALicense {
+	issuingAgency?: {
+		name: string;
+		address?: {
+			addressLine?: string;
+			municipality?: string;
+			regionCode?: string;
+			postalCode?: string;
+			countryCode?: string;
+			validFrom?: string;
+		};
+	};
+	number?: string;
+	name?: string;
+	startDate?: string;
+	status?: string;
+	notes?: string;
+}
+
 export interface FACreateCandidateInput {
 	givenName: string;
 	familyName: string;
@@ -60,6 +79,7 @@ export interface FACreateCandidateInput {
 	ssn?: string; // "XXX-XX-XXXX"
 	address?: FAAddress;
 	driversLicense?: FADriversLicense;
+	licenses?: FALicense[];
 }
 
 export interface FACandidate {

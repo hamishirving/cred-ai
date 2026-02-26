@@ -65,6 +65,45 @@ function buildAgentPrompt(
 }
 
 /**
+ * Serialise a single input value for the invocation message.
+ *
+ * Handles the `attachments` array specially: strips base64Content (which is
+ * huge and not useful in the prompt) and produces a readable summary so the
+ * model knows exactly which files are present and can call storeAttachment
+ * with the right parameters.
+ *
+ * For other arrays/objects, falls back to compact JSON.
+ */
+function formatInputValue(key: string, value: unknown): string {
+	// Attachments: summarise metadata with index, omit raw base64 data
+	if (key === "attachments" && Array.isArray(value)) {
+		if (value.length === 0) return "none";
+		return (
+			`${value.length} file(s):\n` +
+			value
+				.map((att, i) => {
+					const a = att as Record<string, unknown>;
+					return [
+						`  [attachmentIndex: ${i}] fileName: ${a.fileName ?? "unknown"}`,
+						`      contentType: ${a.contentType ?? "unknown"}`,
+						`      contentLength: ${a.contentLength ?? "unknown"} bytes`,
+					].join("\n");
+				})
+				.join("\n")
+		);
+	}
+
+	// Other arrays / objects: compact JSON (truncated if massive)
+	if (typeof value === "object") {
+		const json = JSON.stringify(value);
+		if (json.length > 2000) return `${json.slice(0, 2000)}... (truncated)`;
+		return json;
+	}
+
+	return String(value);
+}
+
+/**
  * Build the initial user message from agent input.
  */
 function buildInvocationMessage(
@@ -75,8 +114,21 @@ function buildInvocationMessage(
 
 	for (const [key, value] of Object.entries(input)) {
 		if (value !== undefined && value !== null && value !== "") {
-			parts.push(`- ${key}: ${String(value)}`);
+			parts.push(`- ${key}: ${formatInputValue(key, value)}`);
 		}
+	}
+
+	// Explicit instruction when attachments are present — reinforces the
+	// system prompt so the model doesn't skip the PROCESS ATTACHMENTS step.
+	if (
+		"attachments" in input &&
+		Array.isArray(input.attachments) &&
+		input.attachments.length > 0
+	) {
+		parts.push(
+			"",
+			`IMPORTANT: This email has ${input.attachments.length} attachment(s). You MUST process each one using storeAttachment before composing your reply. Pass the attachmentIndex (${input.attachments.map((_: unknown, i: number) => i).join(", ")}) to select each file.`,
+		);
 	}
 
 	return parts.join("\n");
@@ -159,9 +211,21 @@ export async function executeAgent(
 			);
 		};
 
-		// Resolve tool subset (inject browser action callback for real-time streaming)
+		// Extract attachments from input (if present) for context-aware tool resolution
+		const attachments =
+			Array.isArray(ctx.input.attachments) && ctx.input.attachments.length > 0
+				? (ctx.input.attachments as Array<{
+						fileName: string;
+						contentType: string;
+						base64Content: string;
+						contentLength: number;
+				  }>)
+				: undefined;
+
+		// Resolve tool subset (inject browser action callback + attachments for context-aware tools)
 		const tools = resolveTools(agent.tools, {
 			onBrowserAction: handleBrowserAction,
+			attachments,
 		});
 		console.log("[agent-runner] Resolved tools:", Object.keys(tools));
 

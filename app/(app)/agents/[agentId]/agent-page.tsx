@@ -164,7 +164,7 @@ const PAGE_SIZE = 10;
 
 interface AgentPageProps {
 	agent: SerializedAgentDefinition;
-	sampleCandidate?: { name: string; email: string } | null;
+	sampleCandidate?: { name: string; email: string; sampleElement?: string } | null;
 }
 
 export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
@@ -187,14 +187,15 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 					defaults[field.key] = sampleCandidate.email;
 				}
 			}
-			// Demo defaults for inbound email responder
+			// Dynamic defaults based on org's compliance elements
 			if (!field.defaultValue) {
+				const elementName = sampleCandidate?.sampleElement || "compliance document";
 				if (field.key === "subject") {
-					defaults[field.key] = "Question about my DBS check";
+					defaults[field.key] = `Question about my ${elementName}`;
 				}
 				if (field.key === "bodyText") {
 					defaults[field.key] =
-						"Hi, I uploaded my DBS certificate last week but I haven't heard anything back. Can you let me know what the status is? Thanks";
+						`Hi, I submitted my ${elementName} last week but I haven't heard anything back. Can you let me know what the status is? Thanks`;
 				}
 			}
 		}

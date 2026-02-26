@@ -34,10 +34,11 @@ Use faSelectPackage to determine the correct package. ALWAYS call this tool — 
 If compliance gaps include drug-screen, tb-test, or physical-examination, set includeDrugHealth to true. This selects a package that bundles background + drug/health screening.
 
 The tool implements this logic:
-- Package #1 (Standard): SSN Trace, County Criminal, Federal Criminal, Nationwide Criminal 7yr, NSOPW, FACIS Level III.
-- Package #2 (Standard + OIG/SAM): Everything in #1 plus Statewide Criminal, OIG (HHS), EPLS/SAM (GSA).
+- Package #1 (539146, Standard): SSN Trace, County Criminal, Federal Criminal, Nationwide Criminal 7yr, NSOPW, FACIS Level III. Default for standard placements.
+- Package #2 (626709, Enhanced): Everything in #1 plus Statewide Criminal, OIG (HHS), EPLS/SAM (GSA). Used when state or facility requires additional checks.
+- Package #3 (626711, Full): Everything in #2 plus National Wants & Warrants, OIG variant. Used for lapse deals and government placements.
 - Drug & Health variant: adds Drug Screen (13-panel), TB Test (QuantiFERON), Physical Examination.
-- Triggers for #2: lapse deals, certain states, facility OIG/SAM requirements, government placements.
+- Triggers for #3: lapse deals, certain states, facility OIG/SAM requirements, government placements.
 
 STEP 4 — CREATE FA CANDIDATE:
 Use faCreateCandidate with the candidate's details from getLocalProfile. Use their Credentially profile ID as the clientReferenceId to maintain the link.

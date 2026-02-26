@@ -11,10 +11,10 @@
  * D&OHS items are ordered a la carte, not via packages.
  */
 
+// Medsol packages configured in QA (25 Feb 2026)
 const PACKAGE_1_ID = "539146"; // Standard: base background package
 const PACKAGE_2_ID = "626709"; // Enhanced: + state criminal + OIG/GSA
 const PACKAGE_3_ID = "626711"; // Full: + national wants & warrants
-const PACKAGE_DHS_ID = "626639"; // Legacy D&HS test package
 
 const STATES_REQUIRING_STATEWIDE_CRIMINAL = [
 	"california",
@@ -103,7 +103,7 @@ export function selectFAPackage(input: PackageSelectionInput): PackageSelection 
 	return {
 		packageId: PACKAGE_1_ID,
 		packageName: "Standard Screening",
-		reason: "Standard new placement -- background package",
+		reason: "Standard new placement -- base background package with SSN, county, nationwide, FACIS, and sex offender checks",
 		tier: 1,
 		includesDrugHealth: dhs,
 	};

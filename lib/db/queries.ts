@@ -1558,7 +1558,7 @@ export async function getSampleCandidate({
 	organisationId,
 }: {
 	organisationId: string;
-}): Promise<{ name: string; email: string } | null> {
+}): Promise<{ name: string; email: string; sampleElement?: string } | null> {
 	const [result] = await db
 		.select({
 			firstName: profiles.firstName,
@@ -1570,9 +1570,31 @@ export async function getSampleCandidate({
 		.limit(1);
 
 	if (!result) return null;
+
+	// Pick a candidate-scoped element, preferring categories candidates are likely to email about
+	const [element] = await db
+		.select({ name: complianceElements.name })
+		.from(complianceElements)
+		.where(
+			and(
+				eq(complianceElements.organisationId, organisationId),
+				eq(complianceElements.fulfilmentProvider, "candidate"),
+			),
+		)
+		.orderBy(
+			sql`CASE ${complianceElements.category}
+				WHEN 'health' THEN 0
+				WHEN 'professional' THEN 1
+				WHEN 'training' THEN 2
+				ELSE 3
+			END`,
+		)
+		.limit(1);
+
 	return {
 		name: `${result.firstName} ${result.lastName}`,
 		email: result.email,
+		sampleElement: element?.name,
 	};
 }
 

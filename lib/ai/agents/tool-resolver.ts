@@ -40,7 +40,8 @@ import { faGetReport } from "@/lib/ai/tools/fa-get-report";
 import { faSelectPackage } from "@/lib/ai/tools/fa-select-package";
 import { faListScreenings } from "@/lib/ai/tools/fa-list-screenings";
 import { createEscalation } from "@/lib/ai/tools/create-escalation";
-import { storeAttachment } from "@/lib/ai/tools/store-attachment";
+import { storeAttachment, createStoreAttachment } from "@/lib/ai/tools/store-attachment";
+import type { EmailAttachment } from "@/lib/ai/tools/store-attachment";
 import { uploadDocumentEvidence } from "@/lib/ai/tools/upload-document-evidence";
 import { verifyDocumentEvidence } from "@/lib/ai/tools/verify-document-evidence";
 
@@ -85,10 +86,12 @@ const toolRegistry: Record<string, Tool> = {
 	verifyDocumentEvidence: verifyDocumentEvidence as Tool,
 };
 
-/** Optional callbacks for context-aware tool resolution */
+/** Optional callbacks and context for tool resolution */
 export interface ToolResolverCallbacks {
 	/** Called when a browser action occurs during browseAndVerify */
 	onBrowserAction?: BrowserActionCallback;
+	/** Email attachments — when present, storeAttachment uses the index-based factory */
+	attachments?: EmailAttachment[];
 }
 
 /**
@@ -120,6 +123,17 @@ export function resolveTools(
 		// Context-aware factory for gdcBrowseVerify
 		if (name === "gdcBrowseVerify" && callbacks?.onBrowserAction) {
 			resolved[name] = createGdcBrowseVerify(callbacks.onBrowserAction) as Tool;
+			continue;
+		}
+
+		// Context-aware factory for storeAttachment — uses index-based variant
+		// when attachments are available so base64 data stays out of the prompt
+		if (
+			name === "storeAttachment" &&
+			callbacks?.attachments &&
+			callbacks.attachments.length > 0
+		) {
+			resolved[name] = createStoreAttachment(callbacks.attachments) as Tool;
 			continue;
 		}
 

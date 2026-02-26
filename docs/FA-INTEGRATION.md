@@ -59,9 +59,9 @@ Checks on a submitted screening and produces the structured dashboard you see in
 
 ## Screening Packages
 
-There are two tiers. Both use the same Sterling package in sandbox (`571732 Medical Solutions Package TEST`), but the selection logic is real.
+Three Medsol packages configured in QA (25 Feb 2026). Package selection is deterministic based on deal context.
 
-### Tier 1: Standard
+### Tier 1: Standard (Package 539146)
 
 The default. Includes:
 - SSN Trace
@@ -69,19 +69,26 @@ The default. Includes:
 - Enhanced Nationwide Criminal Search (7 year)
 - DOJ Sex Offender Search (NSOPW)
 - FACIS L3
-- Drivers Record
 
-### Tier 2: Standard + OIG/SAM
+### Tier 2: Enhanced (Package 626709)
 
 Everything in Tier 1 plus:
 - State Criminal Repository
-- OIG Excluded Parties
+- OIG Excluded Parties (HHS)
 - GSA Excluded Parties (SAM)
 
 **Tier 2 triggers:**
-- Deal type is `lapse` (candidate was inactive, needs full re-screening)
 - Facility requires OIG/SAM checks
 - State is California, New York, Illinois or Pennsylvania (requires statewide criminal search)
+
+### Tier 3: Full (Package 626711)
+
+Everything in Tier 2 plus:
+- National Wants & Warrants
+- OIG variant
+
+**Tier 3 triggers:**
+- Deal type is `lapse` (candidate was inactive, needs full re-screening)
 - Deal type is `government`
 - Candidate's last assignment ended more than 30 days ago
 

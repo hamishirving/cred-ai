@@ -13,7 +13,8 @@ import { getFAClient } from "@/lib/api/first-advantage/client";
 export const faCreateCandidate = tool({
 	description: `Create a candidate in First Advantage for background screening.
 Must be called before initiating a screening. Returns the FA candidate ID needed for screening.
-The candidate needs: name, email, dob, ssn, address (with ISO 3166-2 regionCode like "US-FL"), and driversLicense if required by the package.`,
+The candidate needs: name, email, dob, ssn, address (with ISO 3166-2 regionCode like "US-FL"), and driversLicense if required by the package.
+For packages 626709 and 626711, a licenses array is required. Pass licenseNumber and licenseName from the candidate's professional registration.`,
 
 	inputSchema: z.object({
 		givenName: z.string().describe("Candidate first name"),
@@ -54,6 +55,18 @@ The candidate needs: name, email, dob, ssn, address (with ISO 3166-2 regionCode 
 			.string()
 			.optional()
 			.describe("Driver's license issuing state (ISO 3166-2, e.g. US-FL)"),
+		licenseNumber: z
+			.string()
+			.optional()
+			.describe("Professional license number (e.g. from professionalRegistration)"),
+		licenseName: z
+			.string()
+			.optional()
+			.describe("License name (e.g. 'Nursing License', 'RN License')"),
+		licenseIssuingAgency: z
+			.string()
+			.optional()
+			.describe("License issuing agency name (e.g. 'State Board of Nursing')"),
 	}),
 
 	execute: async (input) => {
@@ -98,6 +111,28 @@ The candidate needs: name, email, dob, ssn, address (with ISO 3166-2 regionCode 
 					licenseNumber: input.driversLicenseNumber,
 					issuingAgency: input.driversLicenseState,
 				};
+			}
+
+			if (input.licenseNumber) {
+				payload.licenses = [
+					{
+						issuingAgency: {
+							name: input.licenseIssuingAgency || "State Board of Nursing",
+							...(input.municipality || input.regionCode
+								? {
+										address: {
+											municipality: input.municipality || "",
+											regionCode: input.regionCode || "",
+											countryCode: "US",
+										},
+									}
+								: {}),
+						},
+						number: input.licenseNumber,
+						name: input.licenseName || "Nursing License",
+						status: "active",
+					},
+				];
 			}
 
 			const candidate = await client.createCandidate(payload as unknown as Parameters<typeof client.createCandidate>[0]);
