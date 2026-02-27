@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import faIcon from "@/app/FA-icon.png";
 import { toast } from "@/components/toast";
@@ -39,6 +38,7 @@ import {
 	recommendDHSProducts,
 } from "@/lib/api/first-advantage/dhs-catalogue";
 import { DHSOrderDialog } from "@/components/placement/dhs-order-dialog";
+import { ExecutionModal } from "@/components/placement/execution-modal";
 
 // ============================================
 // Types
@@ -274,12 +274,16 @@ export function NextActionsSection({
 	facilityDrugTestRequirements = [],
 	onRefresh,
 }: NextActionsSectionProps) {
-	const router = useRouter();
 	const [tasks, setTasks] = useState(initialTasks);
 	const [submittingScreening, setSubmittingScreening] = useState(false);
 	const [checkingStatus, setCheckingStatus] = useState(false);
 	const [delegating, setDelegating] = useState(false);
 	const [dhsDialogOpen, setDhsDialogOpen] = useState(false);
+	const [modalExecution, setModalExecution] = useState<{
+		agentId: string;
+		executionId: string;
+		agentName: string;
+	} | null>(null);
 
 	// Only show pending + in_progress tasks
 	const activeTasks = tasks.filter(
@@ -399,14 +403,10 @@ export function NextActionsSection({
 
 			const result = await streamAgentExecution(response, (execId) => {
 				updateTask(faTask.id, { status: "in_progress" });
-				toast({
-					type: "success",
-					description: "FA screening initiated",
-					action: {
-						label: "View \u2192",
-						onClick: () =>
-							router.push(`/agents/background-screening/executions/${execId}`),
-					},
+				setModalExecution({
+					agentId: "background-screening",
+					executionId: execId,
+					agentName: "Background Screening",
 				});
 			});
 
@@ -447,16 +447,10 @@ export function NextActionsSection({
 			}
 
 			const result = await streamAgentExecution(response, (execId) => {
-				toast({
-					type: "success",
-					description: "Checking screening status\u2026",
-					action: {
-						label: "View \u2192",
-						onClick: () =>
-							router.push(
-								`/agents/screening-status-monitor/executions/${execId}`,
-							),
-					},
+				setModalExecution({
+					agentId: "screening-status-monitor",
+					executionId: execId,
+					agentName: "Screening Status",
 				});
 			});
 
@@ -545,16 +539,10 @@ export function NextActionsSection({
 									taskIds.includes(t.id) ? { ...t, ...inProgressUpdates } : t,
 								),
 							);
-							toast({
-								type: "success",
-								description: `Delegated ${taskIds.length} item${taskIds.length !== 1 ? "s" : ""} to AI Companion`,
-								action: {
-									label: "View \u2192",
-									onClick: () =>
-										router.push(
-											`/agents/onboarding-companion/executions/${executionId}`,
-										),
-								},
+							setModalExecution({
+								agentId: "onboarding-companion",
+								executionId: executionId!,
+								agentName: "Onboarding Companion",
 							});
 						}
 
@@ -685,9 +673,11 @@ export function NextActionsSection({
 							<button
 								type="button"
 								onClick={() =>
-									router.push(
-										`/agents/onboarding-companion/executions/${task.executionId}`,
-									)
+									setModalExecution({
+										agentId: "onboarding-companion",
+										executionId: task.executionId!,
+										agentName: "Onboarding Companion",
+									})
 								}
 								className="text-[10px] text-primary hover:text-primary/70 underline underline-offset-2 cursor-pointer transition-colors duration-150"
 							>
@@ -886,6 +876,18 @@ export function NextActionsSection({
 					</div>
 				)}
 			</div>
+
+			{modalExecution && (
+				<ExecutionModal
+					open={!!modalExecution}
+					onOpenChange={(open) => {
+						if (!open) setModalExecution(null);
+					}}
+					agentId={modalExecution.agentId}
+					executionId={modalExecution.executionId}
+					agentName={modalExecution.agentName}
+				/>
+			)}
 
 			<DHSOrderDialog
 				open={dhsDialogOpen}

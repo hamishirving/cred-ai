@@ -5,6 +5,10 @@ import type { AgentStep } from "@/lib/ai/agents/types";
 import { EmailDraftComponent } from "@/components/email-draft";
 import { SmsMessageComponent } from "@/components/sms-message";
 import { CallResultsDisplay } from "./call-results-display";
+import {
+	FACandidateDisplay,
+	FAScreeningInitiationDisplay,
+} from "./fa-tool-displays";
 
 export type ToolDisplayProps = {
 	data: unknown;
@@ -101,5 +105,13 @@ export const toolDisplayRegistry: Record<string, ToolDisplay> = {
 	getCallStatus: {
 		label: "View Call Results",
 		component: CallResultsWrapper,
+	},
+	faCreateCandidate: {
+		label: "View Candidate",
+		component: FACandidateDisplay,
+	},
+	faInitiateScreening: {
+		label: "View Screening",
+		component: FAScreeningInitiationDisplay,
 	},
 };

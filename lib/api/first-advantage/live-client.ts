@@ -155,6 +155,10 @@ export class LiveFAClient implements FAClient {
 		});
 	}
 
+	async getCandidate(candidateId: string): Promise<FACandidate> {
+		return this.request<FACandidate>(`/candidates/${candidateId}`);
+	}
+
 	async findCandidateByEmail(email: string): Promise<FACandidate | null> {
 		try {
 			const results = await this.request<FACandidate[]>(

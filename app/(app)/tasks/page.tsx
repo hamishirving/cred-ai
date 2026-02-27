@@ -1,30 +1,32 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { formatDistanceToNow, format } from "date-fns";
-import Link from "next/link";
 import {
 	type ColumnDef,
 	flexRender,
 	getCoreRowModel,
-	useReactTable,
+	getPaginationRowModel,
 	getSortedRowModel,
 	type SortingState,
-	getPaginationRowModel,
+	useReactTable,
 } from "@tanstack/react-table";
+import { format, formatDistanceToNow } from "date-fns";
 import {
 	ArrowUpDown,
-	Check,
-	Clock,
-	MoreHorizontal,
 	ArrowUpRight,
-	X,
 	Bell,
-	User,
-	Sparkles,
+	Check,
 	ChevronLeft,
 	ChevronRight,
+	Clock,
+	MoreHorizontal,
+	Sparkles,
+	User,
+	X,
 } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { TableLoader } from "@/components/elements/table-loader";
+import { TaskDetailModal } from "@/components/tasks/task-detail-modal";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,9 +53,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
-import { TableLoader } from "@/components/elements/table-loader";
 import { useOrg } from "@/lib/org-context";
+import { cn } from "@/lib/utils";
 
 interface Task {
 	id: string;
@@ -66,14 +67,19 @@ interface Task {
 	source: "ai_agent" | "manual" | "system";
 	agentId: string | null;
 	insightId: string | null;
+	executionId: string | null;
 	aiReasoning: string | null;
+	complianceElementSlugs?: string[] | null;
 	subjectType: string | null;
 	subjectId: string | null;
 	assigneeId: string | null;
 	assigneeRole: string | null;
+	scheduledFor: string | null;
 	dueAt: string | null;
 	snoozedUntil: string | null;
 	completedAt: string | null;
+	completedBy: string | null;
+	completionNotes: string | null;
 	createdAt: string;
 	updatedAt: string;
 	subject?: {
@@ -86,23 +92,53 @@ interface Task {
 }
 
 const priorityConfig = {
-	urgent: { label: "Urgent", color: "bg-destructive", badgeVariant: "danger" as const },
-	high: { label: "High", color: "bg-chart-3", badgeVariant: "warning" as const },
-	medium: { label: "Medium", color: "bg-chart-3/70", badgeVariant: "warning" as const },
-	low: { label: "Low", color: "bg-muted-foreground/70", badgeVariant: "neutral" as const },
+	urgent: {
+		label: "Urgent",
+		color: "bg-destructive",
+		badgeVariant: "danger" as const,
+	},
+	high: {
+		label: "High",
+		color: "bg-chart-3",
+		badgeVariant: "warning" as const,
+	},
+	medium: {
+		label: "Medium",
+		color: "bg-chart-3/70",
+		badgeVariant: "warning" as const,
+	},
+	low: {
+		label: "Low",
+		color: "bg-muted-foreground/70",
+		badgeVariant: "neutral" as const,
+	},
 };
 
 const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
 
 const statusConfig = {
 	pending: { label: "Pending", icon: Clock, color: "text-[var(--warning)]" },
-	in_progress: { label: "In Progress", icon: ArrowUpRight, color: "text-primary" },
-	completed: { label: "Completed", icon: Check, color: "text-[var(--positive)]" },
+	in_progress: {
+		label: "In Progress",
+		icon: ArrowUpRight,
+		color: "text-primary",
+	},
+	completed: {
+		label: "Completed",
+		icon: Check,
+		color: "text-[var(--positive)]",
+	},
 	dismissed: { label: "Dismissed", icon: X, color: "text-muted-foreground" },
 	snoozed: { label: "Snoozed", icon: Bell, color: "text-muted-foreground" },
 };
 
-const statusOrder = { pending: 0, in_progress: 1, snoozed: 2, completed: 3, dismissed: 4 };
+const statusOrder = {
+	pending: 0,
+	in_progress: 1,
+	snoozed: 2,
+	completed: 3,
+	dismissed: 4,
+};
 
 function getInitials(name: string): string {
 	return name
@@ -123,7 +159,9 @@ const avatarColors = [
 ];
 
 function getAvatarColor(name: string): string {
-	const hash = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+	const hash = name
+		.split("")
+		.reduce((acc, char) => acc + char.charCodeAt(0), 0);
 	return avatarColors[hash % avatarColors.length];
 }
 
@@ -180,9 +218,16 @@ function createColumns(
 				const task = row.original;
 				return (
 					<div className="flex items-center gap-3">
-						<div className={cn("w-1 h-8 rounded-full shrink-0", priorityConfig[task.priority].color)} />
+						<div
+							className={cn(
+								"w-1 h-8 rounded-full shrink-0",
+								priorityConfig[task.priority].color,
+							)}
+						/>
 						<div className="min-w-0">
-							<div className="font-medium truncate max-w-[300px]">{task.title}</div>
+							<div className="font-medium truncate max-w-[300px]">
+								{task.title}
+							</div>
 							{task.description && (
 								<div className="text-xs text-muted-foreground truncate max-w-[300px]">
 									{task.description.split("\n")[0]}
@@ -212,22 +257,27 @@ function createColumns(
 					return <span className="text-muted-foreground text-sm">—</span>;
 				}
 
-				const href = task.subject.type === "placement"
-					? `/placements/${task.subjectId}`
-					: `/candidates/${task.subjectId}`;
+				const href =
+					task.subject.type === "placement"
+						? `/placements/${task.subjectId}`
+						: `/candidates/${task.subjectId}`;
 
 				return (
-					<Link
-						href={href}
-						className="group flex items-center gap-2"
-					>
+					<Link href={href} className="group flex items-center gap-2">
 						<Avatar className="h-6 w-6">
-							<AvatarFallback className={cn(getAvatarColor(task.subject.name), "text-[10px] text-white")}>
+							<AvatarFallback
+								className={cn(
+									getAvatarColor(task.subject.name),
+									"text-[10px] text-white",
+								)}
+							>
 								{getInitials(task.subject.name)}
 							</AvatarFallback>
 						</Avatar>
 						<div className="min-w-0">
-							<div className="text-sm group-hover:text-primary transition-colors duration-150">{task.subject.name}</div>
+							<div className="text-sm group-hover:text-primary transition-colors duration-150">
+								{task.subject.name}
+							</div>
 							{task.subject.facility && (
 								<div className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0 rounded-full w-fit">
 									{task.subject.facility}
@@ -260,7 +310,10 @@ function createColumns(
 				);
 			},
 			sortingFn: (rowA, rowB) => {
-				return priorityOrder[rowA.original.priority] - priorityOrder[rowB.original.priority];
+				return (
+					priorityOrder[rowA.original.priority] -
+					priorityOrder[rowB.original.priority]
+				);
 			},
 		},
 		{
@@ -280,7 +333,9 @@ function createColumns(
 				const StatusIcon = statusConfig[task.status].icon;
 				return (
 					<div className="flex items-center gap-1.5">
-						<StatusIcon className={cn("h-4 w-4", statusConfig[task.status].color)} />
+						<StatusIcon
+							className={cn("h-4 w-4", statusConfig[task.status].color)}
+						/>
 						<span className={cn("text-sm", statusConfig[task.status].color)}>
 							{statusConfig[task.status].label}
 						</span>
@@ -288,7 +343,9 @@ function createColumns(
 				);
 			},
 			sortingFn: (rowA, rowB) => {
-				return statusOrder[rowA.original.status] - statusOrder[rowB.original.status];
+				return (
+					statusOrder[rowA.original.status] - statusOrder[rowB.original.status]
+				);
 			},
 		},
 		{
@@ -306,14 +363,19 @@ function createColumns(
 			),
 			cell: ({ row }) => {
 				const task = row.original;
-				const isOverdue = task.dueAt && new Date(task.dueAt) < new Date() && task.status === "pending";
+				const isOverdue =
+					task.dueAt &&
+					new Date(task.dueAt) < new Date() &&
+					task.status === "pending";
 
 				if (task.dueAt) {
 					return (
-						<span className={cn(
-							"text-sm tabular-nums",
-							isOverdue ? "font-medium text-destructive" : "text-foreground"
-						)}>
+						<span
+							className={cn(
+								"text-sm tabular-nums",
+								isOverdue ? "font-medium text-destructive" : "text-foreground",
+							)}
+						>
 							{format(new Date(task.dueAt), "MMM d")}
 						</span>
 					);
@@ -343,7 +405,9 @@ function createColumns(
 			),
 			cell: ({ row }) => (
 				<span className="text-muted-foreground text-sm">
-					{formatDistanceToNow(new Date(row.original.createdAt), { addSuffix: true })}
+					{formatDistanceToNow(new Date(row.original.createdAt), {
+						addSuffix: true,
+					})}
 				</span>
 			),
 		},
@@ -352,12 +416,20 @@ function createColumns(
 			enableSorting: false,
 			cell: ({ row }) => {
 				const task = row.original;
-				const isActionable = task.status === "pending" || task.status === "in_progress" || task.status === "snoozed";
+				const isActionable =
+					task.status === "pending" ||
+					task.status === "in_progress" ||
+					task.status === "snoozed";
 
 				return (
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
-							<Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Task actions">
+							<Button
+								variant="ghost"
+								size="icon"
+								className="h-8 w-8"
+								aria-label="Task actions"
+							>
 								<MoreHorizontal className="h-4 w-4" />
 							</Button>
 						</DropdownMenuTrigger>
@@ -368,16 +440,33 @@ function createColumns(
 										<Check className="mr-2 h-4 w-4" />
 										Mark Complete
 									</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => onSnooze(task.id, new Date(Date.now() + 24 * 60 * 60 * 1000))}>
+									<DropdownMenuItem
+										onClick={() =>
+											onSnooze(
+												task.id,
+												new Date(Date.now() + 24 * 60 * 60 * 1000),
+											)
+										}
+									>
 										<Clock className="mr-2 h-4 w-4" />
 										Snooze 1 Day
 									</DropdownMenuItem>
-									<DropdownMenuItem onClick={() => onSnooze(task.id, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))}>
+									<DropdownMenuItem
+										onClick={() =>
+											onSnooze(
+												task.id,
+												new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+											)
+										}
+									>
 										<Clock className="mr-2 h-4 w-4" />
 										Snooze 1 Week
 									</DropdownMenuItem>
 									<DropdownMenuSeparator />
-									<DropdownMenuItem onClick={() => onDismiss(task.id)} className="text-muted-foreground">
+									<DropdownMenuItem
+										onClick={() => onDismiss(task.id)}
+										className="text-muted-foreground"
+									>
 										<X className="mr-2 h-4 w-4" />
 										Dismiss
 									</DropdownMenuItem>
@@ -393,9 +482,17 @@ function createColumns(
 								<>
 									{isActionable && <DropdownMenuSeparator />}
 									<DropdownMenuItem asChild>
-										<Link href={task.subjectType === "placement" ? `/placements/${task.subjectId}` : `/candidates/${task.subjectId}`}>
+										<Link
+											href={
+												task.subjectType === "placement"
+													? `/placements/${task.subjectId}`
+													: `/candidates/${task.subjectId}`
+											}
+										>
 											<User className="mr-2 h-4 w-4" />
-											{task.subjectType === "placement" ? "View Placement" : "View Candidate"}
+											{task.subjectType === "placement"
+												? "View Placement"
+												: "View Candidate"}
 										</Link>
 									</DropdownMenuItem>
 								</>
@@ -415,12 +512,19 @@ export default function TasksPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [sorting, setSorting] = useState<SortingState>([]);
 
+	// Task detail modal
+	const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+	const [modalOpen, setModalOpen] = useState(false);
+
 	// Filters
 	const [statusFilter, setStatusFilter] = useState<string>("active");
 	const [priorityFilter, setPriorityFilter] = useState<string>("all");
 	const [sourceFilter, setSourceFilter] = useState<string>("all");
 
-	const hasActiveFilters = statusFilter !== "active" || priorityFilter !== "all" || sourceFilter !== "all";
+	const hasActiveFilters =
+		statusFilter !== "active" ||
+		priorityFilter !== "all" ||
+		sourceFilter !== "all";
 
 	// Fetch all tasks once, filter client-side
 	useEffect(() => {
@@ -455,17 +559,22 @@ export default function TasksPage() {
 		let result = allTasks;
 
 		if (statusFilter === "active") {
-			result = result.filter(t => t.status === "pending" || t.status === "in_progress" || t.status === "snoozed");
+			result = result.filter(
+				(t) =>
+					t.status === "pending" ||
+					t.status === "in_progress" ||
+					t.status === "snoozed",
+			);
 		} else if (statusFilter !== "all") {
-			result = result.filter(t => t.status === statusFilter);
+			result = result.filter((t) => t.status === statusFilter);
 		}
 
 		if (priorityFilter !== "all") {
-			result = result.filter(t => t.priority === priorityFilter);
+			result = result.filter((t) => t.priority === priorityFilter);
 		}
 
 		if (sourceFilter !== "all") {
-			result = result.filter(t => t.source === sourceFilter);
+			result = result.filter((t) => t.source === sourceFilter);
 		}
 
 		return result;
@@ -473,9 +582,24 @@ export default function TasksPage() {
 
 	// Counts from full dataset (unaffected by filters)
 	const counts = useMemo(() => {
-		const status: Record<string, number> = { pending: 0, in_progress: 0, snoozed: 0, completed: 0, dismissed: 0 };
-		const priority: Record<string, number> = { urgent: 0, high: 0, medium: 0, low: 0 };
-		const source: Record<string, number> = { ai_agent: 0, manual: 0, system: 0 };
+		const status: Record<string, number> = {
+			pending: 0,
+			in_progress: 0,
+			snoozed: 0,
+			completed: 0,
+			dismissed: 0,
+		};
+		const priority: Record<string, number> = {
+			urgent: 0,
+			high: 0,
+			medium: 0,
+			low: 0,
+		};
+		const source: Record<string, number> = {
+			ai_agent: 0,
+			manual: 0,
+			system: 0,
+		};
 
 		for (const t of allTasks) {
 			status[t.status] = (status[t.status] ?? 0) + 1;
@@ -483,38 +607,87 @@ export default function TasksPage() {
 			source[t.source] = (source[t.source] ?? 0) + 1;
 		}
 
-		const active = (status.pending ?? 0) + (status.in_progress ?? 0) + (status.snoozed ?? 0);
+		const active =
+			(status.pending ?? 0) + (status.in_progress ?? 0) + (status.snoozed ?? 0);
 
 		return { status, priority, source, active, total: allTasks.length };
 	}, [allTasks]);
 
 	// Task actions
-	const updateTask = async (id: string, updates: Record<string, unknown>) => {
-		try {
-			const response = await fetch(`/api/tasks/${id}`, {
-				method: "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(updates),
-			});
+	const updateTask = useCallback(
+		async (id: string, updates: Record<string, unknown>) => {
+			try {
+				const response = await fetch(`/api/tasks/${id}`, {
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(updates),
+				});
 
-			if (response.ok) {
-				const data = await response.json();
-				setAllTasks(prev => prev.map(t => t.id === id ? { ...t, ...data.task } : t));
+				if (response.ok) {
+					const data = await response.json();
+					const merged = (prev: Task) => ({ ...prev, ...data.task });
+					setAllTasks((prev) => prev.map((t) => (t.id === id ? merged(t) : t)));
+					setSelectedTask((prev) => (prev?.id === id ? merged(prev) : prev));
+				}
+			} catch (err) {
+				console.error("Failed to update task:", err);
 			}
-		} catch (err) {
-			console.error("Failed to update task:", err);
-		}
-	};
+		},
+		[],
+	);
 
-	const handleComplete = (id: string) => updateTask(id, { status: "completed" });
+	const handleComplete = (id: string) =>
+		updateTask(id, { status: "completed" });
 	const handleDismiss = (id: string) => updateTask(id, { status: "dismissed" });
-	const handleSnooze = (id: string, until: Date) => updateTask(id, { status: "snoozed", snoozedUntil: until.toISOString() });
+	const handleSnooze = (id: string, until: Date) =>
+		updateTask(id, { status: "snoozed", snoozedUntil: until.toISOString() });
 	const handleReopen = (id: string) => updateTask(id, { status: "pending" });
 
-	const candidateLabel = selectedOrg?.settings?.terminology?.candidate || "Candidate";
+	const openTaskDetail = useCallback(async (task: Task) => {
+		// Use list data immediately, then enrich with full detail
+		setSelectedTask(task);
+		setModalOpen(true);
+		try {
+			const response = await fetch(`/api/tasks/${task.id}`);
+			if (response.ok) {
+				const data = await response.json();
+				setSelectedTask((prev) =>
+					prev?.id === task.id ? { ...prev, ...data.task } : prev,
+				);
+			}
+		} catch {
+			// List data is good enough if detail fetch fails
+		}
+	}, []);
+
+	const handleRowClick = useCallback(
+		(e: React.MouseEvent, task: Task) => {
+			// Don't open sheet if clicking on interactive elements
+			const target = e.target as HTMLElement;
+			if (
+				target.closest(
+					"a, button, [role=menuitem], [data-radix-collection-item]",
+				)
+			)
+				return;
+			openTaskDetail(task);
+		},
+		[openTaskDetail],
+	);
+
+	const candidateLabel =
+		selectedOrg?.settings?.terminology?.candidate || "Candidate";
 
 	const columns = useMemo(
-		() => createColumns(handleComplete, handleDismiss, handleSnooze, handleReopen, statusFilter, candidateLabel),
+		() =>
+			createColumns(
+				handleComplete,
+				handleDismiss,
+				handleSnooze,
+				handleReopen,
+				statusFilter,
+				candidateLabel,
+			),
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[statusFilter, candidateLabel],
 	);
@@ -544,7 +717,9 @@ export default function TasksPage() {
 		<div className="flex min-h-full flex-1 flex-col gap-10 bg-background p-8">
 			{/* Header */}
 			<div>
-				<h1 className="text-balance text-4xl font-semibold tracking-tight text-foreground">Tasks</h1>
+				<h1 className="text-balance text-4xl font-semibold tracking-tight text-foreground">
+					Tasks
+				</h1>
 				<p className="mt-1 text-sm text-muted-foreground">
 					Compliance actions and follow-ups requiring attention
 				</p>
@@ -556,7 +731,10 @@ export default function TasksPage() {
 				<div className="flex items-center gap-1 border-b border-border">
 					{statusTabs.map((tab) => {
 						const isSelected = statusFilter === tab.value;
-						const count = tab.value === "active" ? counts.active : counts.status[tab.value] ?? 0;
+						const count =
+							tab.value === "active"
+								? counts.active
+								: (counts.status[tab.value] ?? 0);
 						return (
 							<button
 								key={tab.value}
@@ -565,14 +743,16 @@ export default function TasksPage() {
 									"px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer whitespace-nowrap outline-none",
 									isSelected
 										? "border-primary text-primary"
-										: "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
+										: "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
 								)}
 							>
 								{tab.label}
-								<span className={cn(
-									"ml-1.5 tabular-nums text-xs",
-									isSelected ? "text-primary/70" : "text-muted-foreground/80"
-								)}>
+								<span
+									className={cn(
+										"ml-1.5 tabular-nums text-xs",
+										isSelected ? "text-primary/70" : "text-muted-foreground/80",
+									)}
+								>
 									{count}
 								</span>
 							</button>
@@ -596,9 +776,15 @@ export default function TasksPage() {
 						</SelectTrigger>
 						<SelectContent>
 							<SelectItem value="all">All priorities</SelectItem>
-							<SelectItem value="urgent">Urgent ({counts.priority.urgent})</SelectItem>
-							<SelectItem value="high">High ({counts.priority.high})</SelectItem>
-							<SelectItem value="medium">Medium ({counts.priority.medium})</SelectItem>
+							<SelectItem value="urgent">
+								Urgent ({counts.priority.urgent})
+							</SelectItem>
+							<SelectItem value="high">
+								High ({counts.priority.high})
+							</SelectItem>
+							<SelectItem value="medium">
+								Medium ({counts.priority.medium})
+							</SelectItem>
 							<SelectItem value="low">Low ({counts.priority.low})</SelectItem>
 						</SelectContent>
 					</Select>
@@ -608,9 +794,15 @@ export default function TasksPage() {
 						</SelectTrigger>
 						<SelectContent>
 							<SelectItem value="all">All sources</SelectItem>
-							<SelectItem value="ai_agent">AI ({counts.source.ai_agent})</SelectItem>
-							<SelectItem value="manual">Manual ({counts.source.manual})</SelectItem>
-							<SelectItem value="system">System ({counts.source.system})</SelectItem>
+							<SelectItem value="ai_agent">
+								AI ({counts.source.ai_agent})
+							</SelectItem>
+							<SelectItem value="manual">
+								Manual ({counts.source.manual})
+							</SelectItem>
+							<SelectItem value="system">
+								System ({counts.source.system})
+							</SelectItem>
 						</SelectContent>
 					</Select>
 				</div>
@@ -628,74 +820,97 @@ export default function TasksPage() {
 				{isLoading ? (
 					<TableLoader cols={7} rows={10} />
 				) : (
-				<Table>
-					<TableHeader>
-						{table.getHeaderGroups().map((headerGroup) => (
-							<TableRow key={headerGroup.id} className="bg-muted hover:bg-muted">
-								{headerGroup.headers.map((header) => (
-									<TableHead
-										key={header.id}
-										className={cn(
-											"text-xs font-medium text-muted-foreground",
-											header.id === "title" && "w-[350px]",
-											header.id === "subject" && "w-[180px]",
-											header.id === "priority" && "w-[150px]",
-											header.id === "status" && "w-[120px]",
-											header.id === "dueAt" && "w-[100px]",
-											header.id === "createdAt" && "w-[120px]",
-											header.id === "actions" && "w-[50px]",
-										)}
-									>
-										{header.isPlaceholder
-											? null
-											: flexRender(header.column.columnDef.header, header.getContext())}
-									</TableHead>
-								))}
-							</TableRow>
-						))}
-					</TableHeader>
-					<TableBody>
-						{table.getRowModel().rows.length > 0 ? (
-							table.getRowModel().rows.map((row) => (
+					<Table>
+						<TableHeader>
+							{table.getHeaderGroups().map((headerGroup) => (
 								<TableRow
-									key={row.id}
-									className={cn(
-										"bg-card",
-										row.original.status === "completed" && "opacity-60",
-										row.original.status === "dismissed" && "opacity-50",
-									)}
+									key={headerGroup.id}
+									className="bg-muted hover:bg-muted"
 								>
-									{row.getVisibleCells().map((cell) => (
-										<TableCell key={cell.id}>
-											{flexRender(cell.column.columnDef.cell, cell.getContext())}
-										</TableCell>
+									{headerGroup.headers.map((header) => (
+										<TableHead
+											key={header.id}
+											className={cn(
+												"text-xs font-medium text-muted-foreground",
+												header.id === "title" && "w-[350px]",
+												header.id === "subject" && "w-[180px]",
+												header.id === "priority" && "w-[150px]",
+												header.id === "status" && "w-[120px]",
+												header.id === "dueAt" && "w-[100px]",
+												header.id === "createdAt" && "w-[120px]",
+												header.id === "actions" && "w-[50px]",
+											)}
+										>
+											{header.isPlaceholder
+												? null
+												: flexRender(
+														header.column.columnDef.header,
+														header.getContext(),
+													)}
+										</TableHead>
 									))}
 								</TableRow>
-							))
-						) : (
-							<TableRow className="bg-card">
-								<TableCell colSpan={columns.length} className="h-32 text-center">
-									<div className="flex flex-col items-center justify-center">
-										<Check className="mb-3 h-8 w-8 text-muted-foreground/80" aria-hidden="true" />
-										<h3 className="text-xl font-semibold text-foreground">No tasks found</h3>
-										<p className="mt-1 max-w-[40ch] text-sm text-muted-foreground">
-											{statusFilter === "active"
-												? "All caught up! No active tasks requiring attention."
-												: "No tasks match your current filters."}
-										</p>
-									</div>
-								</TableCell>
-							</TableRow>
-						)}
-					</TableBody>
-				</Table>
+							))}
+						</TableHeader>
+						<TableBody>
+							{table.getRowModel().rows.length > 0 ? (
+								table.getRowModel().rows.map((row) => (
+									<TableRow
+										key={row.id}
+										className={cn(
+											"bg-card cursor-pointer",
+											row.original.status === "completed" && "opacity-60",
+											row.original.status === "dismissed" && "opacity-50",
+										)}
+										onClick={(e) => handleRowClick(e, row.original)}
+									>
+										{row.getVisibleCells().map((cell) => (
+											<TableCell key={cell.id}>
+												{flexRender(
+													cell.column.columnDef.cell,
+													cell.getContext(),
+												)}
+											</TableCell>
+										))}
+									</TableRow>
+								))
+							) : (
+								<TableRow className="bg-card">
+									<TableCell
+										colSpan={columns.length}
+										className="h-32 text-center"
+									>
+										<div className="flex flex-col items-center justify-center">
+											<Check
+												className="mb-3 h-8 w-8 text-muted-foreground/80"
+												aria-hidden="true"
+											/>
+											<h3 className="text-xl font-semibold text-foreground">
+												No tasks found
+											</h3>
+											<p className="mt-1 max-w-[40ch] text-sm text-muted-foreground">
+												{statusFilter === "active"
+													? "All caught up! No active tasks requiring attention."
+													: "No tasks match your current filters."}
+											</p>
+										</div>
+									</TableCell>
+								</TableRow>
+							)}
+						</TableBody>
+					</Table>
 				)}
 
 				{/* Pagination */}
 				{!isLoading && table.getPageCount() > 1 && (
 					<div className="flex items-center justify-between border-t border-border px-4 py-2 text-xs text-muted-foreground">
 						<span>
-							{table.getState().pagination.pageIndex * 10 + 1}–{Math.min((table.getState().pagination.pageIndex + 1) * 10, filteredTasks.length)} of {filteredTasks.length}
+							{table.getState().pagination.pageIndex * 10 + 1}–
+							{Math.min(
+								(table.getState().pagination.pageIndex + 1) * 10,
+								filteredTasks.length,
+							)}{" "}
+							of {filteredTasks.length}
 						</span>
 						<div className="flex items-center gap-1">
 							<Button
@@ -720,6 +935,14 @@ export default function TasksPage() {
 					</div>
 				)}
 			</Card>
+
+			<TaskDetailModal
+				task={selectedTask}
+				open={modalOpen}
+				onOpenChange={setModalOpen}
+				onUpdate={updateTask}
+				candidateLabel={candidateLabel}
+			/>
 		</div>
 	);
 }

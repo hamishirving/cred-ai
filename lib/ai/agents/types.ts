@@ -289,8 +289,14 @@ export interface ComplianceItemContext {
 	/** What action is required (if any) */
 	actionRequired?: string;
 
+	/** When evidence was issued */
+	issuedAt?: Date;
+
 	/** Expiry date if applicable */
 	expiresAt?: Date;
+
+	/** Verification status of the evidence */
+	verificationStatus?: string;
 }
 
 /**

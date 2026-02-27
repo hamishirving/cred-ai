@@ -40,6 +40,19 @@ Use getAgentMemory with agentId "onboarding-companion", the candidate's profile 
 - How many times you've contacted this candidate
 If no memory exists, this is the first outreach — be welcoming.
 
+FIRST-TIME WELCOME RULE:
+If no memory exists (first outreach), send a welcome SMS first (if phone is available in E.164 format) using sendSms.
+The SMS must:
+- Greet the candidate by first name
+- Tell them to check their inbox for how to get started
+- Include the portal URL as fallback: https://portal.credentially.io
+
+Example structure:
+"Hi <FirstName>, welcome to Credentially. Please check your inbox for how to get started, or visit your portal: https://portal.credentially.io"
+
+After sending this welcome SMS, continue with your normal communication flow (detailed email if needed).
+If phone is missing/invalid, skip SMS and continue with email.
+
 ANALYSE:
 Compare current compliance state against memory:
 - What's NEW since last run? (newly completed items to celebrate)

@@ -1,7 +1,7 @@
 "use client";
 
+import { GitBranch, Package } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, GitBranch } from "lucide-react";
 import { PackageBrowser } from "./package-browser";
 import { RequirementBuilder } from "./requirement-builder";
 
@@ -13,10 +13,12 @@ export interface PackageData {
 	category: string | null;
 	onlyJurisdictions: string[] | null;
 	isDefault: boolean;
+	isActive: boolean;
 	version: number;
 	updatedAt: string;
 	elementCount: number;
 	elements: Array<{
+		id: string;
 		slug: string;
 		name: string;
 		category: string | null;
@@ -24,18 +26,45 @@ export interface PackageData {
 		evidenceType: string;
 		expiryDays: number | null;
 		faHandled: boolean;
+		displayOrder: number;
 	}>;
+	assignments: {
+		roleIds: string[];
+		jurisdictions: string[];
+		workNodeTypeIds: string[];
+	};
 }
 
 export interface RoleData {
+	id: string;
 	slug: string;
 	name: string;
+}
+
+export interface ComplianceElementData {
+	id: string;
+	name: string;
+	slug: string;
+	category: string | null;
+	scope: string;
+	evidenceType: string;
+	expiryDays: number | null;
+	faHandled: boolean;
+}
+
+export interface WorkNodeTypeData {
+	id: string;
+	name: string;
+	slug: string;
+	level: number;
 }
 
 interface ComplianceSettingsProps {
 	organisationId: string;
 	packages: PackageData[];
 	roles: RoleData[];
+	elements: ComplianceElementData[];
+	workNodeTypes: WorkNodeTypeData[];
 	jurisdictions: string[];
 	facilityTypes: string[];
 	rolePackageMapping: Record<string, string[]>;
@@ -45,6 +74,8 @@ export function ComplianceSettings({
 	organisationId,
 	packages,
 	roles,
+	elements,
+	workNodeTypes,
 	jurisdictions,
 	facilityTypes,
 	rolePackageMapping,
@@ -64,8 +95,12 @@ export function ComplianceSettings({
 
 			<TabsContent value="packages" className="mt-0">
 				<PackageBrowser
+					organisationId={organisationId}
 					packages={packages}
 					roles={roles}
+					elements={elements}
+					workNodeTypes={workNodeTypes}
+					jurisdictions={jurisdictions}
 					rolePackageMapping={rolePackageMapping}
 				/>
 			</TabsContent>

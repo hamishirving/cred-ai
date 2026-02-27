@@ -29,7 +29,11 @@ interface PlacementsKanbanProps {
 	onStatusChange: (id: string, status: string) => Promise<void>;
 }
 
-export function PlacementsKanban({ placements, loading, onStatusChange }: PlacementsKanbanProps) {
+export function PlacementsKanban({
+	placements,
+	loading,
+	onStatusChange,
+}: PlacementsKanbanProps) {
 	const grouped = useMemo(() => {
 		const map: Record<string, PlacementRow[]> = {};
 		for (const status of KANBAN_STATUSES) {
@@ -93,7 +97,10 @@ function KanbanColumn({
 			{/* Column header */}
 			<div className="flex items-center gap-2 px-3 py-2.5">
 				<span
-					className={cn("h-2 w-2 rounded-full flex-shrink-0", STATUS_DOT_COLOR[status])}
+					className={cn(
+						"h-2 w-2 rounded-full flex-shrink-0",
+						STATUS_DOT_COLOR[status],
+					)}
 				/>
 				<span className="text-xs font-medium text-foreground">
 					{STATUS_LABELS[status] || status}
@@ -176,7 +183,7 @@ function KanbanCard({
 						snapshot.isDragging && "shadow-md",
 					)}
 				>
-					{/* Top row: avatar + name */}
+					{/* Top row: avatar + name + compliance */}
 					<div className="flex items-center gap-2">
 						<Avatar className="h-6 w-6 flex-shrink-0">
 							<AvatarFallback
@@ -188,26 +195,39 @@ function KanbanCard({
 								{getInitials(placement.candidateName)}
 							</AvatarFallback>
 						</Avatar>
-						<span className="text-sm font-medium truncate">
+						<span className="text-sm font-medium truncate flex-1">
 							{placement.candidateName}
+						</span>
+						<span
+							className={cn(
+								"text-sm font-semibold tabular-nums shrink-0",
+								complianceColor,
+							)}
+						>
+							{placement.compliancePercentage}%
 						</span>
 					</div>
 
-					{/* Role */}
+					{/* Role + facility */}
 					<p className="mt-1.5 text-xs text-muted-foreground truncate">
 						{placement.roleName}
 					</p>
-
-					{/* Facility */}
 					<p className="text-xs text-muted-foreground truncate">
 						{placement.facilityName}
 					</p>
 
-					{/* Bottom row: compliance + deal type */}
+					{/* Bottom row: start date + deal type */}
 					<div className="mt-2 flex items-center justify-between">
-						<span className={cn("text-xs font-medium tabular-nums", complianceColor)}>
-							{placement.compliancePercentage}%
-						</span>
+						{placement.startDate ? (
+							<span className="text-[11px] text-muted-foreground tabular-nums">
+								Start: {new Date(placement.startDate).toLocaleDateString("en-GB", {
+									day: "numeric",
+									month: "short",
+								})}
+							</span>
+						) : (
+							<span className="text-[11px] text-muted-foreground">Start: TBC</span>
+						)}
 						{dealVariant && (
 							<Badge variant={dealVariant} className="text-[10px] px-1.5 py-0">
 								{placement.dealType}

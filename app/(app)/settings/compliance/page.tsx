@@ -1,26 +1,25 @@
+import { ArrowLeft, ClipboardCheck } from "lucide-react";
 import { cookies } from "next/headers";
-import { ClipboardCheck, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { ComplianceSettings } from "@/components/settings/compliance-settings";
 import { Button } from "@/components/ui/button";
 import {
-	getCompliancePackagesByOrganisationId,
 	getComplianceElementsByOrganisationId,
-	getRolesByOrganisationId,
+	getCompliancePackagesWithDetailsByOrganisationId,
 	getOrganisationById,
+	getRolesByOrganisationId,
+	getWorkNodeTypesByOrganisationId,
 } from "@/lib/db/queries";
 import {
-	usPackageContents,
+	ukFacilityPackages,
+	ukJurisdictionPackages,
+	ukRolePackages,
+} from "@/lib/db/seed/markets/uk";
+import {
+	usFacilityPackages,
 	usRolePackages,
 	usStatePackages,
-	usFacilityPackages,
 } from "@/lib/db/seed/markets/us";
-import {
-	ukPackageContents,
-	ukRolePackages,
-	ukJurisdictionPackages,
-	ukFacilityPackages,
-} from "@/lib/db/seed/markets/uk";
-import { ComplianceSettings } from "@/components/settings/compliance-settings";
 
 // Known UK package slugs used to detect market
 const UK_PACKAGE_SLUGS = new Set([
@@ -55,12 +54,14 @@ export default async function ComplianceSettingsPage() {
 		);
 	}
 
-	const [org, packages, elements, orgRoles] = await Promise.all([
-		getOrganisationById({ id: organisationId }),
-		getCompliancePackagesByOrganisationId({ organisationId }),
-		getComplianceElementsByOrganisationId({ organisationId }),
-		getRolesByOrganisationId({ organisationId }),
-	]);
+	const [org, packages, elements, orgRoles, orgWorkNodeTypes] =
+		await Promise.all([
+			getOrganisationById({ id: organisationId }),
+			getCompliancePackagesWithDetailsByOrganisationId({ organisationId }),
+			getComplianceElementsByOrganisationId({ organisationId }),
+			getRolesByOrganisationId({ organisationId }),
+			getWorkNodeTypesByOrganisationId({ organisationId }),
+		]);
 
 	if (!org) {
 		return (
@@ -78,53 +79,11 @@ export default async function ComplianceSettingsPage() {
 	const market = detectMarket(packages.map((p) => p.slug));
 
 	// Select market-specific mappings
-	const packageContents = market === "uk" ? ukPackageContents : usPackageContents;
 	const rolePackageMapping = market === "uk" ? ukRolePackages : usRolePackages;
-	const jurisdictionPackages = market === "uk" ? ukJurisdictionPackages : usStatePackages;
-	const facilityPackages = market === "uk" ? ukFacilityPackages : usFacilityPackages;
-
-	// Build package-to-elements mapping from static config + DB data
-	const elementsMap = Object.fromEntries(elements.map((e) => [e.slug, e]));
-
-	const packageElementsMap: Record<
-		string,
-		Array<{
-			slug: string;
-			name: string;
-			category: string | null;
-			scope: string;
-			evidenceType: string;
-			expiryDays: number | null;
-			faHandled: boolean;
-		}>
-	> = {};
-
-	for (const pkg of packages) {
-		const elementSlugs = packageContents[pkg.slug] || [];
-		packageElementsMap[pkg.slug] = elementSlugs
-			.map((slug) => {
-				const el = elementsMap[slug];
-				if (!el) return null;
-				return {
-					slug: el.slug,
-					name: el.name,
-					category: el.category,
-					scope: el.scope,
-					evidenceType: el.evidenceType,
-					expiryDays: el.expiryDays,
-					faHandled: el.fulfilmentProvider === "external_provider",
-				};
-			})
-			.filter(Boolean) as Array<{
-			slug: string;
-			name: string;
-			category: string | null;
-			scope: string;
-			evidenceType: string;
-			expiryDays: number | null;
-			faHandled: boolean;
-		}>;
-	}
+	const jurisdictionPackages =
+		market === "uk" ? ukJurisdictionPackages : usStatePackages;
+	const facilityPackages =
+		market === "uk" ? ukFacilityPackages : usFacilityPackages;
 
 	// Serialise data for client
 	const serialisedPackages = packages.map((p) => ({
@@ -135,15 +94,44 @@ export default async function ComplianceSettingsPage() {
 		category: p.category,
 		onlyJurisdictions: p.onlyJurisdictions,
 		isDefault: p.isDefault,
+		isActive: p.isActive,
 		version: p.version,
 		updatedAt: p.updatedAt.toISOString(),
-		elementCount: packageElementsMap[p.slug]?.length ?? 0,
-		elements: packageElementsMap[p.slug] ?? [],
+		elementCount: p.elements.length,
+		elements: p.elements.map((element) => ({
+			id: element.id,
+			slug: element.slug,
+			name: element.name,
+			category: element.category,
+			scope: element.scope,
+			evidenceType: element.evidenceType,
+			expiryDays: element.expiryDays,
+			faHandled: element.faHandled,
+			displayOrder: element.displayOrder,
+		})),
+		assignments: p.assignments,
 	}));
 
 	const serialisedRoles = orgRoles.map((r) => ({
+		id: r.id,
 		slug: r.slug,
 		name: r.name,
+	}));
+	const serialisedElements = elements.map((el) => ({
+		id: el.id,
+		name: el.name,
+		slug: el.slug,
+		category: el.category,
+		scope: el.scope,
+		evidenceType: el.evidenceType,
+		expiryDays: el.expiryDays,
+		faHandled: el.fulfilmentProvider === "external_provider",
+	}));
+	const serialisedWorkNodeTypes = orgWorkNodeTypes.map((type) => ({
+		id: type.id,
+		name: type.name,
+		slug: type.slug,
+		level: type.level,
 	}));
 
 	// Available jurisdictions and facility types from market config
@@ -162,9 +150,7 @@ export default async function ComplianceSettingsPage() {
 				<div className="flex items-center gap-3">
 					<ClipboardCheck className="h-8 w-8" />
 					<div>
-						<h1 className="text-2xl font-semibold">
-							Compliance Configuration
-						</h1>
+						<h1 className="text-2xl font-semibold">Compliance Configuration</h1>
 						<p className="text-muted-foreground">{org.name}</p>
 					</div>
 				</div>
@@ -174,6 +160,8 @@ export default async function ComplianceSettingsPage() {
 				organisationId={organisationId}
 				packages={serialisedPackages}
 				roles={serialisedRoles}
+				elements={serialisedElements}
+				workNodeTypes={serialisedWorkNodeTypes}
 				jurisdictions={jurisdictions}
 				facilityTypes={facilityTypes}
 				rolePackageMapping={rolePackageMapping}

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
-import { useRouter } from "next/navigation";
+import { ExecutionModal } from "@/components/placement/execution-modal";
 import {
 	FileText,
 	Upload,
@@ -133,7 +133,11 @@ export function DocumentIntelligenceDialog({
 	const [uploadedIsPdf, setUploadedIsPdf] = useState(false);
 
 	// Registry verification (BLS agent chain)
-	const router = useRouter();
+	const [modalExecution, setModalExecution] = useState<{
+		agentId: string;
+		executionId: string;
+		agentName: string;
+	} | null>(null);
 	const [verifiedDocumentUrl, setVerifiedDocumentUrl] = useState<string | null>(
 		null,
 	);
@@ -398,16 +402,10 @@ export function DocumentIntelligenceDialog({
 				return;
 			}
 			await streamAgentExecution(response, (execId) => {
-				toast({
-					type: "success",
-					description: "Verifying with AHA registry…",
-					action: {
-						label: "View →",
-						onClick: () =>
-							router.push(
-								`/agents/verify-bls-certificate/executions/${execId}`,
-							),
-					},
+				setModalExecution({
+					agentId: "verify-bls-certificate",
+					executionId: execId,
+					agentName: "BLS Verification",
 				});
 			});
 		} catch {
@@ -421,350 +419,368 @@ export function DocumentIntelligenceDialog({
 	}
 
 	return (
-		<Dialog open={open} onOpenChange={handleClose}>
-			<DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col p-0 gap-0">
-				<DialogHeader className="px-6 pt-5 pb-3 border-b border-border shrink-0">
-					<DialogTitle className="flex items-center gap-2 text-base">
-						<Shield className="size-4" />
-						Document Intelligence
-					</DialogTitle>
-					<DialogDescription className="text-xs">
-						{elementName}
-					</DialogDescription>
-				</DialogHeader>
+		<>
+			<Dialog open={open} onOpenChange={handleClose}>
+				<DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col p-0 gap-0">
+					<DialogHeader className="px-6 pt-5 pb-3 border-b border-border shrink-0">
+						<DialogTitle className="flex items-center gap-2 text-base">
+							<Shield className="size-4" />
+							Document Intelligence
+						</DialogTitle>
+						<DialogDescription className="text-xs">
+							{elementName}
+						</DialogDescription>
+					</DialogHeader>
 
-				<div
-					className="flex flex-1 min-h-0 overflow-hidden"
-					style={{ minHeight: "500px" }}
-				>
-					{/* Left pane: Document preview */}
-					<div className="w-[55%] border-r border-border flex flex-col min-h-0 bg-muted/20">
-						<div className="flex-1 overflow-auto min-h-0">
-							{/* Loading */}
-							{docLoading && (
-								<div className="p-4">
-									<Skeleton className="h-[500px] w-full" />
-								</div>
-							)}
+					<div
+						className="flex flex-1 min-h-0 overflow-hidden"
+						style={{ minHeight: "500px" }}
+					>
+						{/* Left pane: Document preview */}
+						<div className="w-[55%] border-r border-border flex flex-col min-h-0 bg-muted/20">
+							<div className="flex-1 overflow-auto min-h-0">
+								{/* Loading */}
+								{docLoading && (
+									<div className="p-4">
+										<Skeleton className="h-[500px] w-full" />
+									</div>
+								)}
 
-							{/* Error */}
-							{docError && !docLoading && (
-								<div className="flex items-center justify-center h-64">
-									<p className="text-sm text-muted-foreground">{docError}</p>
-								</div>
-							)}
+								{/* Error */}
+								{docError && !docLoading && (
+									<div className="flex items-center justify-center h-64">
+										<p className="text-sm text-muted-foreground">{docError}</p>
+									</div>
+								)}
 
-							{/* Document preview — single block with priority URL */}
-							{previewUrl && !docLoading && !docError && (
-								<div className="flex items-center justify-center p-4 h-full">
-									{previewIsPdf ? (
-										<Document
-											key={previewUrl}
-											file={previewUrl}
-											onLoadSuccess={({ numPages: n }) => setNumPages(n)}
-											onLoadError={() => setDocError("Failed to render PDF")}
-											loading={<Skeleton className="h-[500px] w-full" />}
-											className="flex justify-center"
-										>
-											<Page
-												pageNumber={pageNumber}
-												width={480}
-												renderTextLayer
-												renderAnnotationLayer
+								{/* Document preview — single block with priority URL */}
+								{previewUrl && !docLoading && !docError && (
+									<div className="flex items-center justify-center p-4 h-full">
+										{previewIsPdf ? (
+											<Document
+												key={previewUrl}
+												file={previewUrl}
+												onLoadSuccess={({ numPages: n }) => setNumPages(n)}
+												onLoadError={() => setDocError("Failed to render PDF")}
+												loading={<Skeleton className="h-[500px] w-full" />}
+												className="flex justify-center"
+											>
+												<Page
+													pageNumber={pageNumber}
+													width={480}
+													renderTextLayer
+													renderAnnotationLayer
+												/>
+											</Document>
+										) : (
+											// eslint-disable-next-line @next/next/no-img-element
+											<img
+												src={previewUrl}
+												alt="Document preview"
+												className="max-w-full max-h-full object-contain rounded"
 											/>
-										</Document>
-									) : (
-										// eslint-disable-next-line @next/next/no-img-element
-										<img
-											src={previewUrl}
-											alt="Document preview"
-											className="max-w-full max-h-full object-contain rounded"
-										/>
-									)}
-								</div>
-							)}
+										)}
+									</div>
+								)}
 
-							{/* No document yet */}
-							{!previewUrl && !docLoading && !docError && (
-								<div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3 p-8">
-									<ImageIcon className="size-12 opacity-30" />
-									<p className="text-sm">
-										Upload a document to preview it here
-									</p>
-								</div>
-							)}
-						</div>
-
-						{/* PDF pagination + download */}
-						{numPages && numPages > 1 && (
-							<div className="flex items-center justify-between border-t border-border px-4 py-2 shrink-0 bg-background">
-								<div className="flex items-center gap-1">
-									<Button
-										variant="ghost"
-										size="sm"
-										disabled={pageNumber <= 1}
-										onClick={() => setPageNumber((p) => p - 1)}
-									>
-										<ChevronLeft className="size-4" />
-									</Button>
-									<span className="text-xs text-muted-foreground tabular-nums px-2">
-										{pageNumber} / {numPages}
-									</span>
-									<Button
-										variant="ghost"
-										size="sm"
-										disabled={pageNumber >= numPages}
-										onClick={() => setPageNumber((p) => p + 1)}
-									>
-										<ChevronRight className="size-4" />
-									</Button>
-								</div>
-								{(uploadedFileUrl || docUrl) && (
-									<Button variant="ghost" size="sm" asChild>
-										<a
-											href={uploadedFileUrl || docUrl || ""}
-											target="_blank"
-											rel="noopener noreferrer"
-											download={existingFileName || "document"}
-										>
-											<Download className="size-4 mr-1" />
-											Download
-										</a>
-									</Button>
+								{/* No document yet */}
+								{!previewUrl && !docLoading && !docError && (
+									<div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3 p-8">
+										<ImageIcon className="size-12 opacity-30" />
+										<p className="text-sm">
+											Upload a document to preview it here
+										</p>
+									</div>
 								)}
 							</div>
-						)}
-					</div>
 
-					{/* Right pane: Verification */}
-					<div className="w-[45%] flex flex-col min-h-0">
-						<div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0">
-							{/* Verifying loading state */}
-							{submitting && (
-								<div className="flex flex-col items-center justify-center h-full gap-4 text-center">
-									<div className="relative">
-										<Shield className="size-10 text-primary/20" />
-										<RefreshCw className="size-5 text-primary animate-spin absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-									</div>
-									<div className="space-y-1.5">
-										<p className="text-sm font-medium">Analysing document…</p>
-										<p className="text-xs text-muted-foreground max-w-[240px]">
-											Checking against acceptance criteria and extracting key
-											fields
-										</p>
-									</div>
-									<div className="space-y-2 w-full max-w-[260px] mt-2">
-										<Skeleton className="h-3 w-full" />
-										<Skeleton className="h-3 w-4/5" />
-										<Skeleton className="h-3 w-3/5" />
-									</div>
-								</div>
-							)}
-
-							{/* Existing file info with replace option */}
-							{!submitting &&
-								!result &&
-								hasExistingFile &&
-								!replacing &&
-								!file && (
-									<div className="rounded-md border border-border bg-muted/30 px-4 py-3">
-										<div className="flex items-center gap-3">
-											<FileText className="size-8 text-muted-foreground shrink-0" />
-											<div className="flex-1 text-left min-w-0">
-												<p className="text-sm font-medium truncate">
-													{existingFileName || "Uploaded document"}
-												</p>
-												<p className="text-[10px] text-muted-foreground">
-													Existing evidence on file
-												</p>
-											</div>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => setReplacing(true)}
-												className="text-xs"
-											>
-												<Replace className="size-3 mr-1" />
-												Replace
-											</Button>
-										</div>
-									</div>
-								)}
-
-							{/* File upload area */}
-							{!submitting && !result && showUploadArea && (
-								<div
-									onDragOver={(e) => e.preventDefault()}
-									onDrop={handleDrop}
-									className="relative rounded-md border-2 border-dashed border-border hover:border-primary/50 transition-colors duration-150 px-4 py-6 text-center"
-								>
-									{file ? (
-										<div className="flex items-center gap-3">
-											<FileText className="size-8 text-muted-foreground shrink-0" />
-											<div className="flex-1 text-left min-w-0">
-												<p className="text-sm font-medium truncate">
-													{file.name}
-												</p>
-												<p className="text-[10px] text-muted-foreground">
-													{(file.size / 1024).toFixed(0)} KB
-												</p>
-											</div>
-											<Button variant="ghost" size="sm" onClick={clearNewFile}>
-												Remove
-											</Button>
-										</div>
-									) : (
-										<label className="cursor-pointer block">
-											<Upload className="size-6 text-muted-foreground mx-auto mb-2" />
-											<p className="text-sm text-muted-foreground">
-												{hasExistingFile
-													? "Drop a replacement document or "
-													: "Drop a document here or "}
-												<span className="text-primary underline underline-offset-2">
-													browse
-												</span>
-											</p>
-											<p className="text-[10px] text-muted-foreground mt-1">
-												PDF, JPG, or PNG
-											</p>
-											<input
-												type="file"
-												accept=".pdf,.jpg,.jpeg,.png,.webp"
-												onChange={handleFileChange}
-												className="sr-only"
-											/>
-										</label>
-									)}
-								</div>
-							)}
-
-							{/* Verification result */}
-							{!submitting && result && (
-								<div className="space-y-3">
-									<div className="flex items-center gap-2">
-										<DecisionIcon decision={result.decision} />
-										<Badge
-											variant={
-												result.decision === "approved"
-													? "success"
-													: result.decision === "rejected"
-														? "danger"
-														: "warning"
-											}
-											className="text-xs font-medium"
-										>
-											{result.decision === "approved"
-												? "Approved"
-												: result.decision === "needs_review"
-													? "Needs Review"
-													: "Rejected"}
-										</Badge>
-										<span className="text-xs text-muted-foreground">
-											{result.matchedDocumentType}
-										</span>
-									</div>
-
-									<div className="rounded-md border border-border bg-muted/30 px-3 py-2.5">
-										<p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
-											Reasoning
-										</p>
-										<p className="text-xs leading-relaxed">
-											{result.reasoning}
-										</p>
-									</div>
-
-									{Object.keys(result.extractedFields).length > 0 && (
-										<div className="space-y-1.5">
-											<p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-												Extracted Fields
-											</p>
-											<div className="grid grid-cols-1 gap-y-1">
-												{Object.entries(result.extractedFields).map(
-													([key, value]) => (
-														<div
-															key={key}
-															className="flex items-baseline justify-between gap-2"
-														>
-															<span className="text-[10px] text-muted-foreground capitalize">
-																{key.replace(/([A-Z])/g, " $1").trim()}
-															</span>
-															<span className="text-xs text-right truncate">
-																{value}
-															</span>
-														</div>
-													),
-												)}
-											</div>
-										</div>
-									)}
-
-									{result.nextStep && (
-										<div className="rounded-md border border-border bg-muted/30 px-3 py-2">
-											<p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
-												Next Step
-											</p>
-											<p className="text-xs">{result.nextStep}</p>
-										</div>
-									)}
-								</div>
-							)}
-						</div>
-
-						{/* Footer */}
-						{!submitting && (
-							<div className="flex items-center justify-between px-5 py-3 border-t border-border shrink-0">
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => handleClose(false)}
-								>
-									{result ? "Close" : "Cancel"}
-								</Button>
-								{!result && (
-									<Button
-										size="sm"
-										onClick={handleSubmit}
-										disabled={!file && !hasExistingFile}
-									>
-										{file ? "Upload & Verify" : "Verify Document"}
-									</Button>
-								)}
-								{result && (
-									<div className="flex items-center gap-2">
-										{showRegistryButton && (
-											<Button
-												size="sm"
-												onClick={handleVerifyWithRegistry}
-												disabled={verifyingWithRegistry}
-											>
-												{verifyingWithRegistry ? (
-													<>
-														<RefreshCw className="size-3 animate-spin mr-1" />
-														Verifying…
-													</>
-												) : (
-													<>
-														<ExternalLink className="size-3 mr-1" />
-														Verify with registry
-													</>
-												)}
-											</Button>
-										)}
+							{/* PDF pagination + download */}
+							{numPages && numPages > 1 && (
+								<div className="flex items-center justify-between border-t border-border px-4 py-2 shrink-0 bg-background">
+									<div className="flex items-center gap-1">
 										<Button
-											variant="outline"
+											variant="ghost"
 											size="sm"
-											onClick={resetVerification}
+											disabled={pageNumber <= 1}
+											onClick={() => setPageNumber((p) => p - 1)}
 										>
-											Verify Another
+											<ChevronLeft className="size-4" />
+										</Button>
+										<span className="text-xs text-muted-foreground tabular-nums px-2">
+											{pageNumber} / {numPages}
+										</span>
+										<Button
+											variant="ghost"
+											size="sm"
+											disabled={pageNumber >= numPages}
+											onClick={() => setPageNumber((p) => p + 1)}
+										>
+											<ChevronRight className="size-4" />
 										</Button>
 									</div>
+									{(uploadedFileUrl || docUrl) && (
+										<Button variant="ghost" size="sm" asChild>
+											<a
+												href={uploadedFileUrl || docUrl || ""}
+												target="_blank"
+												rel="noopener noreferrer"
+												download={existingFileName || "document"}
+											>
+												<Download className="size-4 mr-1" />
+												Download
+											</a>
+										</Button>
+									)}
+								</div>
+							)}
+						</div>
+
+						{/* Right pane: Verification */}
+						<div className="w-[45%] flex flex-col min-h-0">
+							<div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0">
+								{/* Verifying loading state */}
+								{submitting && (
+									<div className="flex flex-col items-center justify-center h-full gap-4 text-center">
+										<div className="relative">
+											<Shield className="size-10 text-primary/20" />
+											<RefreshCw className="size-5 text-primary animate-spin absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+										</div>
+										<div className="space-y-1.5">
+											<p className="text-sm font-medium">Analysing document…</p>
+											<p className="text-xs text-muted-foreground max-w-[240px]">
+												Checking against acceptance criteria and extracting key
+												fields
+											</p>
+										</div>
+										<div className="space-y-2 w-full max-w-[260px] mt-2">
+											<Skeleton className="h-3 w-full" />
+											<Skeleton className="h-3 w-4/5" />
+											<Skeleton className="h-3 w-3/5" />
+										</div>
+									</div>
+								)}
+
+								{/* Existing file info with replace option */}
+								{!submitting &&
+									!result &&
+									hasExistingFile &&
+									!replacing &&
+									!file && (
+										<div className="rounded-md border border-border bg-muted/30 px-4 py-3">
+											<div className="flex items-center gap-3">
+												<FileText className="size-8 text-muted-foreground shrink-0" />
+												<div className="flex-1 text-left min-w-0">
+													<p className="text-sm font-medium truncate">
+														{existingFileName || "Uploaded document"}
+													</p>
+													<p className="text-[10px] text-muted-foreground">
+														Existing evidence on file
+													</p>
+												</div>
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={() => setReplacing(true)}
+													className="text-xs"
+												>
+													<Replace className="size-3 mr-1" />
+													Replace
+												</Button>
+											</div>
+										</div>
+									)}
+
+								{/* File upload area */}
+								{!submitting && !result && showUploadArea && (
+									<div
+										onDragOver={(e) => e.preventDefault()}
+										onDrop={handleDrop}
+										className="relative rounded-md border-2 border-dashed border-border hover:border-primary/50 transition-colors duration-150 px-4 py-6 text-center"
+									>
+										{file ? (
+											<div className="flex items-center gap-3">
+												<FileText className="size-8 text-muted-foreground shrink-0" />
+												<div className="flex-1 text-left min-w-0">
+													<p className="text-sm font-medium truncate">
+														{file.name}
+													</p>
+													<p className="text-[10px] text-muted-foreground">
+														{(file.size / 1024).toFixed(0)} KB
+													</p>
+												</div>
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={clearNewFile}
+												>
+													Remove
+												</Button>
+											</div>
+										) : (
+											<label className="cursor-pointer block">
+												<Upload className="size-6 text-muted-foreground mx-auto mb-2" />
+												<p className="text-sm text-muted-foreground">
+													{hasExistingFile
+														? "Drop a replacement document or "
+														: "Drop a document here or "}
+													<span className="text-primary underline underline-offset-2">
+														browse
+													</span>
+												</p>
+												<p className="text-[10px] text-muted-foreground mt-1">
+													PDF, JPG, or PNG
+												</p>
+												<input
+													type="file"
+													accept=".pdf,.jpg,.jpeg,.png,.webp"
+													onChange={handleFileChange}
+													className="sr-only"
+												/>
+											</label>
+										)}
+									</div>
+								)}
+
+								{/* Verification result */}
+								{!submitting && result && (
+									<div className="space-y-3">
+										<div className="flex items-center gap-2">
+											<DecisionIcon decision={result.decision} />
+											<Badge
+												variant={
+													result.decision === "approved"
+														? "success"
+														: result.decision === "rejected"
+															? "danger"
+															: "warning"
+												}
+												className="text-xs font-medium"
+											>
+												{result.decision === "approved"
+													? "Approved"
+													: result.decision === "needs_review"
+														? "Needs Review"
+														: "Rejected"}
+											</Badge>
+											<span className="text-xs text-muted-foreground">
+												{result.matchedDocumentType}
+											</span>
+										</div>
+
+										<div className="rounded-md border border-border bg-muted/30 px-3 py-2.5">
+											<p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
+												Reasoning
+											</p>
+											<p className="text-xs leading-relaxed">
+												{result.reasoning}
+											</p>
+										</div>
+
+										{Object.keys(result.extractedFields).length > 0 && (
+											<div className="space-y-1.5">
+												<p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+													Extracted Fields
+												</p>
+												<div className="grid grid-cols-1 gap-y-1">
+													{Object.entries(result.extractedFields).map(
+														([key, value]) => (
+															<div
+																key={key}
+																className="flex items-baseline justify-between gap-2"
+															>
+																<span className="text-[10px] text-muted-foreground capitalize">
+																	{key.replace(/([A-Z])/g, " $1").trim()}
+																</span>
+																<span className="text-xs text-right truncate">
+																	{value}
+																</span>
+															</div>
+														),
+													)}
+												</div>
+											</div>
+										)}
+
+										{result.nextStep && (
+											<div className="rounded-md border border-border bg-muted/30 px-3 py-2">
+												<p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
+													Next Step
+												</p>
+												<p className="text-xs">{result.nextStep}</p>
+											</div>
+										)}
+									</div>
 								)}
 							</div>
-						)}
+
+							{/* Footer */}
+							{!submitting && (
+								<div className="flex items-center justify-between px-5 py-3 border-t border-border shrink-0">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => handleClose(false)}
+									>
+										{result ? "Close" : "Cancel"}
+									</Button>
+									{!result && (
+										<Button
+											size="sm"
+											onClick={handleSubmit}
+											disabled={!file && !hasExistingFile}
+										>
+											{file ? "Upload & Verify" : "Verify Document"}
+										</Button>
+									)}
+									{result && (
+										<div className="flex items-center gap-2">
+											{showRegistryButton && (
+												<Button
+													size="sm"
+													onClick={handleVerifyWithRegistry}
+													disabled={verifyingWithRegistry}
+												>
+													{verifyingWithRegistry ? (
+														<>
+															<RefreshCw className="size-3 animate-spin mr-1" />
+															Verifying…
+														</>
+													) : (
+														<>
+															<ExternalLink className="size-3 mr-1" />
+															Verify with registry
+														</>
+													)}
+												</Button>
+											)}
+											<Button
+												variant="outline"
+												size="sm"
+												onClick={resetVerification}
+											>
+												Verify Another
+											</Button>
+										</div>
+									)}
+								</div>
+							)}
+						</div>
 					</div>
-				</div>
-			</DialogContent>
-		</Dialog>
+				</DialogContent>
+			</Dialog>
+
+			{modalExecution && (
+				<ExecutionModal
+					open={!!modalExecution}
+					onOpenChange={(isOpen) => {
+						if (!isOpen) setModalExecution(null);
+					}}
+					agentId={modalExecution.agentId}
+					executionId={modalExecution.executionId}
+					agentName={modalExecution.agentName}
+				/>
+			)}
+		</>
 	);
 }
 

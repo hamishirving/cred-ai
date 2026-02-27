@@ -45,6 +45,7 @@ import {
 	workNodes,
 	type WorkNode,
 	workNodeTypes,
+	type WorkNodeType,
 	pipelines,
 	type Pipeline,
 	pipelineStages,
@@ -70,6 +71,8 @@ import {
 	type CompliancePackage,
 	complianceElements,
 	type ComplianceElement,
+	packageElements,
+	assignmentRules,
 	faScreenings,
 	type FAScreeningRecord,
 	type NewFAScreeningRecord,
@@ -1652,10 +1655,14 @@ export async function getSampleCandidate({
 
 export interface PlacementListItem {
 	id: string;
+	organisationId: string;
+	profileId: string;
 	candidateName: string;
 	candidateEmail: string;
 	roleName: string;
+	roleSlug: string;
 	facilityName: string;
+	facilityType: string;
 	jurisdiction: string | null;
 	startDate: Date | null;
 	status: string;
@@ -1676,11 +1683,15 @@ export async function getPlacementsByOrganisationId({
 		const results = await db
 			.select({
 				id: placements.id,
+				organisationId: placements.organisationId,
+				profileId: placements.profileId,
 				firstName: profiles.firstName,
 				lastName: profiles.lastName,
 				email: profiles.email,
 				roleName: roles.name,
+				roleSlug: roles.slug,
 				facilityName: workNodes.name,
+				facilityType: workNodeTypes.name,
 				jurisdiction: workNodes.jurisdiction,
 				startDate: placements.startDate,
 				status: placements.status,
@@ -1692,15 +1703,20 @@ export async function getPlacementsByOrganisationId({
 			.innerJoin(profiles, eq(profiles.id, placements.profileId))
 			.innerJoin(roles, eq(roles.id, placements.roleId))
 			.innerJoin(workNodes, eq(workNodes.id, placements.workNodeId))
+			.leftJoin(workNodeTypes, eq(workNodeTypes.id, workNodes.typeId))
 			.where(eq(placements.organisationId, organisationId))
 			.orderBy(desc(placements.startDate));
 
 		return results.map((r) => ({
 			id: r.id,
+			organisationId: r.organisationId,
+			profileId: r.profileId,
 			candidateName: `${r.firstName} ${r.lastName}`,
 			candidateEmail: r.email,
 			roleName: r.roleName,
+			roleSlug: r.roleSlug,
 			facilityName: r.facilityName,
+			facilityType: r.facilityType?.toLowerCase() ?? "hospital",
 			jurisdiction: r.jurisdiction,
 			startDate: r.startDate,
 			status: r.status,
@@ -2007,7 +2023,123 @@ export async function getCompliancePackagesByOrganisationId({
 		.select()
 		.from(compliancePackages)
 		.where(eq(compliancePackages.organisationId, organisationId))
-		.orderBy(asc(compliancePackages.name));
+			.orderBy(asc(compliancePackages.name));
+}
+
+export interface CompliancePackageDetailElement {
+	id: string;
+	slug: string;
+	name: string;
+	category: string | null;
+	scope: string;
+	evidenceType: string;
+	expiryDays: number | null;
+	faHandled: boolean;
+	displayOrder: number;
+}
+
+export interface CompliancePackageAssignments {
+	roleIds: string[];
+	jurisdictions: string[];
+	workNodeTypeIds: string[];
+}
+
+export interface CompliancePackageWithDetails extends CompliancePackage {
+	elements: CompliancePackageDetailElement[];
+	assignments: CompliancePackageAssignments;
+}
+
+export async function getCompliancePackagesWithDetailsByOrganisationId({
+	organisationId,
+}: {
+	organisationId: string;
+}): Promise<CompliancePackageWithDetails[]> {
+	const [packages, packageElementRows, assignmentRows] = await Promise.all([
+		getCompliancePackagesByOrganisationId({ organisationId }),
+		db
+			.select({
+				packageId: packageElements.packageId,
+				displayOrder: packageElements.displayOrder,
+				elementId: complianceElements.id,
+				elementSlug: complianceElements.slug,
+				elementName: complianceElements.name,
+				elementCategory: complianceElements.category,
+				elementScope: complianceElements.scope,
+				elementEvidenceType: complianceElements.evidenceType,
+				elementExpiryDays: complianceElements.expiryDays,
+				elementFulfilmentProvider: complianceElements.fulfilmentProvider,
+			})
+			.from(packageElements)
+			.innerJoin(
+				complianceElements,
+				eq(complianceElements.id, packageElements.elementId),
+			)
+			.where(eq(complianceElements.organisationId, organisationId))
+			.orderBy(
+				asc(packageElements.packageId),
+				asc(packageElements.displayOrder),
+				asc(complianceElements.name),
+			),
+		db
+			.select({
+				packageId: assignmentRules.packageId,
+				roleId: assignmentRules.roleId,
+				jurisdictions: assignmentRules.jurisdictions,
+				workNodeTypeId: assignmentRules.workNodeTypeId,
+				isActive: assignmentRules.isActive,
+			})
+			.from(assignmentRules)
+			.where(eq(assignmentRules.organisationId, organisationId)),
+	]);
+
+	const elementsByPackage = new Map<string, CompliancePackageDetailElement[]>();
+	for (const row of packageElementRows) {
+		const current = elementsByPackage.get(row.packageId) ?? [];
+		current.push({
+			id: row.elementId,
+			slug: row.elementSlug,
+			name: row.elementName,
+			category: row.elementCategory,
+			scope: row.elementScope,
+			evidenceType: row.elementEvidenceType,
+			expiryDays: row.elementExpiryDays,
+			faHandled: row.elementFulfilmentProvider === "external_provider",
+			displayOrder: row.displayOrder,
+		});
+		elementsByPackage.set(row.packageId, current);
+	}
+
+	const assignmentsByPackage = new Map<string, CompliancePackageAssignments>();
+	for (const row of assignmentRows) {
+		if (!row.isActive) continue;
+		const current = assignmentsByPackage.get(row.packageId) ?? {
+			roleIds: [],
+			jurisdictions: [],
+			workNodeTypeIds: [],
+		};
+		if (row.roleId && !current.roleIds.includes(row.roleId)) {
+			current.roleIds.push(row.roleId);
+		}
+		if (row.workNodeTypeId && !current.workNodeTypeIds.includes(row.workNodeTypeId)) {
+			current.workNodeTypeIds.push(row.workNodeTypeId);
+		}
+		for (const jurisdiction of row.jurisdictions ?? []) {
+			if (!current.jurisdictions.includes(jurisdiction)) {
+				current.jurisdictions.push(jurisdiction);
+			}
+		}
+		assignmentsByPackage.set(row.packageId, current);
+	}
+
+	return packages.map((pkg) => ({
+		...pkg,
+		elements: elementsByPackage.get(pkg.id) ?? [],
+		assignments: assignmentsByPackage.get(pkg.id) ?? {
+			roleIds: [],
+			jurisdictions: [],
+			workNodeTypeIds: [],
+		},
+	}));
 }
 
 export async function getComplianceElementsByOrganisationId({
@@ -2031,7 +2163,19 @@ export async function getRolesByOrganisationId({
 		.select()
 		.from(roles)
 		.where(eq(roles.organisationId, organisationId))
-		.orderBy(asc(roles.name));
+			.orderBy(asc(roles.name));
+}
+
+export async function getWorkNodeTypesByOrganisationId({
+	organisationId,
+}: {
+	organisationId: string;
+}): Promise<WorkNodeType[]> {
+	return db
+		.select()
+		.from(workNodeTypes)
+		.where(eq(workNodeTypes.organisationId, organisationId))
+		.orderBy(asc(workNodeTypes.level), asc(workNodeTypes.name));
 }
 
 // ============================================

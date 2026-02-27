@@ -13,7 +13,12 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import Dagre from "@dagrejs/dagre";
-import { AlertTriangle, ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
+import {
+	AlertTriangle,
+	ChevronDown,
+	ChevronRight,
+	ChevronUp,
+} from "lucide-react";
 import {
 	Select,
 	SelectContent,
@@ -77,8 +82,7 @@ const LAYERS: LayerDef[] = [
 		name: "Role",
 		type: "role",
 		matchesGroup: (g) =>
-			g.reason.startsWith("role:") &&
-			g.packageSlug !== "federal-core-package",
+			g.reason.startsWith("role:") && g.packageSlug !== "federal-core-package",
 	},
 	{
 		id: "state",
@@ -127,27 +131,42 @@ const PRE_DEFINED_CONDITIONS: PreDefinedCondition[] = [
 	{
 		id: "lapse-deal",
 		name: "Lapse deal",
-		description: "Candidate returning after extended inactivity. Triggers tier-2 exclusion screening.",
+		description:
+			"Candidate returning after extended inactivity. Triggers tier-2 exclusion screening.",
 		rules: [
-			{ property: "Placement type", operator: "equals", value: "Lapse (inactive 90+ days)" },
+			{
+				property: "Placement type",
+				operator: "equals",
+				value: "Lapse (inactive 90+ days)",
+			},
 		],
 		flags: { isLapseDeal: true },
 	},
 	{
 		id: "state-oig-sam",
 		name: "State OIG/SAM mandate",
-		description: "State law requires federal exclusion database screening for all placements.",
+		description:
+			"State law requires federal exclusion database screening for all placements.",
 		rules: [
-			{ property: "State policy", operator: "requires", value: "OIG/SAM screening" },
+			{
+				property: "State policy",
+				operator: "requires",
+				value: "OIG/SAM screening",
+			},
 		],
 		flags: { stateRequiresOigSam: true },
 	},
 	{
 		id: "facility-oig-sam",
 		name: "Facility exclusion screening",
-		description: "Facility contract mandates OIG/SAM checks regardless of state requirements.",
+		description:
+			"Facility contract mandates OIG/SAM checks regardless of state requirements.",
 		rules: [
-			{ property: "Facility contract", operator: "requires", value: "OIG/SAM screening" },
+			{
+				property: "Facility contract",
+				operator: "requires",
+				value: "OIG/SAM screening",
+			},
 		],
 		flags: { facilityRequiresOigSam: true },
 	},
@@ -166,6 +185,20 @@ function getConditionLabel(reason: string): string {
 // Layout helper
 // ============================================
 
+function estimateLayerNodeHeight(data: LayerNodeData): number {
+	// Header: name row (34px) + border-b (1px)
+	let h = 35;
+	if (data.active && data.packageName) h += 18;
+	if (data.active && data.reason) h += 24;
+	// Element list capped at max-h-[200px] in CSS
+	if (data.active && data.elements.length > 0) {
+		h += Math.min(data.elements.length * 23, 200);
+	} else {
+		h += 38; // empty state
+	}
+	return h;
+}
+
 function applyDagreLayout(nodes: Node[], edges: Edge[]): Node[] {
 	const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
 	g.setGraph({
@@ -179,8 +212,14 @@ function applyDagreLayout(nodes: Node[], edges: Edge[]): Node[] {
 	for (const node of nodes) {
 		let width = 200;
 		let height = 180;
-		if (node.type === "layerNode") { width = 260; height = 200; }
-		if (node.type === "conditionGateNode") { width = 220; height = 160; }
+		if (node.type === "layerNode") {
+			width = 260;
+			height = estimateLayerNodeHeight(node.data as LayerNodeData);
+		}
+		if (node.type === "conditionGateNode") {
+			width = 220;
+			height = 160;
+		}
 		g.setNode(node.id, { width, height });
 	}
 
@@ -209,7 +248,15 @@ function applyDagreLayout(nodes: Node[], edges: Edge[]): Node[] {
 
 function buildGraph(
 	result: ResolveResponse | null,
-	context: { role: string; jurisdiction: string; facilityType: string; dealType: string; isLapseDeal: boolean; stateRequiresOigSam: boolean; facilityRequiresOigSam: boolean },
+	context: {
+		role: string;
+		jurisdiction: string;
+		facilityType: string;
+		dealType: string;
+		isLapseDeal: boolean;
+		stateRequiresOigSam: boolean;
+		facilityRequiresOigSam: boolean;
+	},
 	enabledConditions: Set<string>,
 ): { nodes: Node[]; edges: Edge[] } {
 	const nodes: Node[] = [];
@@ -230,9 +277,8 @@ function buildGraph(
 
 	// Standard layer nodes (federal, role, state, facility)
 	for (const layer of LAYERS) {
-		const matchingGroups = result?.groups.filter((g) =>
-			layer.matchesGroup(g),
-		) ?? [];
+		const matchingGroups =
+			result?.groups.filter((g) => layer.matchesGroup(g)) ?? [];
 		const isActive = matchingGroups.length > 0;
 		const elements = matchingGroups.flatMap((g) =>
 			g.elements.map((e) => ({
@@ -274,15 +320,16 @@ function buildGraph(
 	}
 
 	// Conditional groups from the resolution
-	const conditionalGroups = result?.groups.filter((g) =>
-		g.reason.startsWith("conditional:"),
-	) ?? [];
+	const conditionalGroups =
+		result?.groups.filter((g) => g.reason.startsWith("conditional:")) ?? [];
 	const conditionalActive = conditionalGroups.length > 0;
 
 	// Build condition checks from pre-defined conditions
 	const conditions: ConditionCheck[] = PRE_DEFINED_CONDITIONS.map((cond) => ({
 		label: cond.name,
-		description: cond.rules.map((r) => `${r.property} ${r.operator} ${r.value}`).join(", "),
+		description: cond.rules
+			.map((r) => `${r.property} ${r.operator} ${r.value}`)
+			.join(", "),
 		active: enabledConditions.has(cond.id),
 	}));
 
@@ -370,9 +417,8 @@ function buildGraph(
 
 	// Edges: standard active layers → summary
 	for (const layer of LAYERS) {
-		const matchingGroups = result?.groups.filter((g) =>
-			layer.matchesGroup(g),
-		) ?? [];
+		const matchingGroups =
+			result?.groups.filter((g) => layer.matchesGroup(g)) ?? [];
 		if (matchingGroups.length > 0) {
 			const colors = LAYER_COLORS[layer.type] || LAYER_COLORS.federal;
 			edges.push({
@@ -433,22 +479,32 @@ export function RequirementBuilder({
 	const [facilityType, setFacilityType] = useState("none");
 
 	// Pre-defined conditions — toggle on/off by ID
-	const [enabledConditions, setEnabledConditions] = useState<Set<string>>(new Set());
+	const [enabledConditions, setEnabledConditions] = useState<Set<string>>(
+		new Set(),
+	);
 	const [conditionsExpanded, setConditionsExpanded] = useState(false);
-	const [expandedConditionId, setExpandedConditionId] = useState<string | null>(null);
+	const [expandedConditionId, setExpandedConditionId] = useState<string | null>(
+		null,
+	);
 
 	// Derive resolution flags from enabled conditions
-	const { isLapseDeal, stateRequiresOigSam, facilityRequiresOigSam } = useMemo(() => {
-		const flags = { isLapseDeal: false, stateRequiresOigSam: false, facilityRequiresOigSam: false };
-		for (const cond of PRE_DEFINED_CONDITIONS) {
-			if (enabledConditions.has(cond.id)) {
-				if (cond.flags.isLapseDeal) flags.isLapseDeal = true;
-				if (cond.flags.stateRequiresOigSam) flags.stateRequiresOigSam = true;
-				if (cond.flags.facilityRequiresOigSam) flags.facilityRequiresOigSam = true;
+	const { isLapseDeal, stateRequiresOigSam, facilityRequiresOigSam } =
+		useMemo(() => {
+			const flags = {
+				isLapseDeal: false,
+				stateRequiresOigSam: false,
+				facilityRequiresOigSam: false,
+			};
+			for (const cond of PRE_DEFINED_CONDITIONS) {
+				if (enabledConditions.has(cond.id)) {
+					if (cond.flags.isLapseDeal) flags.isLapseDeal = true;
+					if (cond.flags.stateRequiresOigSam) flags.stateRequiresOigSam = true;
+					if (cond.flags.facilityRequiresOigSam)
+						flags.facilityRequiresOigSam = true;
+				}
 			}
-		}
-		return flags;
-	}, [enabledConditions]);
+			return flags;
+		}, [enabledConditions]);
 	const activeConditionCount = enabledConditions.size;
 
 	// Resolution state
@@ -483,7 +539,15 @@ export function RequirementBuilder({
 		} finally {
 			setLoading(false);
 		}
-	}, [organisationId, roleSlug, jurisdiction, facilityType, isLapseDeal, stateRequiresOigSam, facilityRequiresOigSam]);
+	}, [
+		organisationId,
+		roleSlug,
+		jurisdiction,
+		facilityType,
+		isLapseDeal,
+		stateRequiresOigSam,
+		facilityRequiresOigSam,
+	]);
 
 	useEffect(() => {
 		resolve();
@@ -500,7 +564,15 @@ export function RequirementBuilder({
 			stateRequiresOigSam,
 			facilityRequiresOigSam,
 		}),
-		[roleSlug, jurisdiction, facilityType, isLapseDeal, stateRequiresOigSam, facilityRequiresOigSam, roles],
+		[
+			roleSlug,
+			jurisdiction,
+			facilityType,
+			isLapseDeal,
+			stateRequiresOigSam,
+			facilityRequiresOigSam,
+			roles,
+		],
 	);
 
 	const { nodes: graphNodes, edges: graphEdges } = useMemo(
@@ -561,9 +633,7 @@ export function RequirementBuilder({
 					</div>
 
 					<div className="flex flex-col gap-1.5 min-w-[140px]">
-						<Label className="text-xs text-muted-foreground">
-							Facility
-						</Label>
+						<Label className="text-xs text-muted-foreground">Facility</Label>
 						<Select value={facilityType} onValueChange={setFacilityType}>
 							<SelectTrigger className="h-8 text-sm">
 								<SelectValue />
@@ -614,7 +684,8 @@ export function RequirementBuilder({
 				{conditionsExpanded && (
 					<div className="mt-3 pt-3 border-t">
 						<p className="text-[11px] text-muted-foreground mb-2.5">
-							Enable conditions to trigger additional screening requirements. Each condition adds packages to the resolution when active.
+							Enable conditions to trigger additional screening requirements.
+							Each condition adds packages to the resolution when active.
 						</p>
 						<div className="flex flex-col gap-1.5">
 							{PRE_DEFINED_CONDITIONS.map((cond) => {
@@ -626,7 +697,9 @@ export function RequirementBuilder({
 										key={cond.id}
 										className={cn(
 											"rounded-md border transition-colors duration-150",
-											isEnabled ? "border-[#c93d4e]/30 bg-[#fdf0f1]" : "border-border",
+											isEnabled
+												? "border-[#c93d4e]/30 bg-[#fdf0f1]"
+												: "border-border",
 										)}
 									>
 										<div className="flex items-center gap-2.5 px-3 py-2">
@@ -656,9 +729,7 @@ export function RequirementBuilder({
 											<button
 												type="button"
 												onClick={() =>
-													setExpandedConditionId(
-														isExpanded ? null : cond.id,
-													)
+													setExpandedConditionId(isExpanded ? null : cond.id)
 												}
 												className="text-muted-foreground hover:text-foreground p-0.5 shrink-0"
 											>
@@ -714,7 +785,8 @@ export function RequirementBuilder({
 						For a <strong>{roleName}</strong>
 						{jurisdiction !== "none" && (
 							<>
-								{" "}in{" "}
+								{" "}
+								in{" "}
 								<strong className="capitalize">
 									{jurisdiction.replace(/-/g, " ")}
 								</strong>
@@ -722,7 +794,8 @@ export function RequirementBuilder({
 						)}
 						{facilityType !== "none" && (
 							<>
-								{" "}at a{" "}
+								{" "}
+								at a{" "}
 								<strong className="capitalize">
 									{facilityType.replace(/-/g, " ")}
 								</strong>
@@ -730,10 +803,9 @@ export function RequirementBuilder({
 						)}
 						{activeConditionCount > 0
 							? ` with ${activeConditionCount} condition${activeConditionCount > 1 ? "s" : ""} active`
-							: ""
-						}: the system composes{" "}
-						<strong>{result.summary.total} requirements</strong>{" "}
-						from{" "}
+							: ""}
+						: the system composes{" "}
+						<strong>{result.summary.total} requirements</strong> from{" "}
 						<strong>
 							{result.groups.length} package
 							{result.groups.length !== 1 ? "s" : ""}
@@ -743,9 +815,7 @@ export function RequirementBuilder({
 				</div>
 			)}
 
-			{loading && (
-				<Skeleton className="h-10 rounded-lg" />
-			)}
+			{loading && <Skeleton className="h-10 rounded-lg" />}
 
 			{/* React Flow canvas */}
 			<div className="h-[500px] rounded-lg border bg-card overflow-hidden">
@@ -764,11 +834,7 @@ export function RequirementBuilder({
 					}}
 					proOptions={{ hideAttribution: true }}
 				>
-					<Background
-						variant={BackgroundVariant.Dots}
-						gap={20}
-						size={1}
-					/>
+					<Background variant={BackgroundVariant.Dots} gap={20} size={1} />
 					<Controls
 						className="!bg-card !border-border !rounded-lg !shadow-md [&>button]:!bg-card [&>button]:!border-border [&>button]:!fill-foreground [&>button:hover]:!bg-muted"
 						style={{ left: 10, bottom: 10 }}

@@ -94,6 +94,7 @@ export interface FACandidate {
 	address?: FAAddress;
 	screeningIds: string[];
 	driversLicense?: FADriversLicense;
+	licenses?: FALicense[];
 }
 
 // -- Screenings --
@@ -167,6 +168,7 @@ export interface FAClient {
 	getPackages(): Promise<FAPackage[]>;
 	createCandidate(data: FACreateCandidateInput): Promise<FACandidate>;
 	updateCandidate(candidateId: string, data: FACreateCandidateInput): Promise<FACandidate>;
+	getCandidate(candidateId: string): Promise<FACandidate>;
 	initiateScreening(data: FAInitiateScreeningInput): Promise<FAScreening>;
 	getScreening(screeningId: string): Promise<FAScreening>;
 	getReportLink(screeningId: string): Promise<FAReportLink>;

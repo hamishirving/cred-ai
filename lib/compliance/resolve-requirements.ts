@@ -8,25 +8,29 @@
  * carry-forward tagging for items that transfer between assignments.
  */
 
-import { eq, and, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
+	assignmentRules,
 	complianceElements,
 	compliancePackages,
 	evidence,
+	packageElements,
+	roles,
+	workNodeTypes,
 } from "@/lib/db/schema";
 import {
-	usRolePackages,
-	usStatePackages,
+	ukFacilityPackages,
+	ukJurisdictionPackages,
+	ukPackageContents,
+	ukRolePackages,
+} from "@/lib/db/seed/markets/uk";
+import {
 	usFacilityPackages,
 	usPackageContents,
+	usRolePackages,
+	usStatePackages,
 } from "@/lib/db/seed/markets/us";
-import {
-	ukRolePackages,
-	ukJurisdictionPackages,
-	ukFacilityPackages,
-	ukPackageContents,
-} from "@/lib/db/seed/markets/uk";
 
 // Merged mappings — slugs don't overlap between markets
 const allRolePackages: Record<string, string[]> = {
@@ -195,6 +199,122 @@ export async function resolvePlacementRequirements(
 	organisationId: string,
 	context: PlacementContext,
 ): Promise<RequirementGroup[]> {
+	const normalise = (value: string | null | undefined) =>
+		(value || "").trim().toLowerCase().replace(/\s+/g, "-");
+
+	const resolveDynamicPackageSelections = async (): Promise<
+		Array<{ packageSlug: string; reason: string }>
+	> => {
+		const [roleRow, nodeTypeRows, rules] = await Promise.all([
+			db
+				.select({ id: roles.id })
+				.from(roles)
+				.where(
+					and(
+						eq(roles.organisationId, organisationId),
+						eq(roles.slug, context.roleSlug),
+					),
+				)
+				.limit(1)
+				.then((rows) => rows[0] ?? null),
+			db
+				.select({
+					id: workNodeTypes.id,
+					name: workNodeTypes.name,
+					slug: workNodeTypes.slug,
+				})
+				.from(workNodeTypes)
+				.where(eq(workNodeTypes.organisationId, organisationId)),
+			db
+				.select({
+					name: assignmentRules.name,
+					packageId: assignmentRules.packageId,
+					roleId: assignmentRules.roleId,
+					workNodeTypeId: assignmentRules.workNodeTypeId,
+					jurisdictions: assignmentRules.jurisdictions,
+				})
+				.from(assignmentRules)
+				.where(
+					and(
+						eq(assignmentRules.organisationId, organisationId),
+						eq(assignmentRules.isActive, true),
+					),
+				),
+		]);
+
+		const roleId = roleRow?.id ?? null;
+		const normalisedFacilityType = normalise(context.facilityType);
+		const normalisedJurisdiction = normalise(context.jurisdiction);
+
+		const matchingWorkNodeTypeIds = new Set(
+			nodeTypeRows
+				.filter(
+					(row) =>
+						normalise(row.slug) === normalisedFacilityType ||
+						normalise(row.name) === normalisedFacilityType,
+				)
+				.map((row) => row.id),
+		);
+
+		const matchedRules = rules.filter((rule) => {
+			if (rule.roleId && (!roleId || rule.roleId !== roleId)) return false;
+			if (
+				rule.workNodeTypeId &&
+				!matchingWorkNodeTypeIds.has(rule.workNodeTypeId)
+			) {
+				return false;
+			}
+			const jurisdictions = (rule.jurisdictions ?? []).map((j) => normalise(j));
+			if (
+				jurisdictions.length > 0 &&
+				!jurisdictions.includes(normalisedJurisdiction)
+			) {
+				return false;
+			}
+			return true;
+		});
+
+		if (matchedRules.length === 0) return [];
+
+		const packageIds = [...new Set(matchedRules.map((rule) => rule.packageId))];
+		if (packageIds.length === 0) return [];
+
+		const matchedPackages = await db
+			.select({
+				id: compliancePackages.id,
+				slug: compliancePackages.slug,
+				isActive: compliancePackages.isActive,
+			})
+			.from(compliancePackages)
+			.where(
+				and(
+					eq(compliancePackages.organisationId, organisationId),
+					inArray(compliancePackages.id, packageIds),
+				),
+			);
+
+		const slugByPackageId = new Map(
+			matchedPackages
+				.filter(
+					(pkg) => pkg.isActive && pkg.slug !== "exclusion-checks-package",
+				)
+				.map((pkg) => [pkg.id, pkg.slug]),
+		);
+
+		return matchedRules
+			.map((rule) => {
+				const packageSlug = slugByPackageId.get(rule.packageId);
+				if (!packageSlug) return null;
+				return {
+					packageSlug,
+					reason: `assignment:${rule.name}`,
+				};
+			})
+			.filter((entry): entry is { packageSlug: string; reason: string } =>
+				Boolean(entry),
+			);
+	};
+
 	const groups: RequirementGroup[] = [];
 	const seenSlugs = new Set<string>();
 
@@ -211,30 +331,81 @@ export async function resolvePlacementRequirements(
 				and(
 					eq(compliancePackages.organisationId, organisationId),
 					eq(compliancePackages.slug, packageSlug),
+					eq(compliancePackages.isActive, true),
 				),
 			)
 			.limit(1);
 
 		if (!pkg) return null;
+		const normalisedContextJurisdiction = normalise(context.jurisdiction);
+		const packageJurisdictionGuard = (pkg.onlyJurisdictions ?? []).map((j) =>
+			normalise(j),
+		);
+		if (
+			packageJurisdictionGuard.length > 0 &&
+			!packageJurisdictionGuard.includes(normalisedContextJurisdiction)
+		) {
+			return null;
+		}
 
-		// Get element slugs from the static mapping
-		const elementSlugs = allPackageContents[packageSlug] || [];
-		if (elementSlugs.length === 0) return null;
-
-		// Filter to jurisdiction-appropriate elements and deduplicate
-		const newSlugs = elementSlugs.filter((s) => !seenSlugs.has(s));
-		if (newSlugs.length === 0) return null;
-
-		// Look up element definitions from DB
-		const elements = await db
-			.select()
-			.from(complianceElements)
+		// Primary source: DB package->elements composition
+		let elements = await db
+			.select({
+				id: complianceElements.id,
+				slug: complianceElements.slug,
+				name: complianceElements.name,
+				description: complianceElements.description,
+				category: complianceElements.category,
+				scope: complianceElements.scope,
+				evidenceType: complianceElements.evidenceType,
+				expiryDays: complianceElements.expiryDays,
+				expiryWarningDays: complianceElements.expiryWarningDays,
+				fulfilmentProvider: complianceElements.fulfilmentProvider,
+				onlyJurisdictions: complianceElements.onlyJurisdictions,
+				excludeJurisdictions: complianceElements.excludeJurisdictions,
+			})
+			.from(packageElements)
+			.innerJoin(
+				complianceElements,
+				eq(complianceElements.id, packageElements.elementId),
+			)
 			.where(
 				and(
+					eq(packageElements.packageId, pkg.id),
 					eq(complianceElements.organisationId, organisationId),
-					inArray(complianceElements.slug, newSlugs),
 				),
-			);
+			)
+			.orderBy(asc(packageElements.displayOrder), asc(complianceElements.name));
+
+		// Fallback: static package contents map for backward compatibility
+		if (elements.length === 0) {
+			const elementSlugs = allPackageContents[packageSlug] || [];
+			if (elementSlugs.length === 0) return null;
+			const newSlugs = elementSlugs.filter((s) => !seenSlugs.has(s));
+			if (newSlugs.length === 0) return null;
+			elements = await db
+				.select({
+					id: complianceElements.id,
+					slug: complianceElements.slug,
+					name: complianceElements.name,
+					description: complianceElements.description,
+					category: complianceElements.category,
+					scope: complianceElements.scope,
+					evidenceType: complianceElements.evidenceType,
+					expiryDays: complianceElements.expiryDays,
+					expiryWarningDays: complianceElements.expiryWarningDays,
+					fulfilmentProvider: complianceElements.fulfilmentProvider,
+					onlyJurisdictions: complianceElements.onlyJurisdictions,
+					excludeJurisdictions: complianceElements.excludeJurisdictions,
+				})
+				.from(complianceElements)
+				.where(
+					and(
+						eq(complianceElements.organisationId, organisationId),
+						inArray(complianceElements.slug, newSlugs),
+					),
+				);
+		}
 
 		// Filter by jurisdiction applicability
 		const applicableElements = elements.filter((el) => {
@@ -275,31 +446,51 @@ export async function resolvePlacementRequirements(
 		};
 	};
 
+	const packageSelections: Array<{ packageSlug: string; reason: string }> = [];
+
 	// 1. Role packages (federal core + role-specific + specialty)
 	const rolePackageSlugs = allRolePackages[context.roleSlug] || [];
 	for (const pkgSlug of rolePackageSlugs) {
-		const group = await resolvePackage(pkgSlug, `role:${context.roleSlug}`);
-		if (group) groups.push(group);
+		packageSelections.push({
+			packageSlug: pkgSlug,
+			reason: `role:${context.roleSlug}`,
+		});
 	}
 
 	// 2. State/jurisdiction package
-	const statePackageSlug = allStatePackages[context.jurisdiction];
+	const normalisedJurisdictionKey = normalise(context.jurisdiction).replace(
+		/\s+/g,
+		"-",
+	);
+	const statePackageSlug =
+		allStatePackages[context.jurisdiction] ||
+		allStatePackages[normalisedJurisdictionKey];
 	if (statePackageSlug) {
-		const group = await resolvePackage(
-			statePackageSlug,
-			`state:${context.jurisdiction}`,
-		);
-		if (group) groups.push(group);
+		packageSelections.push({
+			packageSlug: statePackageSlug,
+			reason: `state:${context.jurisdiction}`,
+		});
 	}
 
 	// 3. Facility package
-	const facilityPackageSlug = allFacilityPackages[context.facilityType];
+	const normalisedFacilityKey = normalise(context.facilityType).replace(
+		/\s+/g,
+		"-",
+	);
+	const facilityPackageSlug =
+		allFacilityPackages[context.facilityType] ||
+		allFacilityPackages[normalisedFacilityKey];
 	if (facilityPackageSlug) {
-		const group = await resolvePackage(
-			facilityPackageSlug,
-			`facility:${context.facilityType}`,
-		);
-		if (group) groups.push(group);
+		packageSelections.push({
+			packageSlug: facilityPackageSlug,
+			reason: `facility:${context.facilityType}`,
+		});
+	}
+
+	// 3b. Dynamic assignment rules (admin-managed package mappings)
+	const dynamicSelections = await resolveDynamicPackageSelections();
+	for (const selection of dynamicSelections) {
+		packageSelections.push(selection);
 	}
 
 	// 4. Conditional: OIG/SAM exclusion checks
@@ -309,7 +500,17 @@ export async function resolvePlacementRequirements(
 			: context.stateRequiresOigSam
 				? `conditional:state-mandate:${context.jurisdiction}`
 				: "conditional:facility-requirement";
-		const group = await resolvePackage("exclusion-checks-package", reason);
+		packageSelections.push({
+			packageSlug: "exclusion-checks-package",
+			reason,
+		});
+	}
+
+	const processedPackages = new Set<string>();
+	for (const selection of packageSelections) {
+		if (processedPackages.has(selection.packageSlug)) continue;
+		processedPackages.add(selection.packageSlug);
+		const group = await resolvePackage(selection.packageSlug, selection.reason);
 		if (group) groups.push(group);
 	}
 

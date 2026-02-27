@@ -961,11 +961,18 @@ Sign off as: "${config.name} Credentialing Team"`),
 						status:
 							candidateConfig.state.status === "compliant"
 								? "active"
-								: "compliance",
+								: candidateConfig.state.status === "in_progress"
+									? "onboarding"
+									: "compliance",
 						compliancePercentage:
 							candidateConfig.state.status === "compliant"
 								? 100
-								: randomInt(70, 95),
+								: candidateConfig.state.status === "in_progress"
+									? randomInt(30, 55)
+									: candidateConfig.state.status === "non_compliant" ||
+											candidateConfig.state.status === "stuck"
+										? randomInt(40, 65)
+										: randomInt(70, 95),
 						isCompliant: candidateConfig.state.status === "compliant",
 						startDate: candidateConfig.state.startDateDays
 							? daysFromNow(candidateConfig.state.startDateDays)

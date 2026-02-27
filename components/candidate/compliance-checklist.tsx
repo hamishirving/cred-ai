@@ -164,7 +164,7 @@ export function ComplianceChecklist({
 	readOnly = false,
 }: ComplianceChecklistProps) {
 	const [expandedGroups, setExpandedGroups] = useState<Set<BlockedBy>>(
-		new Set(defaultExpanded)
+		new Set(defaultExpanded),
 	);
 
 	// Group items by blocker
@@ -172,12 +172,14 @@ export function ComplianceChecklist({
 		() =>
 			GROUP_CONFIG.reduce(
 				(acc, config) => {
-					acc[config.key] = items.filter((item) => item.blockedBy === config.key);
+					acc[config.key] = items.filter(
+						(item) => item.blockedBy === config.key,
+					);
 					return acc;
 				},
-				{} as Record<BlockedBy, ComplianceItemDisplay[]>
+				{} as Record<BlockedBy, ComplianceItemDisplay[]>,
 			),
-		[items]
+		[items],
 	);
 
 	const toggleGroup = (key: BlockedBy) => {
@@ -195,10 +197,13 @@ export function ComplianceChecklist({
 	// Calculate stats
 	const totalItems = items.length;
 	const completeItems = groupedItems.complete?.length || 0;
-	const percentage = totalItems > 0 ? Math.round((completeItems / totalItems) * 100) : 0;
+	const percentage =
+		totalItems > 0 ? Math.round((completeItems / totalItems) * 100) : 0;
 
 	// Days until start
-	const daysToStart = placement?.startDate ? daysUntil(placement.startDate) : null;
+	const daysToStart = placement?.startDate
+		? daysUntil(placement.startDate)
+		: null;
 
 	return (
 		<div className="space-y-3">
@@ -224,7 +229,9 @@ export function ComplianceChecklist({
 								)}
 							</div>
 							<div className="text-right">
-								<span className="text-2xl font-bold text-foreground">{percentage}%</span>
+								<span className="text-2xl font-bold text-foreground">
+									{percentage}%
+								</span>
 								<p className="text-sm text-muted-foreground">
 									{completeItems}/{totalItems} complete
 								</p>
@@ -250,7 +257,7 @@ export function ComplianceChecklist({
 						key={config.key}
 						className={cn(
 							"shadow-none! bg-card transition-colors",
-							!isEmpty && config.borderColor
+							!isEmpty && config.borderColor,
 						)}
 					>
 						<Collapsible
@@ -264,29 +271,29 @@ export function ComplianceChecklist({
 											<span className={config.color}>{config.icon}</span>
 											{config.label}
 											{!isEmpty && (
-												<Badge
-													variant={config.badgeVariant}
-													className="ml-1"
-												>
+												<Badge variant={config.badgeVariant} className="ml-1">
 													{groupItems.length}
 												</Badge>
 											)}
 										</CardTitle>
 										<div className="flex items-center gap-2">
 											{/* Quick action for group */}
-											{!readOnly && config.key === "candidate" && groupItems.length > 0 && onChaseCandidate && (
-												<Button
-													variant="ghost"
-													size="sm"
-													className="h-7 text-xs text-muted-foreground"
-													onClick={(e) => {
-														e.stopPropagation();
-													}}
-												>
-													<MessageSquare className="h-3 w-3 mr-1" />
-													Chase
-												</Button>
-											)}
+											{!readOnly &&
+												config.key === "candidate" &&
+												groupItems.length > 0 &&
+												onChaseCandidate && (
+													<Button
+														variant="ghost"
+														size="sm"
+														className="h-7 text-xs text-muted-foreground"
+														onClick={(e) => {
+															e.stopPropagation();
+														}}
+													>
+														<MessageSquare className="h-3 w-3 mr-1" />
+														Chase
+													</Button>
+												)}
 											{isExpanded ? (
 												<ChevronUp className="h-4 w-4 text-muted-foreground/80" />
 											) : (
@@ -318,7 +325,9 @@ export function ComplianceChecklist({
 																? onChaseThirdParty
 																: undefined
 													}
-													onReview={config.key === "admin" ? onReviewItem : undefined}
+													onReview={
+														config.key === "admin" ? onReviewItem : undefined
+													}
 													onViewEvidence={onViewEvidence}
 												/>
 											))}
@@ -352,6 +361,18 @@ function ComplianceItem({
 	onReview?: (itemId: string) => void;
 	onViewEvidence?: (itemId: string) => void;
 }) {
+	// Format verification status for display
+	const formatVerificationStatus = (status: string) => {
+		const map: Record<string, string> = {
+			human_verified: "Verified",
+			auto_verified: "Auto-verified",
+			pending_review: "Pending review",
+			rejected: "Rejected",
+			verified: "Verified",
+		};
+		return map[status] || status.replace(/_/g, " ");
+	};
+
 	// Build status text based on blocker type
 	const getStatusText = () => {
 		switch (item.blockedBy) {
@@ -363,7 +384,8 @@ function ComplianceItem({
 			case "admin":
 				if (item.uploadedAt) {
 					const days = Math.floor(
-						(Date.now() - new Date(item.uploadedAt).getTime()) / (1000 * 60 * 60 * 24)
+						(Date.now() - new Date(item.uploadedAt).getTime()) /
+							(1000 * 60 * 60 * 24),
 					);
 					return `Uploaded ${formatDaysAgo(days)} ago`;
 				}
@@ -373,14 +395,26 @@ function ComplianceItem({
 					return `Requested ${formatDate(item.requestedAt)}`;
 				}
 				return item.blockingReason || "Awaiting response";
-			case "complete":
+			case "complete": {
+				const parts: string[] = [];
+				if (item.verificationStatus) {
+					parts.push(formatVerificationStatus(item.verificationStatus));
+				} else {
+					parts.push("Verified");
+				}
+				if (item.issuedAt) {
+					parts.push(`Issued ${formatDate(item.issuedAt)}`);
+				}
 				if (item.expiresAt) {
 					const daysToExpiry = daysUntil(item.expiresAt);
 					if (daysToExpiry !== null && daysToExpiry <= 30) {
-						return `Expires ${formatDate(item.expiresAt)}`;
+						parts.push(`Expires ${formatDate(item.expiresAt)}`);
+					} else {
+						parts.push(`Exp. ${formatDate(item.expiresAt)}`);
 					}
 				}
-				return "Verified";
+				return parts.join(" · ");
+			}
 			default:
 				return item.blockingReason || "";
 		}
@@ -388,26 +422,23 @@ function ComplianceItem({
 
 	// Check if expiring soon
 	const isExpiringSoon =
-		item.expiresAt && daysUntil(item.expiresAt) !== null && daysUntil(item.expiresAt)! <= 30;
+		item.expiresAt &&
+		daysUntil(item.expiresAt) !== null &&
+		daysUntil(item.expiresAt)! <= 30;
 
 	return (
 		<li className="group flex items-center justify-between rounded-md px-3 py-2 transition-colors hover:bg-muted/60">
 			<div className="flex items-center gap-3 min-w-0 flex-1">
 				{/* Status indicator */}
-				<div
-					className={cn(
-						"h-2 w-2 rounded-full shrink-0",
-						config.dotColor
-					)}
-				/>
+				<div className={cn("h-2 w-2 rounded-full shrink-0", config.dotColor)} />
 
 				{/* Name and status */}
 				<div className="min-w-0 flex-1">
-					<p className="truncate text-sm font-medium text-foreground">{item.elementName}</p>
+					<p className="truncate text-sm font-medium text-foreground">
+						{item.elementName}
+					</p>
 					<p className="flex items-center gap-1 text-xs text-muted-foreground">
-						{item.blockedBy !== "complete" && (
-							<Clock className="h-3 w-3" />
-						)}
+						{item.blockedBy !== "complete" && <Clock className="h-3 w-3" />}
 						{getStatusText()}
 						{isExpiringSoon && item.blockedBy === "complete" && (
 							<Badge variant="warning" className="ml-2 h-5 py-0 text-xs">
@@ -421,55 +452,57 @@ function ComplianceItem({
 			{/* Actions */}
 			{!readOnly && (
 				<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-				{/* Primary action based on status */}
-				{onChase && item.blockedBy === "candidate" && (
-					<Button
-						variant="ghost"
-						size="sm"
-						className="h-7 text-xs text-muted-foreground"
-						onClick={() => onChase(item.elementId)}
-					>
-						Chase
-					</Button>
-				)}
-				{onReview && item.blockedBy === "admin" && (
-					<Button
-						variant="ghost"
-						size="sm"
-						className="h-7 text-xs text-muted-foreground"
-						onClick={() => onReview(item.elementId)}
-					>
-						Review
-					</Button>
-				)}
-				{onChase && item.blockedBy === "third_party" && (
-					<Button
-						variant="ghost"
-						size="sm"
-						className="h-7 text-xs text-muted-foreground"
-						onClick={() => onChase(item.elementId)}
-					>
-						Chase
-					</Button>
-				)}
-
-				{/* More actions dropdown */}
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-							<MoreHorizontal className="h-4 w-4" />
+					{/* Primary action based on status */}
+					{onChase && item.blockedBy === "candidate" && (
+						<Button
+							variant="ghost"
+							size="sm"
+							className="h-7 text-xs text-muted-foreground"
+							onClick={() => onChase(item.elementId)}
+						>
+							Chase
 						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
-						{onViewEvidence && (
-							<DropdownMenuItem onClick={() => onViewEvidence(item.elementId)}>
-								View details
-							</DropdownMenuItem>
-						)}
-						<DropdownMenuItem>Add note</DropdownMenuItem>
-						<DropdownMenuItem>View history</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
+					)}
+					{onReview && item.blockedBy === "admin" && (
+						<Button
+							variant="ghost"
+							size="sm"
+							className="h-7 text-xs text-muted-foreground"
+							onClick={() => onReview(item.elementId)}
+						>
+							Review
+						</Button>
+					)}
+					{onChase && item.blockedBy === "third_party" && (
+						<Button
+							variant="ghost"
+							size="sm"
+							className="h-7 text-xs text-muted-foreground"
+							onClick={() => onChase(item.elementId)}
+						>
+							Chase
+						</Button>
+					)}
+
+					{/* More actions dropdown */}
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+								<MoreHorizontal className="h-4 w-4" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							{onViewEvidence && (
+								<DropdownMenuItem
+									onClick={() => onViewEvidence(item.elementId)}
+								>
+									View details
+								</DropdownMenuItem>
+							)}
+							<DropdownMenuItem>Add note</DropdownMenuItem>
+							<DropdownMenuItem>View history</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</div>
 			)}
 		</li>

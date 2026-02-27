@@ -12,6 +12,7 @@ import {
 	Circle,
 	AlertTriangle,
 	Clock,
+	Download,
 	Shield,
 	MapPin,
 	Briefcase,
@@ -28,6 +29,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { toast } from "@/components/toast";
+import { ShareProfileDialog } from "@/components/candidate/share-profile-dialog";
 import { useOrg } from "@/lib/org-context";
 import {
 	ActivityTimeline,
@@ -803,6 +806,47 @@ function SummaryStatCard({
 	);
 }
 
+function DownloadPDFButton({
+	profileId,
+	organisationId,
+}: {
+	profileId: string;
+	organisationId: string;
+}) {
+	const [loading, setLoading] = useState(false);
+
+	const handleDownload = async () => {
+		setLoading(true);
+		try {
+			const res = await fetch(`/api/profiles/${profileId}/share-link`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ ttlHours: 1, organisationId }),
+			});
+			if (!res.ok) throw new Error("Failed to create share link");
+			const { link } = await res.json();
+			window.open(`${link.url}?print=true`, "_blank");
+		} catch {
+			toast({ type: "error", description: "Failed to generate PDF" });
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	return (
+		<Button
+			variant="outline"
+			size="sm"
+			className="gap-1.5"
+			onClick={handleDownload}
+			disabled={loading}
+		>
+			<Download className="h-3.5 w-3.5" />
+			{loading ? "Generating\u2026" : "Download PDF"}
+		</Button>
+	);
+}
+
 function DetailSkeleton() {
 	return (
 		<div className="flex min-h-full flex-1 flex-col gap-8 bg-background p-8">
@@ -1025,23 +1069,35 @@ export default function PlacementDetailPage() {
 					</div>
 				</div>
 
-				{/* Overall compliance */}
-				<div className="text-right shrink-0">
-					<span
-						className={cn(
-							"text-4xl font-semibold tabular-nums",
-							summary.percentage >= 80
-								? "text-[var(--positive)]"
-								: summary.percentage >= 50
-									? "text-[var(--warning)]"
-									: "text-destructive",
-						)}
-					>
-						{summary.percentage}%
-					</span>
-					<p className="text-xs text-muted-foreground mt-1">
-						{summary.met} of {summary.total} items met
-					</p>
+				{/* Actions + compliance */}
+				<div className="flex items-center gap-4 shrink-0">
+					<div className="flex items-center gap-2">
+						<ShareProfileDialog
+							profileId={placement.profileId}
+							organisationId={placement.organisationId}
+						/>
+						<DownloadPDFButton
+							profileId={placement.profileId}
+							organisationId={placement.organisationId}
+						/>
+					</div>
+					<div className="text-right">
+						<span
+							className={cn(
+								"text-4xl font-semibold tabular-nums",
+								summary.percentage >= 80
+									? "text-[var(--positive)]"
+									: summary.percentage >= 50
+										? "text-[var(--warning)]"
+										: "text-destructive",
+							)}
+						>
+							{summary.percentage}%
+						</span>
+						<p className="text-xs text-muted-foreground mt-1">
+							{summary.met} of {summary.total} items met
+						</p>
+					</div>
 				</div>
 			</div>
 

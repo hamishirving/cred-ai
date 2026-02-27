@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+	getFAScreeningsByProfileId,
 	getPlacementById,
 	getProfileById,
-	getFAScreeningsByProfileId,
 	upsertFAScreening,
 } from "@/lib/db/queries";
 import { getFAClient } from "@/lib/api/first-advantage/client";
-import {
-	toAlacarteItems,
-	DHS_PRODUCTS,
-} from "@/lib/api/first-advantage/dhs-catalogue";
+import { buildFACandidatePayloadFromProfile } from "@/lib/api/first-advantage/candidate-payload";
+import { DHS_PRODUCTS, toAlacarteItems } from "@/lib/api/first-advantage/dhs-catalogue";
 
 export async function POST(
 	request: NextRequest,
@@ -20,19 +18,14 @@ export async function POST(
 		const body = await request.json();
 		const { productCodes } = body as { productCodes?: string[] };
 
-		if (
-			!productCodes ||
-			!Array.isArray(productCodes) ||
-			productCodes.length === 0
-		) {
+		if (!productCodes || !Array.isArray(productCodes) || productCodes.length === 0) {
 			return NextResponse.json(
 				{ error: "productCodes array is required" },
 				{ status: 400 },
 			);
 		}
 
-		// Validate all codes exist in catalogue
-		const invalidCodes = productCodes.filter((c) => !DHS_PRODUCTS[c]);
+		const invalidCodes = productCodes.filter((code) => !DHS_PRODUCTS[code]);
 		if (invalidCodes.length > 0) {
 			return NextResponse.json(
 				{ error: `Unknown product codes: ${invalidCodes.join(", ")}` },
@@ -40,25 +33,21 @@ export async function POST(
 			);
 		}
 
-		// Look up placement
 		const placement = await getPlacementById({ id: params.id });
 		if (!placement) {
-			return NextResponse.json(
-				{ error: "Placement not found" },
-				{ status: 404 },
-			);
+			return NextResponse.json({ error: "Placement not found" }, { status: 404 });
 		}
 
-		// Look up profile
 		const profile = await getProfileById({ id: placement.profileId });
 		if (!profile) {
 			return NextResponse.json({ error: "Profile not found" }, { status: 404 });
 		}
 
 		const client = getFAClient();
+		const candidatePayload = buildFACandidatePayloadFromProfile(profile);
 
-		// Get or create FA candidate
 		let faCandidateId: string;
+		let createdNewCandidate = false;
 		const existingScreenings = await getFAScreeningsByProfileId({
 			profileId: profile.id,
 		});
@@ -67,47 +56,39 @@ export async function POST(
 			faCandidateId = existingScreenings[0].faCandidateId;
 		} else {
 			try {
-				const candidate = await client.createCandidate({
-					givenName: profile.firstName,
-					familyName: profile.lastName,
-					email: profile.email,
-					clientReferenceId: profile.id,
-					dob: profile.dateOfBirth
-						? new Date(profile.dateOfBirth).toISOString().split("T")[0]
-						: undefined,
-				});
+				const candidate = await client.createCandidate(candidatePayload);
 				faCandidateId = candidate.id;
-			} catch (err) {
-				// 409 = candidate already exists in FA (e.g. created by background screening agent)
-				if (err instanceof Error && err.message.includes("409")) {
-					// Try local DB first
-					const retryScreenings = await getFAScreeningsByProfileId({
-						profileId: profile.id,
-					});
-					const existingId = retryScreenings.find(
-						(s) => s.faCandidateId,
-					)?.faCandidateId;
-					if (existingId) {
-						faCandidateId = existingId;
-					} else {
-						// Fall back to searching FA API by email
-						const existing = await client.findCandidateByEmail(profile.email);
-						if (existing) {
-							faCandidateId = existing.id;
-						} else {
-							throw new Error("FA candidate exists but could not be resolved");
-						}
-					}
+				createdNewCandidate = true;
+			} catch (error) {
+				if (!(error instanceof Error) || !error.message.includes("409")) {
+					throw error;
+				}
+
+				const retryScreenings = await getFAScreeningsByProfileId({
+					profileId: profile.id,
+				});
+				const existingId = retryScreenings.find(
+					(screening) => screening.faCandidateId,
+				)?.faCandidateId;
+
+				if (existingId) {
+					faCandidateId = existingId;
 				} else {
-					throw err;
+					const existing = await client.findCandidateByEmail(profile.email);
+					if (!existing) {
+						throw new Error("FA candidate exists but could not be resolved");
+					}
+					faCandidateId = existing.id;
 				}
 			}
 		}
 
-		// Build alacarte items
-		const alacarte = toAlacarteItems(productCodes);
+		// Reused candidates may have stale payloads from earlier flows.
+		if (!createdNewCandidate) {
+			await client.updateCandidate(faCandidateId, candidatePayload);
+		}
 
-		// Build drug object (required for D&OHS clinic routing)
+		const alacarte = toAlacarteItems(productCodes);
 		const address = profile.address;
 		const drug = {
 			sex: (profile.sex || "male") as "male" | "female",
@@ -115,21 +96,17 @@ export async function POST(
 			siteSelectionAddress: {
 				addressLine: address?.line1 || "123 Main St",
 				municipality: address?.city || "Orlando",
-				regionCode: address?.state
-					? `US-${address.state.toUpperCase()}`
-					: "US-FL",
+				regionCode: address?.state ? `US-${address.state.toUpperCase()}` : "US-FL",
 				postalCode: address?.postcode || "32801",
 			},
 		};
 
-		// Initiate screening
 		const screening = await client.initiateScreening({
 			candidateId: faCandidateId,
 			alacarte,
 			drug,
 		});
 
-		// Persist
 		const record = await upsertFAScreening({
 			organisationId: placement.organisationId,
 			profileId: profile.id,

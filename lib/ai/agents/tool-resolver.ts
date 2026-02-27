@@ -31,6 +31,7 @@ import { getLocalProfile } from "@/lib/ai/tools/get-local-profile";
 import { getLocalCompliance } from "@/lib/ai/tools/get-local-compliance";
 import { searchLocalCandidates } from "@/lib/ai/tools/search-local-candidates";
 import { createSearchKnowledge, searchKnowledge } from "@/lib/ai/tools/search-knowledge";
+import { updateLocalProfile } from "@/lib/ai/tools/update-local-profile";
 import { resolvePlacementRequirementsTool } from "@/lib/ai/tools/resolve-placement-requirements";
 import { getPlacementComplianceTool } from "@/lib/ai/tools/get-placement-compliance";
 import { faGetPackages } from "@/lib/ai/tools/fa-get-packages";
@@ -73,6 +74,7 @@ const toolRegistry: Record<string, Tool> = {
 	getLocalCompliance: getLocalCompliance as Tool,
 	searchLocalCandidates: searchLocalCandidates as Tool,
 	searchKnowledge: searchKnowledge as Tool,
+	updateLocalProfile: updateLocalProfile as Tool,
 	resolvePlacementRequirements: resolvePlacementRequirementsTool as Tool,
 	getPlacementCompliance: getPlacementComplianceTool as Tool,
 	faGetPackages: faGetPackages as Tool,
