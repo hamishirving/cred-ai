@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse, connection } from "next/server";
 import {
 	checkPlacementCompliance,
 	type PlacementContext,
@@ -6,6 +6,7 @@ import {
 import { getPlacementsByOrganisationId } from "@/lib/db/queries";
 
 export async function GET(request: NextRequest) {
+	await connection();
 	try {
 		const searchParams = request.nextUrl.searchParams;
 		const organisationId = searchParams.get("organisationId");

@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse, connection } from "next/server";
 import { getAgentMetrics } from "@/lib/reports/agent-metrics";
 import type { AgentMetricsRange } from "@/lib/reports/types";
 
@@ -15,6 +15,7 @@ function isValidDate(value: string | null): value is string {
 }
 
 export async function GET(request: NextRequest) {
+	await connection();
 	try {
 		const searchParams = request.nextUrl.searchParams;
 		const organisationId = searchParams.get("organisationId");

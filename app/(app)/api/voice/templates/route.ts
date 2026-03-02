@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, connection } from "next/server";
 import { auth } from "@/lib/auth";
 import { ChatSDKError } from "@/lib/errors";
 import { listTemplates } from "@/lib/voice";
@@ -8,6 +8,7 @@ import { listTemplates } from "@/lib/voice";
 // ============================================
 
 export async function GET() {
+	await connection();
 	try {
 		// 1. Check authentication
 		const session = await auth();
