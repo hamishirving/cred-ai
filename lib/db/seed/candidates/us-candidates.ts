@@ -4,7 +4,11 @@
  * Named candidates with varied compliance states for realistic demos.
  */
 import type { NewProfile } from "../../schema";
-import { generateUSPhone, generateUSNursingLicense, generateSSN } from "../utils";
+import {
+	generateUSPhone,
+	generateUSNursingLicense,
+	generateSSN,
+} from "../utils";
 import type { CandidateProfile, CandidateState } from "./uk-candidates";
 
 /**
@@ -18,12 +22,14 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			lastName: "Martinez",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1989-08-15"),
+			sex: "female",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("CA"),
 			address: {
 				line1: "1234 Sunset Blvd",
 				city: "Los Angeles",
+				state: "CA",
 				postcode: "90028",
 				country: "USA",
 			},
@@ -32,7 +38,8 @@ export const travelNurseCandidates: CandidateProfile[] = [
 		state: {
 			status: "compliant",
 			daysSinceActivity: 3,
-			notes: "Active assignment at UCLA Medical Center ICU. California licensed. Fully compliant.",
+			notes:
+				"Active assignment at UCLA Medical Center ICU. California licensed. Fully compliant.",
 		},
 		referenceContacts: [
 			{
@@ -65,12 +72,14 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			lastName: "Johnson",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1985-03-22"),
+			sex: "male",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("FL"),
 			address: {
 				line1: "567 Palm Drive",
 				city: "Miami",
+				state: "FL",
 				postcode: "33101",
 				country: "USA",
 			},
@@ -81,7 +90,8 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			missingElements: ["texas-rn-license"],
 			startDateDays: 14,
 			daysSinceActivity: 2,
-			notes: "Has Florida license, needs Texas license for upcoming Houston Methodist assignment.",
+			notes:
+				"Has Florida license, needs Texas license for upcoming Houston Methodist assignment.",
 		},
 		referenceContacts: [
 			{
@@ -104,12 +114,14 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			lastName: "Davis",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1994-11-08"),
+			sex: "female",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("TX"),
 			address: {
 				line1: "890 Main Street",
 				city: "Dallas",
+				state: "TX",
 				postcode: "75201",
 				country: "USA",
 			},
@@ -124,7 +136,8 @@ export const travelNurseCandidates: CandidateProfile[] = [
 				"hospital-credentialing",
 			],
 			daysSinceActivity: 1,
-			notes: "New to travel nursing. First assignment in progress. Good engagement.",
+			notes:
+				"New to travel nursing. First assignment in progress. Good engagement.",
 		},
 	},
 	{
@@ -134,12 +147,14 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			lastName: "Lee",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1982-06-30"),
+			sex: "male",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("CA"),
 			address: {
 				line1: "456 Ocean Avenue",
 				city: "San Diego",
+				state: "CA",
 				postcode: "92101",
 				country: "USA",
 			},
@@ -159,12 +174,14 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			lastName: "Garcia",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1991-02-14"),
+			sex: "female",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("AZ"),
 			address: {
 				line1: "789 Desert Road",
 				city: "Phoenix",
+				state: "AZ",
 				postcode: "85001",
 				country: "USA",
 			},
@@ -184,12 +201,14 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			lastName: "Kim",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1987-09-18"),
+			sex: "male",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("COMPACT"),
 			address: {
 				line1: "321 Lake View",
 				city: "Chicago",
+				state: "IL",
 				postcode: "60601",
 				country: "USA",
 			},
@@ -198,7 +217,8 @@ export const travelNurseCandidates: CandidateProfile[] = [
 		state: {
 			status: "compliant",
 			daysSinceActivity: 7,
-			notes: "Multi-state compact license holder. Can work in 41 states. Very experienced.",
+			notes:
+				"Multi-state compact license holder. Can work in 41 states. Very experienced.",
 		},
 	},
 	{
@@ -208,12 +228,14 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			lastName: "Brown",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1993-04-25"),
+			sex: "female",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("NC"),
 			address: {
 				line1: "654 Peach Street",
 				city: "Charlotte",
+				state: "NC",
 				postcode: "28202",
 				country: "USA",
 			},
@@ -233,12 +255,14 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			lastName: "Thompson",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1980-12-01"),
+			sex: "male",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("CA"),
 			address: {
 				line1: "987 Golden Gate Way",
 				city: "San Francisco",
+				state: "CA",
 				postcode: "94102",
 				country: "USA",
 			},
@@ -249,7 +273,8 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			missingElements: ["hospital-credentialing"],
 			startDateDays: 7,
 			daysSinceActivity: 1,
-			notes: "Candidate-scoped items complete. Waiting on Cedars-Sinai credentialing.",
+			notes:
+				"Candidate-scoped items complete. Waiting on Cedars-Sinai credentialing.",
 		},
 	},
 	{
@@ -259,12 +284,14 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			lastName: "Wilson",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1986-07-12"),
+			sex: "female",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("COMPACT"),
 			address: {
 				line1: "246 Broadway",
 				city: "Denver",
+				state: "CO",
 				postcode: "80202",
 				country: "USA",
 			},
@@ -273,9 +300,211 @@ export const travelNurseCandidates: CandidateProfile[] = [
 		state: {
 			status: "compliant",
 			daysSinceActivity: 14,
-			notes: "Highly experienced. 5+ years travel nursing. All certifications current.",
+			notes:
+				"Highly experienced. 5+ years travel nursing. All certifications current.",
 		},
 	},
+	// === FA DEMO CANDIDATES ===
+	// These three candidates map to the Medsol demo scenarios.
+
+	// Scenario 1: New clinician — first FL placement, partial compliance
+	{
+		profile: {
+			email: "ashlyn.torres@email.com",
+			firstName: "Ashlyn",
+			lastName: "Torres",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1995-06-12"),
+			sex: "female",
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("COMPACT"),
+			address: {
+				line1: "422 Magnolia Avenue",
+				city: "Nashville",
+				state: "TN",
+				postcode: "37203",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-icu-rn",
+		state: {
+			status: "in_progress",
+			missingElements: [
+				"federal-background-check",
+				"florida-level2-background",
+				"florida-rn-license",
+				"drug-screen",
+				"mmr-vaccination",
+				"tb-test",
+				"varicella-vaccination",
+				"hep-b-vaccination",
+				"physical-examination",
+				"hospital-credentialing",
+				"hospital-orientation",
+				"unit-competency",
+			],
+			daysSinceActivity: 1,
+			notes:
+				"New travel ICU RN. First Florida placement. Has compact license, BLS, ACLS, PALS from Tennessee assignment. Health records and background screening still needed. Standard deal — Package #1. FACIS bundled in background package.",
+		},
+	},
+
+	// Scenario 2: Reassignment — moving from TX to CA, most items carry forward
+	{
+		profile: {
+			email: "lexie.chen@email.com",
+			firstName: "Lexie",
+			lastName: "Chen",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1990-03-28"),
+			sex: "female",
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("COMPACT"),
+			address: {
+				line1: "1800 Main Street",
+				city: "Dallas",
+				state: "TX",
+				postcode: "75201",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-rn",
+		state: {
+			status: "near_complete",
+			missingElements: [
+				"california-rn-license",
+				"california-background-check",
+				"hospital-credentialing",
+				"hospital-orientation",
+				"unit-competency",
+			],
+			startDateDays: 21,
+			daysSinceActivity: 2,
+			notes:
+				"Reassignment from Texas to California. Compact license holder. Federal background, drug screen, BLS, ACLS, health records all carry forward from TX assignment. Only needs CA-specific items and facility onboarding.",
+		},
+	},
+
+	// Scenario 3: Lapse deal — inactive 6 months, many items expired
+	{
+		profile: {
+			email: "peter.walsh@email.com",
+			firstName: "Peter",
+			lastName: "Walsh",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1983-11-15"),
+			sex: "male",
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("FL"),
+			address: {
+				line1: "890 Beach Boulevard",
+				city: "Jacksonville",
+				state: "FL",
+				postcode: "32250",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-rn",
+		state: {
+			status: "non_compliant",
+			missingElements: [
+				"federal-background-check",
+				"florida-level2-background",
+				"drug-screen",
+				"facis-sanctions-screening",
+				"hospital-credentialing",
+				"hospital-orientation",
+				"unit-competency",
+			],
+			expiringElements: ["bls-certification", "tb-test"],
+			daysSinceActivity: 0,
+			notes:
+				"Lapse deal. Inactive for 6 months. Background check expired, drug screen expired, BLS expiring. Needs full re-screening with FACIS sanctions package (Package #2 — tier-2 trigger: lapse deal). Has FL license (still current).",
+		},
+	},
+
+	// Scenario 4: Medsol scorecard candidate — Iowa, compact licence, first-time
+	{
+		profile: {
+			email: "natasha.smith@email.com",
+			firstName: "Natasha",
+			lastName: "Smith",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1992-09-03"),
+			sex: "female",
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("COMPACT"),
+			address: {
+				line1: "814 Grand Avenue",
+				city: "Des Moines",
+				state: "IA",
+				postcode: "50309",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-rn",
+		state: {
+			status: "in_progress",
+			missingElements: [
+				"federal-background-check",
+				"state-background-check",
+				"drug-screen",
+				"tb-test",
+				"physical-examination",
+				"mmr-vaccination",
+				"varicella-vaccination",
+				"hep-b-vaccination",
+				"tdap-vaccination",
+				"skills-checklist",
+				"professional-references",
+				"hospital-credentialing",
+				"hospital-orientation",
+			],
+			daysSinceActivity: 0,
+			notes:
+				"Medsol scorecard candidate. First-time clinician with Medical Solutions. Iowa compact licence. 13-week contract. Has DL, some health docs, signed consent. Needs background, drug screen, health items, and facility onboarding.",
+		},
+	},
+
+	// Scenario 5: BLS verification demo — cert on hand, needs registry check
+	{
+		profile: {
+			email: "spencer.evans@email.com",
+			firstName: "Spencer",
+			lastName: "Evans",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1993-04-17"),
+			sex: "male",
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: generateUSNursingLicense("COMPACT"),
+			address: {
+				line1: "1220 Summit Drive",
+				city: "Portland",
+				state: "OR",
+				postcode: "97201",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-rn",
+		state: {
+			status: "in_progress",
+			missingElements: [
+				"bls-certification",
+				"drug-screen",
+				"physical-examination",
+				"professional-references",
+			],
+			daysSinceActivity: 2,
+			notes:
+				"BLS cert uploaded but not yet verified against AHA registry. Drug screen and physical pending. Has compact license and most health records from previous Oregon assignment.",
+		},
+	},
+
 	{
 		profile: {
 			email: "brian.anderson@email.com",
@@ -283,12 +512,14 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			lastName: "Anderson",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1990-05-28"),
+			sex: "male",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("TX"),
 			address: {
 				line1: "135 Rodeo Drive",
 				city: "Houston",
+				state: "TX",
 				postcode: "77001",
 				country: "USA",
 			},
@@ -299,6 +530,40 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			expiringElements: ["acls-certification"],
 			daysSinceActivity: 0,
 			notes: "ACLS just expired. Cannot work ER until renewed. Urgent.",
+		},
+	},
+
+	// Scenario 6: BON PSV demo — TX licence 801653, RN + LVN/LPN, compact multistate
+	{
+		profile: {
+			email: "james.hickox@email.com",
+			firstName: "James",
+			lastName: "Hickox",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1988-07-04"),
+			sex: "male",
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: "TX-RN-801653",
+			address: {
+				line1: "2401 Elm Street",
+				city: "Dallas",
+				state: "TX",
+				postcode: "75226",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-icu-rn",
+		state: {
+			status: "in_progress",
+			missingElements: [
+				"bon-licence-verification",
+				"federal-background-check",
+				"drug-screen",
+			],
+			daysSinceActivity: 0,
+			notes:
+				"BON PSV demo candidate. TX licence 801653 (RN + LVN/LPN). Compact multistate. Licence needs primary source verification against TX Board of Nursing.",
 		},
 	},
 ];
@@ -314,12 +579,14 @@ export const lakesideCandidates: CandidateProfile[] = [
 			lastName: "Hernandez",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1984-01-20"),
+			sex: "female",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("TX"),
 			address: {
 				line1: "456 Memorial Drive",
 				city: "Houston",
+				state: "TX",
 				postcode: "77030",
 				country: "USA",
 			},
@@ -351,12 +618,14 @@ export const lakesideCandidates: CandidateProfile[] = [
 			lastName: "Williams",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1988-09-05"),
+			sex: "male",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("TX"),
 			address: {
 				line1: "789 Medical Center Blvd",
 				city: "Houston",
+				state: "TX",
 				postcode: "77054",
 				country: "USA",
 			},
@@ -377,12 +646,14 @@ export const lakesideCandidates: CandidateProfile[] = [
 			lastName: "Moore",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1976-06-15"),
+			sex: "female",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("TX"),
 			address: {
 				line1: "321 Westheimer Road",
 				city: "Houston",
+				state: "TX",
 				postcode: "77056",
 				country: "USA",
 			},
@@ -401,12 +672,14 @@ export const lakesideCandidates: CandidateProfile[] = [
 			lastName: "Taylor",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1992-11-30"),
+			sex: "male",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("TX"),
 			address: {
 				line1: "654 Kirby Drive",
 				city: "Houston",
+				state: "TX",
 				postcode: "77098",
 				country: "USA",
 			},
@@ -453,12 +726,14 @@ export const lakesideCandidates: CandidateProfile[] = [
 			lastName: "Jackson",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1995-03-08"),
+			sex: "female",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("TX"),
 			address: {
 				line1: "987 Galleria Parkway",
 				city: "Houston",
+				state: "TX",
 				postcode: "77057",
 				country: "USA",
 			},
@@ -478,12 +753,14 @@ export const lakesideCandidates: CandidateProfile[] = [
 			lastName: "White",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1990-08-22"),
+			sex: "male",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("TX"),
 			address: {
 				line1: "159 Heights Boulevard",
 				city: "Houston",
+				state: "TX",
 				postcode: "77008",
 				country: "USA",
 			},
@@ -493,7 +770,8 @@ export const lakesideCandidates: CandidateProfile[] = [
 			status: "stuck",
 			missingElements: ["drug-screen"],
 			daysSinceActivity: 8,
-			notes: "Missed drug screen appointment. Rescheduled twice. Needs follow-up.",
+			notes:
+				"Missed drug screen appointment. Rescheduled twice. Needs follow-up.",
 		},
 	},
 	{
@@ -503,12 +781,14 @@ export const lakesideCandidates: CandidateProfile[] = [
 			lastName: "Harris",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1987-04-17"),
+			sex: "female",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("TX"),
 			address: {
 				line1: "753 Montrose Boulevard",
 				city: "Houston",
+				state: "TX",
 				postcode: "77006",
 				country: "USA",
 			},
@@ -527,12 +807,14 @@ export const lakesideCandidates: CandidateProfile[] = [
 			lastName: "Martin",
 			phone: generateUSPhone(),
 			dateOfBirth: new Date("1998-02-10"),
+			sex: "male",
 			status: "active",
 			nationalId: generateSSN(),
 			professionalRegistration: generateUSNursingLicense("TX"),
 			address: {
 				line1: "852 Washington Avenue",
 				city: "Houston",
+				state: "TX",
 				postcode: "77007",
 				country: "USA",
 			},

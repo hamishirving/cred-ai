@@ -29,22 +29,7 @@ Requires both profileId and organisationId.`,
 	execute: async ({
 		profileId,
 		organisationId,
-	}): Promise<
-		| {
-				data: {
-					profileId: string;
-					firstName: string;
-					lastName: string;
-					email: string;
-					organisationId: string;
-					role?: { id: string; name: string };
-					placement?: { id: string; workNodeName: string; startDate?: Date };
-					daysInOnboarding: number;
-					daysSinceLastActivity: number;
-				};
-		  }
-		| { error: string }
-	> => {
+	}) => {
 		console.log("[getLocalProfile] Looking up profile:", profileId);
 
 		const context = await getCandidateContext(profileId, organisationId);
@@ -53,6 +38,10 @@ Requires both profileId and organisationId.`,
 			return { error: `Profile ${profileId} not found in organisation ${organisationId}` };
 		}
 
+		// Also fetch the full profile record for fields not in CandidateContext
+		const { getProfileById } = await import("@/lib/db/queries");
+		const fullProfile = await getProfileById({ id: profileId });
+
 		return {
 			data: {
 				profileId: context.profileId,
@@ -60,6 +49,12 @@ Requires both profileId and organisationId.`,
 				lastName: context.lastName,
 				email: context.email,
 				organisationId,
+				phone: fullProfile?.phone ?? null,
+				dateOfBirth: fullProfile?.dateOfBirth?.toISOString().split("T")[0] ?? null,
+				sex: fullProfile?.sex ?? null,
+				nationalId: fullProfile?.nationalId ?? null,
+				address: fullProfile?.address ?? null,
+				professionalRegistration: fullProfile?.professionalRegistration ?? null,
 				role: context.role,
 				placement: context.placement,
 				daysInOnboarding: context.daysInOnboarding,

@@ -11,12 +11,18 @@ import {
 } from "@/components/ui/table";
 import { CheckCircle2, XCircle, Phone, Clock, MessageSquare } from "lucide-react";
 
+interface TranscriptMessage {
+	role?: string;
+	content?: string;
+	timestamp?: number;
+}
+
 interface CallData {
 	status?: string;
 	outcome?: string;
 	duration?: number;
 	capturedData?: Record<string, unknown>;
-	transcript?: string;
+	transcript?: string | TranscriptMessage[];
 	pollCount?: number;
 	timedOut?: boolean;
 }
@@ -86,6 +92,36 @@ function parseTranscript(transcript: string) {
 	return messages;
 }
 
+function parseTranscriptMessages(
+	transcript?: string | TranscriptMessage[],
+): Array<{ speaker: string; text: string }> {
+	if (!transcript) return [];
+
+	if (typeof transcript === "string") {
+		return parseTranscript(transcript);
+	}
+
+	if (!Array.isArray(transcript)) return [];
+
+	return transcript
+		.filter(
+			(message): message is TranscriptMessage =>
+				typeof message === "object" &&
+				message !== null &&
+				typeof message.content === "string" &&
+				message.content.trim().length > 0,
+		)
+		.map((message) => ({
+			speaker:
+				message.role === "assistant"
+					? "AI"
+					: message.role === "user"
+						? "User"
+						: String(message.role ?? "User"),
+			text: String(message.content),
+		}));
+}
+
 /** Extract confirmed results from VAPI structured outputs */
 function extractConfirmedData(capturedData: Record<string, unknown>): Record<string, unknown> {
 	// capturedData might be the structured outputs directly, or nested
@@ -119,6 +155,57 @@ function formatValue(value: unknown): string {
 	return String(value);
 }
 
+function getFollowupSummary(capturedData?: Record<string, unknown>): string | null {
+	if (!capturedData) return null;
+
+	const analysis = capturedData.analysis;
+	if (
+		analysis &&
+		typeof analysis === "object" &&
+		typeof (analysis as { summary?: unknown }).summary === "string"
+	) {
+		return (analysis as { summary: string }).summary;
+	}
+
+	if (typeof capturedData.summary === "string") return capturedData.summary;
+	return null;
+}
+
+function getFollowupStructuredUpdates(
+	capturedData?: Record<string, unknown>,
+): Record<string, unknown> | null {
+	if (!capturedData) return null;
+
+	const analysis = capturedData.analysis;
+	if (
+		analysis &&
+		typeof analysis === "object" &&
+		(analysis as { structuredData?: unknown }).structuredData &&
+		typeof (analysis as { structuredData?: unknown }).structuredData === "object"
+	) {
+		const structuredData = (
+			analysis as { structuredData: Record<string, unknown> }
+		).structuredData;
+		const updates = structuredData.updates;
+		if (updates && typeof updates === "object") {
+			return updates as Record<string, unknown>;
+		}
+	}
+
+	if (
+		capturedData.structuredData &&
+		typeof capturedData.structuredData === "object" &&
+		(capturedData.structuredData as { updates?: unknown }).updates &&
+		typeof (capturedData.structuredData as { updates?: unknown }).updates ===
+			"object"
+	) {
+		return (capturedData.structuredData as { updates: Record<string, unknown> })
+			.updates;
+	}
+
+	return null;
+}
+
 export function CallResultsDisplay({ data, originalContext }: CallResultsDisplayProps) {
 	const call = data as CallData;
 
@@ -144,7 +231,24 @@ export function CallResultsDisplay({ data, originalContext }: CallResultsDisplay
 		})
 		.filter(Boolean) as { field: string; original: string; confirmed: string; hasOriginal: boolean; isMatch: boolean }[];
 
-	const messages = typeof call.transcript === "string" ? parseTranscript(call.transcript) : [];
+	const messages = parseTranscriptMessages(call.transcript);
+	const followupSummary = getFollowupSummary(call.capturedData);
+	const followupUpdates = getFollowupStructuredUpdates(call.capturedData);
+	const followupUpdateRows = followupUpdates
+		? Object.entries(followupUpdates)
+				.filter(
+					([, value]) =>
+						value !== null &&
+						value !== undefined &&
+						(typeof value !== "string" || value.trim().length > 0),
+				)
+				.map(([key, value]) => ({
+					key,
+					value:
+						typeof value === "object" ? JSON.stringify(value) : String(value),
+				}))
+		: [];
+	const hasReferenceComparison = comparisonRows.length > 0;
 
 	return (
 		<div className="w-full max-w-2xl space-y-4">
@@ -170,7 +274,7 @@ export function CallResultsDisplay({ data, originalContext }: CallResultsDisplay
 			</div>
 
 			{/* Comparison table */}
-			{comparisonRows.length > 0 && (
+			{hasReferenceComparison && (
 				<div>
 					<h4 className="text-xs font-medium text-muted-foreground mb-2">Employment Verification</h4>
 					<div className="rounded-md border">
@@ -208,6 +312,55 @@ export function CallResultsDisplay({ data, originalContext }: CallResultsDisplay
 				</div>
 			)}
 
+			{/* Follow-up call summary */}
+			{!hasReferenceComparison && followupSummary ? (
+				<div>
+					<h4 className="text-xs font-medium text-muted-foreground mb-2">
+						Call Summary
+					</h4>
+					<div className="rounded-md bg-muted/30 p-3 text-sm leading-relaxed">
+						{followupSummary}
+					</div>
+				</div>
+			) : null}
+
+			{/* Follow-up structured updates */}
+			{!hasReferenceComparison && (
+				<div>
+					<h4 className="text-xs font-medium text-muted-foreground mb-2">
+						Structured Updates
+					</h4>
+					<div className="rounded-md border">
+						{followupUpdateRows.length > 0 ? (
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead className="text-xs">Field</TableHead>
+										<TableHead className="text-xs">Value</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+									{followupUpdateRows.map((row) => (
+										<TableRow key={row.key}>
+											<TableCell className="text-sm font-medium">
+												{row.key}
+											</TableCell>
+											<TableCell className="text-sm text-muted-foreground">
+												{row.value}
+											</TableCell>
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
+						) : (
+							<div className="p-3 text-sm text-muted-foreground">
+								No structured field updates captured.
+							</div>
+						)}
+					</div>
+				</div>
+			)}
+
 			{/* Transcript */}
 			{messages.length > 0 && (
 				<div>
@@ -223,7 +376,7 @@ export function CallResultsDisplay({ data, originalContext }: CallResultsDisplay
 										msg.speaker === "AI" ? "text-primary" : "text-[var(--positive)]"
 									}`}
 								>
-									{msg.speaker === "AI" ? "Assistant" : "Reference"}
+									{msg.speaker === "AI" ? "Assistant" : "Candidate"}
 								</div>
 								<div className="text-sm leading-relaxed">{msg.text}</div>
 							</div>

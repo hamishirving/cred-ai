@@ -114,6 +114,13 @@ RAGIE_API_KEY="your-ragie-key"
 
 # Email - Postmark
 POSTMARK_API_KEY="your-postmark-key"
+
+# SMS - Twilio
+TWILIO_ACCOUNT_SID="your-twilio-account-sid"
+TWILIO_AUTH_TOKEN="your-twilio-auth-token"
+TWILIO_FROM_NUMBER="+447456442519"
+# Optional demo override (forces all outbound SMS To= this number)
+# SMS_TEST_OVERRIDE_TO="+447780781414"
 ```
 
 See `.env.example` for the complete list.

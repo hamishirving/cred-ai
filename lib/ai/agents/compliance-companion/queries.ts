@@ -19,7 +19,11 @@ import {
 	activities,
 	workNodes,
 } from "@/lib/db/schema";
-import type { CandidateContext, ComplianceItemContext, OrgAISettings } from "../types";
+import type {
+	CandidateContext,
+	ComplianceItemContext,
+	OrgAISettings,
+} from "../types";
 import { analyzeBlocking } from "./blocking";
 
 // Database connection
@@ -37,9 +41,7 @@ const db = drizzle(client);
 /**
  * Get organisation settings including AI companion configuration.
  */
-export async function getOrganisationSettings(
-	organisationId: string,
-): Promise<{
+export async function getOrganisationSettings(organisationId: string): Promise<{
 	id: string;
 	name: string;
 	settings: OrgAISettings;
@@ -62,13 +64,25 @@ export async function getOrganisationSettings(
 	const rawSettings = org.settings as Record<string, unknown> | null;
 
 	const aiSettings: OrgAISettings = {
-		enabled: (rawSettings?.aiCompanion as Record<string, unknown>)?.enabled as boolean ?? true,
-		orgPrompt: (rawSettings?.aiCompanion as Record<string, unknown>)?.orgPrompt as string | undefined,
-		emailFrequency: ((rawSettings?.aiCompanion as Record<string, unknown>)?.emailFrequency as string) as OrgAISettings["emailFrequency"] ?? "daily",
-		sendTime: (rawSettings?.aiCompanion as Record<string, unknown>)?.sendTime as string ?? "09:00",
-		timezone: (rawSettings?.aiCompanion as Record<string, unknown>)?.timezone as string ?? "Europe/London",
-		complianceContact: rawSettings?.complianceContact as OrgAISettings["complianceContact"],
-		supportContact: rawSettings?.supportContact as OrgAISettings["supportContact"],
+		enabled:
+			((rawSettings?.aiCompanion as Record<string, unknown>)
+				?.enabled as boolean) ?? true,
+		orgPrompt: (rawSettings?.aiCompanion as Record<string, unknown>)
+			?.orgPrompt as string | undefined,
+		emailFrequency:
+			((rawSettings?.aiCompanion as Record<string, unknown>)
+				?.emailFrequency as string as OrgAISettings["emailFrequency"]) ??
+			"daily",
+		sendTime:
+			((rawSettings?.aiCompanion as Record<string, unknown>)
+				?.sendTime as string) ?? "09:00",
+		timezone:
+			((rawSettings?.aiCompanion as Record<string, unknown>)
+				?.timezone as string) ?? "Europe/London",
+		complianceContact:
+			rawSettings?.complianceContact as OrgAISettings["complianceContact"],
+		supportContact:
+			rawSettings?.supportContact as OrgAISettings["supportContact"],
 	};
 
 	return {
@@ -99,7 +113,10 @@ export async function getCandidateContext(
 		.select()
 		.from(profiles)
 		.where(
-			and(eq(profiles.id, profileId), eq(profiles.organisationId, organisationId)),
+			and(
+				eq(profiles.id, profileId),
+				eq(profiles.organisationId, organisationId),
+			),
 		)
 		.limit(1);
 
@@ -157,7 +174,8 @@ export async function getCandidateContext(
 		const lastActivity = recentActivities[0];
 		daysSinceLastActivity = lastActivity
 			? Math.floor(
-					(Date.now() - lastActivity.createdAt.getTime()) / (1000 * 60 * 60 * 24),
+					(Date.now() - lastActivity.createdAt.getTime()) /
+						(1000 * 60 * 60 * 24),
 				)
 			: 999;
 	}
@@ -271,7 +289,10 @@ async function getComplianceItemsForProfile(
 		)
 		.orderBy(desc(evidence.createdAt));
 
-	const latestEvidenceByElement = new Map<string, (typeof evidenceRecords)[number]>();
+	const latestEvidenceByElement = new Map<
+		string,
+		(typeof evidenceRecords)[number]
+	>();
 	for (const record of evidenceRecords) {
 		if (!latestEvidenceByElement.has(record.complianceElementId)) {
 			latestEvidenceByElement.set(record.complianceElementId, record);
@@ -301,6 +322,7 @@ async function getComplianceItemsForProfile(
 				description: null,
 				category: null,
 				dataOwnership: "organisation",
+				fulfilmentProvider: "candidate",
 				evidenceType: "document",
 				expiryDays: null,
 				renewalRequired: true,
@@ -327,7 +349,9 @@ async function getComplianceItemsForProfile(
 			blockedBy: analysis.blockedBy,
 			blockingReason: analysis.reason,
 			actionRequired: analysis.actionRequired,
+			issuedAt: evidenceRecord?.issuedAt ?? undefined,
 			expiresAt: evidenceRecord?.expiresAt ?? undefined,
+			verificationStatus: evidenceRecord?.verificationStatus ?? undefined,
 		});
 	}
 

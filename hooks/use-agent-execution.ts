@@ -11,8 +11,12 @@
 
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import type { AgentStep, AgentExecutionResult, BrowserAction } from "@/lib/ai/agents/types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type {
+	AgentStep,
+	AgentExecutionResult,
+	BrowserAction,
+} from "@/lib/ai/agents/types";
 
 export type AgentStatus = "idle" | "running" | "completed" | "failed";
 
@@ -52,6 +56,17 @@ export function useAgentExecution(): UseAgentExecutionReturn {
 	const abortRef = useRef<AbortController | null>(null);
 	const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+	// Clean up polling/SSE on unmount (critical for modal close)
+	useEffect(() => {
+		return () => {
+			abortRef.current?.abort();
+			if (pollRef.current) {
+				clearInterval(pollRef.current);
+				pollRef.current = null;
+			}
+		};
+	}, []);
+
 	const execute = useCallback(
 		(agentId: string, input: Record<string, unknown>) => {
 			// Abort any existing execution
@@ -72,15 +87,12 @@ export function useAgentExecution(): UseAgentExecutionReturn {
 
 			(async () => {
 				try {
-					const response = await fetch(
-						`/api/agents/${agentId}/execute`,
-						{
-							method: "POST",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify(input),
-							signal: controller.signal,
-						},
-					);
+					const response = await fetch(`/api/agents/${agentId}/execute`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(input),
+						signal: controller.signal,
+					});
 
 					if (!response.ok) {
 						let message = "Execution failed";
@@ -147,7 +159,11 @@ export function useAgentExecution(): UseAgentExecutionReturn {
 									const data = JSON.parse(dataLine);
 									handleEvent(eventName, data);
 								} catch {
-									console.warn("[SSE] Failed to parse event:", eventName, dataLine.slice(0, 100));
+									console.warn(
+										"[SSE] Failed to parse event:",
+										eventName,
+										dataLine.slice(0, 100),
+									);
 								}
 							}
 
@@ -156,17 +172,19 @@ export function useAgentExecution(): UseAgentExecutionReturn {
 					}
 				} catch (err) {
 					if ((err as Error).name !== "AbortError") {
-						const message = err instanceof Error ? err.message : "Connection lost";
+						const message =
+							err instanceof Error ? err.message : "Connection lost";
 						setStatus("failed");
 						setError(message);
-						setResult((prev) =>
-							prev ?? {
-								status: "failed",
-								summary: message,
-								steps: [],
-								usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
-								durationMs: 0,
-							},
+						setResult(
+							(prev) =>
+								prev ?? {
+									status: "failed",
+									summary: message,
+									steps: [],
+									usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+									durationMs: 0,
+								},
 						);
 					}
 				}
@@ -188,20 +206,19 @@ export function useAgentExecution(): UseAgentExecutionReturn {
 							statusData.status === "completed" ||
 							statusData.status === "failed"
 						) {
-							setStatus(
-								statusData.status as "completed" | "failed",
-							);
+							setStatus(statusData.status as "completed" | "failed");
 						}
 						if (statusData.status === "failed" && statusData.error) {
 							setError(statusData.error);
-							setResult((prev) =>
-								prev ?? {
-									status: "failed",
-									summary: statusData.error!,
-									steps: [],
-									usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
-									durationMs: 0,
-								},
+							setResult(
+								(prev) =>
+									prev ?? {
+										status: "failed",
+										summary: statusData.error!,
+										steps: [],
+										usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+										durationMs: 0,
+									},
 							);
 						}
 						break;
@@ -223,56 +240,55 @@ export function useAgentExecution(): UseAgentExecutionReturn {
 		[],
 	);
 
-	const connectToExecution = useCallback(
-		(agentId: string, execId: string) => {
-			if (pollRef.current) clearInterval(pollRef.current);
-			abortRef.current?.abort();
+	const connectToExecution = useCallback((agentId: string, execId: string) => {
+		if (pollRef.current) clearInterval(pollRef.current);
+		abortRef.current?.abort();
 
-			setExecutionId(execId);
-			setStatus("running");
+		setExecutionId(execId);
+		setStatus("running");
 
-			const poll = setInterval(async () => {
-				try {
-					const res = await fetch(
-						`/api/agents/${agentId}/executions/${execId}`,
-					);
-					if (!res.ok) return;
-					const data = await res.json();
-					if (!data.execution) return;
+		const poll = setInterval(async () => {
+			try {
+				const res = await fetch(`/api/agents/${agentId}/executions/${execId}`);
+				if (!res.ok) return;
+				const data = await res.json();
+				if (!data.execution) return;
 
-					const exec = data.execution;
-					setSteps(exec.steps || []);
-					// Fetch browser actions from database
-					if (exec.browserActions && exec.browserActions.length > 0) {
-						setBrowserActions(exec.browserActions);
-					}
-
-					if (exec.status === "completed" || exec.status === "failed") {
-						clearInterval(poll);
-						pollRef.current = null;
-						setStatus(exec.status);
-						if (exec.status === "failed") {
-							setError(exec.output?.error || "Execution failed");
-						}
-						if (exec.output) {
-							setResult({
-								status: exec.status,
-								summary: exec.output.summary || exec.output.error || "",
-								steps: exec.steps || [],
-								usage: exec.tokensUsed || { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
-								durationMs: exec.durationMs || 0,
-							});
-						}
-					}
-				} catch {
-					// Retry on next interval
+				const exec = data.execution;
+				setSteps(exec.steps || []);
+				// Fetch browser actions from database
+				if (exec.browserActions && exec.browserActions.length > 0) {
+					setBrowserActions(exec.browserActions);
 				}
-			}, 1000); // Poll every 1s for real-time feel
 
-			pollRef.current = poll;
-		},
-		[],
-	);
+				if (exec.status === "completed" || exec.status === "failed") {
+					clearInterval(poll);
+					pollRef.current = null;
+					setStatus(exec.status);
+					if (exec.status === "failed") {
+						setError(exec.output?.error || "Execution failed");
+					}
+					if (exec.output) {
+						setResult({
+							status: exec.status,
+							summary: exec.output.summary || exec.output.error || "",
+							steps: exec.steps || [],
+							usage: exec.tokensUsed || {
+								inputTokens: 0,
+								outputTokens: 0,
+								totalTokens: 0,
+							},
+							durationMs: exec.durationMs || 0,
+						});
+					}
+				}
+			} catch {
+				// Retry on next interval
+			}
+		}, 1000); // Poll every 1s for real-time feel
+
+		pollRef.current = poll;
+	}, []);
 
 	const stop = useCallback(() => {
 		abortRef.current?.abort();
@@ -282,14 +298,15 @@ export function useAgentExecution(): UseAgentExecutionReturn {
 		}
 		setStatus("failed");
 		setError("Execution stopped by user");
-		setResult((prev) =>
-			prev ?? {
-				status: "failed",
-				summary: "Execution stopped by user",
-				steps: [],
-				usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
-				durationMs: 0,
-			},
+		setResult(
+			(prev) =>
+				prev ?? {
+					status: "failed",
+					summary: "Execution stopped by user",
+					steps: [],
+					usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+					durationMs: 0,
+				},
 		);
 	}, []);
 

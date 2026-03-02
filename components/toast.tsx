@@ -12,12 +12,17 @@ const iconsByType: Record<"success" | "error", ReactNode> = {
 
 export function toast(props: Omit<ToastProps, "id">) {
 	return sonnerToast.custom((id) => (
-		<Toast description={props.description} id={id} type={props.type} />
+		<Toast
+			description={props.description}
+			id={id}
+			type={props.type}
+			action={props.action}
+		/>
 	));
 }
 
 function Toast(props: ToastProps) {
-	const { id, type, description } = props;
+	const { id, type, description, action } = props;
 
 	const descriptionRef = useRef<HTMLDivElement>(null);
 	const [multiLine, setMultiLine] = useState(false);
@@ -63,6 +68,18 @@ function Toast(props: ToastProps) {
 				<div className="text-foreground text-sm" ref={descriptionRef}>
 					{description}
 				</div>
+				{action && (
+					<button
+						type="button"
+						onClick={() => {
+							action.onClick();
+							sonnerToast.dismiss(id);
+						}}
+						className="shrink-0 text-xs font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer"
+					>
+						{action.label}
+					</button>
+				)}
 			</div>
 		</div>
 	);
@@ -72,4 +89,5 @@ type ToastProps = {
 	id: string | number;
 	type: "success" | "error";
 	description: string;
+	action?: { label: string; onClick: () => void };
 };

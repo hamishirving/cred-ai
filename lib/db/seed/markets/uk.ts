@@ -18,6 +18,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "identity",
 		scope: "candidate",
 		evidenceType: "check",
+		fulfilmentProvider: "external_provider",
 		expiryDays: 1095, // 3 years
 		expiryWarningDays: 90,
 		integrationKey: "dbs",
@@ -33,6 +34,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "identity",
 		scope: "candidate",
 		evidenceType: "check",
+		fulfilmentProvider: "external_provider",
 		expiryDays: null, // Continuous monitoring
 		expiryWarningDays: null,
 		integrationKey: "pvg",
@@ -50,6 +52,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "identity",
 		scope: "candidate",
 		evidenceType: "document",
+		fulfilmentProvider: "candidate",
 		expiryDays: null, // Varies by visa type
 		expiryWarningDays: 90,
 		verificationRules: {
@@ -65,6 +68,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "identity",
 		scope: "candidate",
 		evidenceType: "document",
+		fulfilmentProvider: "candidate",
 		expiryDays: null, // Uses document expiry
 		expiryWarningDays: 90,
 		verificationRules: {
@@ -82,6 +86,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "professional",
 		scope: "candidate",
 		evidenceType: "check",
+		fulfilmentProvider: "system",
 		expiryDays: 365, // Annual renewal
 		expiryWarningDays: 60,
 		integrationKey: "nmc",
@@ -97,6 +102,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "professional",
 		scope: "candidate",
 		evidenceType: "check",
+		fulfilmentProvider: "system",
 		expiryDays: 365,
 		expiryWarningDays: 60,
 		integrationKey: "gmc",
@@ -112,6 +118,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "professional",
 		scope: "candidate",
 		evidenceType: "check",
+		fulfilmentProvider: "system",
 		expiryDays: 730, // 2 years
 		expiryWarningDays: 60,
 		integrationKey: "hcpc",
@@ -129,6 +136,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "training",
 		scope: "candidate",
 		evidenceType: "attestation",
+		fulfilmentProvider: "candidate",
 		expiryDays: 365,
 		expiryWarningDays: 30,
 		verificationRules: {
@@ -142,6 +150,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "training",
 		scope: "candidate",
 		evidenceType: "attestation",
+		fulfilmentProvider: "candidate",
 		expiryDays: 365,
 		expiryWarningDays: 30,
 		verificationRules: {
@@ -155,6 +164,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "training",
 		scope: "candidate",
 		evidenceType: "attestation",
+		fulfilmentProvider: "candidate",
 		expiryDays: 1095, // 3 years
 		expiryWarningDays: 30,
 		verificationRules: {
@@ -168,6 +178,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "training",
 		scope: "candidate",
 		evidenceType: "document",
+		fulfilmentProvider: "candidate",
 		expiryDays: 365,
 		expiryWarningDays: 30,
 		verificationRules: {
@@ -182,6 +193,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "training",
 		scope: "candidate",
 		evidenceType: "attestation",
+		fulfilmentProvider: "candidate",
 		expiryDays: 1095, // 3 years
 		expiryWarningDays: 30,
 		verificationRules: {
@@ -195,6 +207,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "training",
 		scope: "candidate",
 		evidenceType: "attestation",
+		fulfilmentProvider: "candidate",
 		expiryDays: 1095, // 3 years
 		expiryWarningDays: 30,
 		verificationRules: {
@@ -208,6 +221,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "training",
 		scope: "candidate",
 		evidenceType: "attestation",
+		fulfilmentProvider: "candidate",
 		expiryDays: 365,
 		expiryWarningDays: 30,
 		verificationRules: {
@@ -221,6 +235,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "training",
 		scope: "candidate",
 		evidenceType: "document",
+		fulfilmentProvider: "candidate",
 		expiryDays: null, // One-time
 		verificationRules: {
 			validationMode: "ai_human",
@@ -236,6 +251,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "verification",
 		scope: "candidate",
 		evidenceType: "form",
+		fulfilmentProvider: "flexible",
 		expiryDays: null, // One-time
 		verificationRules: {
 			validationMode: "human_required",
@@ -250,6 +266,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "orientation",
 		scope: "placement",
 		evidenceType: "attestation",
+		fulfilmentProvider: "organisation_staff",
 		expiryDays: null, // Per placement
 		verificationRules: {
 			validationMode: "none",
@@ -262,6 +279,7 @@ export const ukComplianceElements: Omit<NewComplianceElement, "organisationId">[
 		category: "orientation",
 		scope: "placement",
 		evidenceType: "attestation",
+		fulfilmentProvider: "organisation_staff",
 		expiryDays: null,
 		verificationRules: {
 			validationMode: "none",
@@ -279,30 +297,35 @@ export const ukPackageTemplates: Omit<NewCompliancePackage, "organisationId">[] 
 		description: "Essential requirements for all candidates",
 		category: "core",
 		isDefault: true,
+		version: 1,
 	},
 	{
 		name: "Nursing Package",
 		slug: "nursing-package",
 		description: "Additional requirements for registered nurses",
 		category: "professional",
+		version: 1,
 	},
 	{
 		name: "Healthcare Assistant Package",
 		slug: "hca-package",
 		description: "Requirements for healthcare assistants",
 		category: "professional",
+		version: 1,
 	},
 	{
 		name: "Care Worker Package",
 		slug: "care-worker-package",
 		description: "Requirements for domiciliary care workers",
 		category: "professional",
+		version: 1,
 	},
 	{
 		name: "NHS Trust Package",
 		slug: "nhs-trust-package",
 		description: "NHS Trust specific requirements",
 		category: "client",
+		version: 1,
 	},
 	{
 		name: "Scotland Package",
@@ -310,6 +333,21 @@ export const ukPackageTemplates: Omit<NewCompliancePackage, "organisationId">[] 
 		description: "Scotland-specific requirements (PVG instead of DBS)",
 		category: "jurisdiction",
 		onlyJurisdictions: ["scotland"],
+		version: 1,
+	},
+	{
+		name: "Doctor Package",
+		slug: "doctor-package",
+		description: "Additional requirements for medical doctors",
+		category: "professional",
+		version: 1,
+	},
+	{
+		name: "Care Home Package",
+		slug: "care-home-package",
+		description: "Care home specific orientation and training",
+		category: "client",
+		version: 1,
 	},
 ];
 
@@ -354,6 +392,16 @@ export const ukPackageContents: Record<string, string[]> = {
 	"scotland-package": [
 		"pvg-scheme",
 	],
+	"doctor-package": [
+		"gmc-registration",
+		"bls-uk",
+		"safeguarding-adults",
+		"safeguarding-children",
+	],
+	"care-home-package": [
+		"care-certificate",
+		"safeguarding-adults",
+	],
 };
 
 /**
@@ -394,3 +442,31 @@ export const ukRoles: Omit<NewRole, "organisationId">[] = [
 		professionalBody: "gmc",
 	},
 ];
+
+/**
+ * Which packages a role requires (role slug -> package slugs).
+ */
+export const ukRolePackages: Record<string, string[]> = {
+	"band-5-nurse": ["core-package", "nursing-package"],
+	"band-6-nurse": ["core-package", "nursing-package"],
+	"healthcare-assistant": ["core-package", "hca-package"],
+	"care-worker": ["core-package", "care-worker-package"],
+	"senior-care-worker": ["core-package", "care-worker-package"],
+	doctor: ["core-package", "doctor-package"],
+};
+
+/**
+ * Which package a jurisdiction requires (jurisdiction -> package slug).
+ */
+export const ukJurisdictionPackages: Record<string, string> = {
+	scotland: "scotland-package",
+};
+
+/**
+ * Which package a facility type requires (facility type -> package slug).
+ */
+export const ukFacilityPackages: Record<string, string> = {
+	"nhs-trust": "nhs-trust-package",
+	"care-home": "care-home-package",
+};
+

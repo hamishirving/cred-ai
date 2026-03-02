@@ -14,8 +14,6 @@ import {
 	sql,
 	type SQL,
 } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
 import type { ArtifactKind } from "@/components/artifact";
 import type { VisibilityType } from "@/components/visibility-selector";
 import { ChatSDKError } from "../errors";
@@ -42,6 +40,12 @@ import {
 	type Profile,
 	placements,
 	type Placement,
+	roles,
+	type Role,
+	workNodes,
+	type WorkNode,
+	workNodeTypes,
+	type WorkNodeType,
 	pipelines,
 	type Pipeline,
 	pipelineStages,
@@ -63,6 +67,17 @@ import {
 	type AgentMemory,
 	referenceContacts,
 	type ReferenceContact,
+	compliancePackages,
+	type CompliancePackage,
+	complianceElements,
+	type ComplianceElement,
+	packageElements,
+	assignmentRules,
+	faScreenings,
+	type FAScreeningRecord,
+	type NewFAScreeningRecord,
+	acceptableDocuments,
+	type AcceptableDocument,
 } from "./schema";
 import type {
 	TranscriptMessage,
@@ -70,13 +85,8 @@ import type {
 	VoiceCallOutcome,
 } from "../voice/types";
 
-// biome-ignore lint: Forbidden non-null assertion.
-const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-if (!databaseUrl) {
-	throw new Error("DATABASE_URL is not defined");
-}
-const client = postgres(databaseUrl);
-const db = drizzle(client);
+// Use the shared connection pool from lib/db/index.ts
+import { db } from "./index";
 
 export async function saveChat({
 	id,
@@ -877,6 +887,18 @@ export interface PipelineWithStages {
 }
 
 /**
+ * Get a profile by ID.
+ */
+export async function getProfileById({ id }: { id: string }): Promise<Profile | null> {
+	const [result] = await db
+		.select()
+		.from(profiles)
+		.where(eq(profiles.id, id))
+		.limit(1);
+	return result ?? null;
+}
+
+/**
  * Get the default profile pipeline for an organisation with its stages.
  */
 export async function getDefaultProfilePipeline({
@@ -1104,6 +1126,9 @@ export async function createTask({
 	subjectType,
 	subjectId,
 	organisationId,
+	complianceElementSlugs,
+	source,
+	agentId,
 }: {
 	title: string;
 	description?: string;
@@ -1120,6 +1145,9 @@ export async function createTask({
 	subjectType?: "profile" | "placement" | "evidence" | "escalation";
 	subjectId?: string;
 	organisationId?: string;
+	complianceElementSlugs?: string[];
+	source?: "ai_agent" | "manual" | "system";
+	agentId?: string;
 }): Promise<Task> {
 	try {
 		// Use a default org ID for demo purposes if not provided
@@ -1138,8 +1166,9 @@ export async function createTask({
 				dueAt,
 				subjectType,
 				subjectId,
-				source: "ai_agent",
-				agentId: "chat-companion",
+				complianceElementSlugs: complianceElementSlugs ?? [],
+				source: source ?? "ai_agent",
+				agentId: agentId ?? "chat-companion",
 				status: "pending",
 			})
 			.returning();
@@ -1473,6 +1502,54 @@ export async function logEmailActivity({
 	});
 }
 
+/**
+ * Log a sent/failed SMS as an activity for audit trail.
+ */
+export async function logSmsActivity({
+	organisationId,
+	profileId,
+	recipientPhone,
+	recipientName,
+	body,
+	twilioSid,
+	status,
+	errorMessage,
+	reasoning,
+}: {
+	organisationId: string;
+	profileId: string;
+	recipientPhone: string;
+	recipientName: string;
+	body: string;
+	twilioSid?: string;
+	status: string;
+	errorMessage?: string;
+	reasoning?: string;
+}): Promise<void> {
+	const normalizedStatus = status.toLowerCase();
+	const isFailure = normalizedStatus === "failed";
+	const summary = isFailure ? "SMS failed to send" : "SMS sent";
+
+	await db.insert(activities).values({
+		organisationId,
+		profileId,
+		activityType: "message_sent",
+		actor: "ai",
+		channel: "sms",
+		summary,
+		details: {
+			recipientPhone,
+			recipientName,
+			body,
+			status,
+			twilioSid,
+			errorMessage,
+		},
+		aiReasoning: reasoning,
+		visibleToCandidate: "true",
+	});
+}
+
 // ============================================
 // Reference Contacts
 // ============================================
@@ -1532,20 +1609,720 @@ export async function getSampleCandidate({
 	organisationId,
 }: {
 	organisationId: string;
-}): Promise<{ name: string; email: string } | null> {
+}): Promise<{
+	profileId: string;
+	name: string;
+	email: string;
+	sampleElement?: string;
+} | null> {
 	const [result] = await db
 		.select({
+			profileId: profiles.id,
 			firstName: profiles.firstName,
 			lastName: profiles.lastName,
 			email: profiles.email,
 		})
 		.from(profiles)
 		.where(eq(profiles.organisationId, organisationId))
+		.orderBy(
+			sql`CASE
+				WHEN lower(${profiles.firstName}) = 'spencer'
+					AND lower(${profiles.lastName}) = 'evans'
+				THEN 0
+				ELSE 1
+			END`,
+		)
 		.limit(1);
 
 	if (!result) return null;
+
+	// Pick a candidate-scoped element, preferring categories candidates are likely to email about
+	const [element] = await db
+		.select({ name: complianceElements.name })
+		.from(complianceElements)
+		.where(
+			and(
+				eq(complianceElements.organisationId, organisationId),
+				eq(complianceElements.fulfilmentProvider, "candidate"),
+			),
+		)
+		.orderBy(
+			sql`CASE ${complianceElements.category}
+				WHEN 'health' THEN 0
+				WHEN 'professional' THEN 1
+				WHEN 'training' THEN 2
+				ELSE 3
+			END`,
+		)
+		.limit(1);
+
 	return {
+		profileId: result.profileId,
 		name: `${result.firstName} ${result.lastName}`,
 		email: result.email,
+		sampleElement: element?.name,
 	};
+}
+
+// ============================================
+// Placement Queries
+// ============================================
+
+export interface PlacementListItem {
+	id: string;
+	organisationId: string;
+	profileId: string;
+	candidateName: string;
+	candidateEmail: string;
+	roleName: string;
+	roleSlug: string;
+	facilityName: string;
+	facilityType: string;
+	jurisdiction: string | null;
+	startDate: Date | null;
+	status: string;
+	compliancePercentage: number;
+	isCompliant: boolean;
+	dealType: string | null;
+}
+
+/**
+ * Get all placements for an organisation with joined profile, role, and work node data.
+ */
+export async function getPlacementsByOrganisationId({
+	organisationId,
+}: {
+	organisationId: string;
+}): Promise<PlacementListItem[]> {
+	try {
+		const results = await db
+			.select({
+				id: placements.id,
+				organisationId: placements.organisationId,
+				profileId: placements.profileId,
+				firstName: profiles.firstName,
+				lastName: profiles.lastName,
+				email: profiles.email,
+				roleName: roles.name,
+				roleSlug: roles.slug,
+				facilityName: workNodes.name,
+				facilityType: workNodeTypes.name,
+				jurisdiction: workNodes.jurisdiction,
+				startDate: placements.startDate,
+				status: placements.status,
+				compliancePercentage: placements.compliancePercentage,
+				isCompliant: placements.isCompliant,
+				customFields: placements.customFields,
+			})
+			.from(placements)
+			.innerJoin(profiles, eq(profiles.id, placements.profileId))
+			.innerJoin(roles, eq(roles.id, placements.roleId))
+			.innerJoin(workNodes, eq(workNodes.id, placements.workNodeId))
+			.leftJoin(workNodeTypes, eq(workNodeTypes.id, workNodes.typeId))
+			.where(eq(placements.organisationId, organisationId))
+			.orderBy(desc(placements.startDate));
+
+		return results.map((r) => ({
+			id: r.id,
+			organisationId: r.organisationId,
+			profileId: r.profileId,
+			candidateName: `${r.firstName} ${r.lastName}`,
+			candidateEmail: r.email,
+			roleName: r.roleName,
+			roleSlug: r.roleSlug,
+			facilityName: r.facilityName,
+			facilityType: r.facilityType?.toLowerCase() ?? "hospital",
+			jurisdiction: r.jurisdiction,
+			startDate: r.startDate,
+			status: r.status,
+			compliancePercentage: r.compliancePercentage,
+			isCompliant: r.isCompliant,
+			dealType: (r.customFields as Record<string, unknown>)?.dealType as string | null ?? null,
+		}));
+	} catch (error) {
+		console.error("Failed to get placements:", error);
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to get placements by organisation id",
+		);
+	}
+}
+
+export interface PlacementDetail {
+	id: string;
+	organisationId: string;
+	profileId: string;
+	workNodeId: string;
+	candidateName: string;
+	candidateEmail: string;
+	roleName: string;
+	roleSlug: string;
+	facilityName: string;
+	facilityType: string;
+	jurisdiction: string | null;
+	startDate: Date | null;
+	endDate: Date | null;
+	status: string;
+	compliancePercentage: number;
+	isCompliant: boolean;
+	dealType: string | null;
+	facilityDrugTestRequirements: string[];
+	notes: string | null;
+}
+
+function getStringArray(value: unknown): string[] {
+	if (!Array.isArray(value)) return [];
+	return value.filter((entry): entry is string => typeof entry === "string");
+}
+
+/**
+ * Get a single placement by ID with joined profile, role, and work node data.
+ */
+export async function getPlacementById({
+	id,
+}: {
+	id: string;
+}): Promise<PlacementDetail | null> {
+	try {
+		const [result] = await db
+			.select({
+				id: placements.id,
+				organisationId: placements.organisationId,
+				profileId: placements.profileId,
+				workNodeId: placements.workNodeId,
+				firstName: profiles.firstName,
+				lastName: profiles.lastName,
+				email: profiles.email,
+				roleName: roles.name,
+				roleSlug: roles.slug,
+				facilityName: workNodes.name,
+				typeId: workNodes.typeId,
+				jurisdiction: workNodes.jurisdiction,
+				workNodeCustomFields: workNodes.customFields,
+				startDate: placements.startDate,
+				endDate: placements.endDate,
+				status: placements.status,
+				compliancePercentage: placements.compliancePercentage,
+				isCompliant: placements.isCompliant,
+				customFields: placements.customFields,
+				notes: placements.notes,
+			})
+			.from(placements)
+			.innerJoin(profiles, eq(profiles.id, placements.profileId))
+			.innerJoin(roles, eq(roles.id, placements.roleId))
+			.innerJoin(workNodes, eq(workNodes.id, placements.workNodeId))
+			.where(eq(placements.id, id));
+
+		if (!result) return null;
+
+		// Look up work node type name to derive facilityType
+		let facilityType = "hospital";
+		if (result.typeId) {
+			const [nodeType] = await db
+				.select({ name: workNodeTypes.name })
+				.from(workNodeTypes)
+				.where(eq(workNodeTypes.id, result.typeId))
+				.limit(1);
+			if (nodeType) {
+				facilityType = nodeType.name.toLowerCase();
+			}
+		}
+
+		return {
+			id: result.id,
+			organisationId: result.organisationId,
+			profileId: result.profileId,
+			workNodeId: result.workNodeId,
+			candidateName: `${result.firstName} ${result.lastName}`,
+			candidateEmail: result.email,
+			roleName: result.roleName,
+			roleSlug: result.roleSlug,
+			facilityName: result.facilityName,
+			facilityType,
+			jurisdiction: result.jurisdiction,
+			startDate: result.startDate,
+			endDate: result.endDate,
+			status: result.status,
+			compliancePercentage: result.compliancePercentage,
+			isCompliant: result.isCompliant,
+			dealType: (result.customFields as Record<string, unknown>)?.dealType as string | null ?? null,
+			facilityDrugTestRequirements: getStringArray(
+				(result.workNodeCustomFields as Record<string, unknown> | null | undefined)?.drugTestRequirements,
+			),
+			notes: result.notes,
+		};
+	} catch (error) {
+		console.error("Failed to get placement:", error);
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to get placement by id",
+		);
+	}
+}
+
+// ============================================
+// Work Node / Facility Queries
+// ============================================
+
+export interface WorkNodeDetail {
+	id: string;
+	name: string;
+	typeName: string;
+	jurisdiction: string | null;
+	address: string | null;
+	drugTestRequirements: string[];
+	hierarchyPath: { id: string; name: string; typeName: string }[];
+	activePlacements: {
+		id: string;
+		candidateName: string;
+		roleName: string;
+		status: string;
+		compliancePercentage: number;
+	}[];
+}
+
+/**
+ * Get full work node detail including hierarchy path and active placements.
+ */
+export async function getWorkNodeDetail({
+	id,
+}: {
+	id: string;
+}): Promise<WorkNodeDetail | null> {
+	try {
+		// 1. Fetch the node with its type name
+		const [node] = await db
+			.select({
+				id: workNodes.id,
+				name: workNodes.name,
+				parentId: workNodes.parentId,
+				jurisdiction: workNodes.jurisdiction,
+				address: workNodes.address,
+				customFields: workNodes.customFields,
+				typeName: workNodeTypes.name,
+			})
+			.from(workNodes)
+			.innerJoin(workNodeTypes, eq(workNodeTypes.id, workNodes.typeId))
+			.where(eq(workNodes.id, id));
+
+		if (!node) return null;
+
+		// 2. Walk parent chain to build hierarchy path (max 5 levels)
+		const hierarchyPath: { id: string; name: string; typeName: string }[] = [];
+		let currentParentId = node.parentId;
+		let depth = 0;
+
+		while (currentParentId && depth < 5) {
+			const [parent] = await db
+				.select({
+					id: workNodes.id,
+					name: workNodes.name,
+					parentId: workNodes.parentId,
+					typeName: workNodeTypes.name,
+				})
+				.from(workNodes)
+				.innerJoin(workNodeTypes, eq(workNodeTypes.id, workNodes.typeId))
+				.where(eq(workNodes.id, currentParentId));
+
+			if (!parent) break;
+
+			hierarchyPath.unshift({
+				id: parent.id,
+				name: parent.name,
+				typeName: parent.typeName,
+			});
+			currentParentId = parent.parentId;
+			depth++;
+		}
+
+		// Add current node at the end
+		hierarchyPath.push({
+			id: node.id,
+			name: node.name,
+			typeName: node.typeName,
+		});
+
+		// 3. Fetch active placements at this node (limit 10)
+		const activePlacementRows = await db
+			.select({
+				id: placements.id,
+				firstName: profiles.firstName,
+				lastName: profiles.lastName,
+				roleName: roles.name,
+				status: placements.status,
+				compliancePercentage: placements.compliancePercentage,
+			})
+			.from(placements)
+			.innerJoin(profiles, eq(profiles.id, placements.profileId))
+			.innerJoin(roles, eq(roles.id, placements.roleId))
+			.where(
+				and(
+					eq(placements.workNodeId, id),
+					inArray(placements.status, [
+						"pending",
+						"onboarding",
+						"compliance",
+						"ready",
+						"active",
+					]),
+				),
+			)
+			.limit(10);
+
+		return {
+			id: node.id,
+			name: node.name,
+			typeName: node.typeName,
+			jurisdiction: node.jurisdiction,
+			address: node.address,
+			drugTestRequirements: getStringArray(
+				(node.customFields as Record<string, unknown> | null | undefined)?.drugTestRequirements,
+			),
+			hierarchyPath,
+			activePlacements: activePlacementRows.map((r) => ({
+				id: r.id,
+				candidateName: `${r.firstName} ${r.lastName}`,
+				roleName: r.roleName,
+				status: r.status,
+				compliancePercentage: r.compliancePercentage,
+			})),
+		};
+	} catch (error) {
+		console.error("Failed to get work node detail:", error);
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to get work node detail",
+		);
+	}
+}
+
+/**
+ * Update a placement's status.
+ */
+type PlacementStatus = "pending" | "onboarding" | "compliance" | "ready" | "active" | "completed" | "cancelled";
+
+export async function updatePlacementStatus({
+	id,
+	status,
+}: {
+	id: string;
+	status: PlacementStatus;
+}): Promise<{ id: string; status: string } | null> {
+	try {
+		const [result] = await db
+			.update(placements)
+			.set({ status, updatedAt: new Date() })
+			.where(eq(placements.id, id))
+			.returning({ id: placements.id, status: placements.status });
+
+		return result || null;
+	} catch (error) {
+		console.error("Failed to update placement status:", error);
+		throw new ChatSDKError(
+			"bad_request:database",
+			"Failed to update placement status",
+		);
+	}
+}
+
+// ============================================
+// Compliance Queries
+// ============================================
+
+export async function getCompliancePackagesByOrganisationId({
+	organisationId,
+}: {
+	organisationId: string;
+}): Promise<CompliancePackage[]> {
+	return db
+		.select()
+		.from(compliancePackages)
+		.where(eq(compliancePackages.organisationId, organisationId))
+			.orderBy(asc(compliancePackages.name));
+}
+
+export interface CompliancePackageDetailElement {
+	id: string;
+	slug: string;
+	name: string;
+	category: string | null;
+	scope: string;
+	evidenceType: string;
+	expiryDays: number | null;
+	faHandled: boolean;
+	displayOrder: number;
+}
+
+export interface CompliancePackageAssignments {
+	roleIds: string[];
+	jurisdictions: string[];
+	workNodeTypeIds: string[];
+}
+
+export interface CompliancePackageWithDetails extends CompliancePackage {
+	elements: CompliancePackageDetailElement[];
+	assignments: CompliancePackageAssignments;
+}
+
+export async function getCompliancePackagesWithDetailsByOrganisationId({
+	organisationId,
+}: {
+	organisationId: string;
+}): Promise<CompliancePackageWithDetails[]> {
+	const [packages, packageElementRows, assignmentRows] = await Promise.all([
+		getCompliancePackagesByOrganisationId({ organisationId }),
+		db
+			.select({
+				packageId: packageElements.packageId,
+				displayOrder: packageElements.displayOrder,
+				elementId: complianceElements.id,
+				elementSlug: complianceElements.slug,
+				elementName: complianceElements.name,
+				elementCategory: complianceElements.category,
+				elementScope: complianceElements.scope,
+				elementEvidenceType: complianceElements.evidenceType,
+				elementExpiryDays: complianceElements.expiryDays,
+				elementFulfilmentProvider: complianceElements.fulfilmentProvider,
+			})
+			.from(packageElements)
+			.innerJoin(
+				complianceElements,
+				eq(complianceElements.id, packageElements.elementId),
+			)
+			.where(eq(complianceElements.organisationId, organisationId))
+			.orderBy(
+				asc(packageElements.packageId),
+				asc(packageElements.displayOrder),
+				asc(complianceElements.name),
+			),
+		db
+			.select({
+				packageId: assignmentRules.packageId,
+				roleId: assignmentRules.roleId,
+				jurisdictions: assignmentRules.jurisdictions,
+				workNodeTypeId: assignmentRules.workNodeTypeId,
+				isActive: assignmentRules.isActive,
+			})
+			.from(assignmentRules)
+			.where(eq(assignmentRules.organisationId, organisationId)),
+	]);
+
+	const elementsByPackage = new Map<string, CompliancePackageDetailElement[]>();
+	for (const row of packageElementRows) {
+		const current = elementsByPackage.get(row.packageId) ?? [];
+		current.push({
+			id: row.elementId,
+			slug: row.elementSlug,
+			name: row.elementName,
+			category: row.elementCategory,
+			scope: row.elementScope,
+			evidenceType: row.elementEvidenceType,
+			expiryDays: row.elementExpiryDays,
+			faHandled: row.elementFulfilmentProvider === "external_provider",
+			displayOrder: row.displayOrder,
+		});
+		elementsByPackage.set(row.packageId, current);
+	}
+
+	const assignmentsByPackage = new Map<string, CompliancePackageAssignments>();
+	for (const row of assignmentRows) {
+		if (!row.isActive) continue;
+		const current = assignmentsByPackage.get(row.packageId) ?? {
+			roleIds: [],
+			jurisdictions: [],
+			workNodeTypeIds: [],
+		};
+		if (row.roleId && !current.roleIds.includes(row.roleId)) {
+			current.roleIds.push(row.roleId);
+		}
+		if (row.workNodeTypeId && !current.workNodeTypeIds.includes(row.workNodeTypeId)) {
+			current.workNodeTypeIds.push(row.workNodeTypeId);
+		}
+		for (const jurisdiction of row.jurisdictions ?? []) {
+			if (!current.jurisdictions.includes(jurisdiction)) {
+				current.jurisdictions.push(jurisdiction);
+			}
+		}
+		assignmentsByPackage.set(row.packageId, current);
+	}
+
+	return packages.map((pkg) => ({
+		...pkg,
+		elements: elementsByPackage.get(pkg.id) ?? [],
+		assignments: assignmentsByPackage.get(pkg.id) ?? {
+			roleIds: [],
+			jurisdictions: [],
+			workNodeTypeIds: [],
+		},
+	}));
+}
+
+export async function getComplianceElementsByOrganisationId({
+	organisationId,
+}: {
+	organisationId: string;
+}): Promise<ComplianceElement[]> {
+	return db
+		.select()
+		.from(complianceElements)
+		.where(eq(complianceElements.organisationId, organisationId))
+		.orderBy(asc(complianceElements.name));
+}
+
+export async function getRolesByOrganisationId({
+	organisationId,
+}: {
+	organisationId: string;
+}): Promise<Role[]> {
+	return db
+		.select()
+		.from(roles)
+		.where(eq(roles.organisationId, organisationId))
+			.orderBy(asc(roles.name));
+}
+
+export async function getWorkNodeTypesByOrganisationId({
+	organisationId,
+}: {
+	organisationId: string;
+}): Promise<WorkNodeType[]> {
+	return db
+		.select()
+		.from(workNodeTypes)
+		.where(eq(workNodeTypes.organisationId, organisationId))
+		.orderBy(asc(workNodeTypes.level), asc(workNodeTypes.name));
+}
+
+// ============================================
+// FA Screenings
+// ============================================
+
+/**
+ * Insert or update an FA screening record.
+ * Upserts on fa_screening_id (FA's unique numeric string ID).
+ */
+export async function upsertFAScreening(
+	data: NewFAScreeningRecord,
+): Promise<FAScreeningRecord> {
+	const now = new Date();
+	const [result] = await db
+		.insert(faScreenings)
+		.values({ ...data, createdAt: now, updatedAt: now })
+		.onConflictDoUpdate({
+			target: faScreenings.faScreeningId,
+			set: {
+				status: data.status,
+				result: data.result,
+				reportItems: data.reportItems,
+				portalUrl: data.portalUrl,
+				estimatedCompletionAt: data.estimatedCompletionAt,
+				rawResponse: data.rawResponse,
+				updatedAt: now,
+			},
+		})
+		.returning();
+	return result;
+}
+
+/**
+ * Get all FA screenings for a candidate profile.
+ */
+export async function getFAScreeningsByProfileId({
+	profileId,
+}: {
+	profileId: string;
+}): Promise<FAScreeningRecord[]> {
+	return db
+		.select()
+		.from(faScreenings)
+		.where(eq(faScreenings.profileId, profileId))
+		.orderBy(desc(faScreenings.createdAt));
+}
+
+/**
+ * Get all FA screenings for a placement.
+ */
+export async function getFAScreeningsByPlacementId({
+	placementId,
+}: {
+	placementId: string;
+}): Promise<FAScreeningRecord[]> {
+	return db
+		.select()
+		.from(faScreenings)
+		.where(eq(faScreenings.placementId, placementId))
+		.orderBy(desc(faScreenings.createdAt));
+}
+
+// ============================================
+// Placement Lookup
+// ============================================
+
+/**
+ * Get an active (non-terminal) placement for a profile within an organisation.
+ * Used by inbound document processing to find placement context automatically.
+ */
+export async function getActivePlacementByProfileId({
+	profileId,
+	organisationId,
+}: { profileId: string; organisationId: string }) {
+	const [result] = await db
+		.select({ id: placements.id })
+		.from(placements)
+		.where(
+			and(
+				eq(placements.profileId, profileId),
+				eq(placements.organisationId, organisationId),
+				inArray(placements.status, [
+					"pending",
+					"onboarding",
+					"compliance",
+					"ready",
+					"active",
+				]),
+			),
+		)
+		.limit(1);
+	return result || null;
+}
+
+// ============================================
+// Acceptable Documents
+// ============================================
+
+/**
+ * Get acceptable documents for a set of compliance element IDs.
+ * Returns only active documents, ordered by priority.
+ */
+export async function getAcceptableDocumentsByElementIds({
+	elementIds,
+}: {
+	elementIds: string[];
+}): Promise<AcceptableDocument[]> {
+	if (elementIds.length === 0) return [];
+	return db
+		.select()
+		.from(acceptableDocuments)
+		.where(
+			and(
+				inArray(acceptableDocuments.complianceElementId, elementIds),
+				eq(acceptableDocuments.isActive, true),
+			),
+		)
+		.orderBy(acceptableDocuments.priority);
+}
+
+/**
+ * Get a single acceptable document by ID.
+ */
+export async function getAcceptableDocumentById({
+	id,
+}: {
+	id: string;
+}): Promise<AcceptableDocument | null> {
+	const [result] = await db
+		.select()
+		.from(acceptableDocuments)
+		.where(eq(acceptableDocuments.id, id));
+	return result ?? null;
 }

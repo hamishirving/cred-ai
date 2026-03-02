@@ -7,6 +7,7 @@
  */
 import {
 	boolean,
+	integer,
 	jsonb,
 	pgTable,
 	text,
@@ -51,6 +52,9 @@ export const compliancePackages = pgTable("compliance_packages", {
 
 	/** Whether this package is active */
 	isActive: boolean("is_active").notNull().default(true),
+
+	/** Package version — incremented on edits (future: creates new version) */
+	version: integer("version").notNull().default(1),
 
 	createdAt: timestamp("created_at").notNull().defaultNow(),
 	updatedAt: timestamp("updated_at").notNull().defaultNow(),

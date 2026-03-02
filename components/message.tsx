@@ -40,6 +40,33 @@ const PurePreviewMessage = ({
 	const attachmentsFromMessage = message.parts.filter(
 		(part) => part.type === "file",
 	);
+	const completedToolCallIds = new Set(
+		message.parts
+			.filter(
+				(part) =>
+					Boolean(part) &&
+					typeof part === "object" &&
+					"type" in part &&
+					typeof (part as { type?: unknown }).type === "string" &&
+					((part as { type: string }).type.startsWith("tool-") ||
+						(part as { type: string }).type === "dynamic-tool"),
+			)
+			.flatMap((part) => {
+				const toolPart = part as {
+					toolCallId?: string;
+					output?: unknown;
+					state?: string;
+				};
+				if (!toolPart.toolCallId) return [];
+				const hasOutput = toolPart.output !== undefined;
+				const isCompletedState =
+					toolPart.state === "result" ||
+					toolPart.state === "output-available" ||
+					toolPart.state === "output-error" ||
+					toolPart.state === "output-denied";
+				return hasOutput || isCompletedState ? [toolPart.toolCallId] : [];
+			}),
+	);
 
 	useDataStream();
 
@@ -97,24 +124,38 @@ const PurePreviewMessage = ({
 						</div>
 					)}
 
-					{message.parts?.map((part, index) => {
-						const { type } = part;
-						const key = `message-${message.id}-part-${index}`;
+						{message.parts?.map((part, index) => {
+							if (
+								!part ||
+								typeof part !== "object" ||
+								!("type" in part) ||
+								typeof (part as { type?: unknown }).type !== "string"
+							) {
+								return null;
+							}
 
-						if (type === "reasoning" && part.text?.trim().length > 0) {
-							return (
-								<MessageReasoning
-									isLoading={isLoading}
-									key={key}
-									reasoning={part.text}
-								/>
-							);
-						}
+							const { type } = part as { type: string };
+							const key = `message-${message.id}-part-${index}`;
 
-						if (type === "text") {
-							if (mode === "view") {
+							if (type === "reasoning") {
+								const reasoningPart = part as { text?: string };
+								if (!reasoningPart.text?.trim().length) {
+									return null;
+								}
 								return (
-									<div key={key}>
+									<MessageReasoning
+										isLoading={isLoading}
+										key={key}
+										reasoning={reasoningPart.text}
+									/>
+								);
+							}
+
+							if (type === "text") {
+								const textPart = part as { text?: string };
+								if (mode === "view") {
+									return (
+										<div key={key}>
 										<MessageContent
 											className={cn({
 												"w-fit break-words rounded-2xl px-3 py-2 text-right text-white":
@@ -123,16 +164,16 @@ const PurePreviewMessage = ({
 													message.role === "assistant",
 											})}
 											data-testid="message-content"
-											style={
-												message.role === "user"
-													? { backgroundColor: "var(--primary)" }
-													: undefined
-											}
-										>
-											<Response>{sanitizeText(part.text)}</Response>
-										</MessageContent>
-									</div>
-								);
+												style={
+													message.role === "user"
+														? { backgroundColor: "var(--primary)" }
+														: undefined
+												}
+											>
+												<Response>{sanitizeText(textPart.text ?? "")}</Response>
+											</MessageContent>
+										</div>
+									);
 							}
 
 							if (mode === "edit") {
@@ -157,25 +198,38 @@ const PurePreviewMessage = ({
 						}
 
 						// Handle all tool types through the registry
-						if (hasToolHandler(type)) {
 							const toolPart = part as {
-								toolCallId: string;
+								toolCallId?: string;
+								toolName?: string;
 								state?: string;
 								input?: unknown;
 								output?: unknown;
 							};
-							return (
-								<div key={toolPart.toolCallId}>
-									{renderTool(type, {
-										toolCallId: toolPart.toolCallId,
-										state: toolPart.state as
-											| "input-available"
-											| "output-available"
+
+							if (hasToolHandler(type, toolPart.toolName)) {
+								const toolCallId =
+									toolPart.toolCallId || `tool-part-${message.id}-${index}`;
+								// Some streams keep both a "call" part and a later "result" part
+								// for the same toolCallId. Hide stale pending duplicates once complete.
+								if (
+									toolPart.output === undefined &&
+									toolPart.toolCallId &&
+									completedToolCallIds.has(toolPart.toolCallId)
+								) {
+									return null;
+								}
+								return (
+									<div key={`${toolCallId}-${index}`}>
+										{renderTool(type, {
+											toolCallId,
+											state: toolPart.state as
+												| "input-available"
+												| "output-available"
 											| undefined,
 										input: toolPart.input,
 										output: toolPart.output,
 										isReadonly,
-									})}
+									}, toolPart.toolName)}
 								</div>
 							);
 						}

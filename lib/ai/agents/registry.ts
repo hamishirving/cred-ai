@@ -12,6 +12,11 @@ import { gdcVerificationAgent } from "./definitions/gdc-verification";
 import { onboardingCompanionAgent } from "./definitions/onboarding-companion";
 import { referenceCheckAgent } from "./definitions/reference-check";
 import { inboundEmailResponderAgent } from "./definitions/inbound-email-responder";
+import { complianceGapAnalyzerAgent } from "./definitions/compliance-gap-analyzer";
+import { backgroundScreeningAgent } from "./definitions/background-screening";
+import { screeningStatusMonitorAgent } from "./definitions/screening-status-monitor";
+import { bonVerificationAgent } from "./definitions/bon-verification";
+import { voiceFollowupCompanionAgent } from "./definitions/voice-followup-companion";
 
 /** All registered agents */
 const agents: Record<string, AgentDefinition> = {
@@ -21,6 +26,11 @@ const agents: Record<string, AgentDefinition> = {
 	[onboardingCompanionAgent.id]: onboardingCompanionAgent,
 	[referenceCheckAgent.id]: referenceCheckAgent,
 	[inboundEmailResponderAgent.id]: inboundEmailResponderAgent,
+	[complianceGapAnalyzerAgent.id]: complianceGapAnalyzerAgent,
+	[backgroundScreeningAgent.id]: backgroundScreeningAgent,
+	[screeningStatusMonitorAgent.id]: screeningStatusMonitorAgent,
+	[bonVerificationAgent.id]: bonVerificationAgent,
+	[voiceFollowupCompanionAgent.id]: voiceFollowupCompanionAgent,
 };
 
 /**
@@ -48,7 +58,14 @@ export function serializeAgent(
 ): SerializedAgentDefinition {
 	const schemaShape = agent.inputSchema.shape;
 	const inputFields = Object.entries(schemaShape).map(([key, zodField]) => {
-		const field = zodField as { description?: string; _def?: { typeName?: string; defaultValue?: unknown; innerType?: { _def?: { typeName?: string } } } };
+		const field = zodField as {
+			description?: string;
+			_def?: {
+				typeName?: string;
+				defaultValue?: unknown;
+				innerType?: { _def?: { typeName?: string } };
+			};
+		};
 		// ZodDefault wraps the inner type
 		const isDefault = field._def?.typeName === "ZodDefault";
 		const innerDef = isDefault ? field._def?.innerType?._def : field._def;
@@ -61,7 +78,13 @@ export function serializeAgent(
 			description: field.description || "",
 			required: !innerDef?.typeName?.includes("Optional") && !isDefault,
 			...(isDefault && field._def?.defaultValue != null
-				? { defaultValue: String(typeof field._def.defaultValue === "function" ? field._def.defaultValue() : field._def.defaultValue) }
+				? {
+						defaultValue: String(
+							typeof field._def.defaultValue === "function"
+								? field._def.defaultValue()
+								: field._def.defaultValue,
+						),
+					}
 				: {}),
 		};
 	});

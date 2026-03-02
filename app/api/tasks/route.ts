@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { alias } from "drizzle-orm/pg-core";
 import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { tasks, profiles } from "@/lib/db/schema";
+import { tasks, profiles, placements, workNodes } from "@/lib/db/schema";
+
+// Alias for the placement's candidate profile (avoids collision with direct profile join)
+const placementProfiles = alias(profiles, "placement_profiles");
 
 // Database connection
 const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
@@ -24,6 +28,8 @@ export async function GET(request: NextRequest) {
 		const priority = searchParams.get("priority");
 		const assigneeRole = searchParams.get("assigneeRole");
 		const source = searchParams.get("source");
+		const subjectType = searchParams.get("subjectType");
+		const subjectId = searchParams.get("subjectId");
 		const limit = parseInt(searchParams.get("limit") || "50", 10);
 		const offset = parseInt(searchParams.get("offset") || "0", 10);
 
@@ -60,7 +66,15 @@ export async function GET(request: NextRequest) {
 			conditions.push(eq(tasks.source, source as typeof tasks.source._.data));
 		}
 
-		// Query tasks with profile info
+		if (subjectType) {
+			conditions.push(eq(tasks.subjectType, subjectType as typeof tasks.subjectType._.data));
+		}
+
+		if (subjectId) {
+			conditions.push(eq(tasks.subjectId, subjectId));
+		}
+
+		// Query tasks with profile info and placement enrichment
 		const taskList = await db
 			.select({
 				id: tasks.id,
@@ -72,21 +86,28 @@ export async function GET(request: NextRequest) {
 				status: tasks.status,
 				source: tasks.source,
 				agentId: tasks.agentId,
+				executionId: tasks.executionId,
 				insightId: tasks.insightId,
 				aiReasoning: tasks.aiReasoning,
+				complianceElementSlugs: tasks.complianceElementSlugs,
 				subjectType: tasks.subjectType,
 				subjectId: tasks.subjectId,
 				assigneeId: tasks.assigneeId,
 				assigneeRole: tasks.assigneeRole,
+				scheduledFor: tasks.scheduledFor,
 				dueAt: tasks.dueAt,
 				snoozedUntil: tasks.snoozedUntil,
 				completedAt: tasks.completedAt,
 				createdAt: tasks.createdAt,
 				updatedAt: tasks.updatedAt,
-				// Join profile for subject info
+				// Join profile for profile-subject info
 				profileFirstName: profiles.firstName,
 				profileLastName: profiles.lastName,
 				profileEmail: profiles.email,
+				// Join placement → profile + workNode for placement-subject info
+				placementCandidateFirstName: placementProfiles.firstName,
+				placementCandidateLastName: placementProfiles.lastName,
+				placementFacilityName: workNodes.name,
 			})
 			.from(tasks)
 			.leftJoin(
@@ -95,6 +116,21 @@ export async function GET(request: NextRequest) {
 					eq(tasks.subjectType, "profile"),
 					eq(tasks.subjectId, profiles.id),
 				),
+			)
+			.leftJoin(
+				placements,
+				and(
+					eq(tasks.subjectType, "placement"),
+					eq(tasks.subjectId, placements.id),
+				),
+			)
+			.leftJoin(
+				placementProfiles,
+				eq(placements.profileId, placementProfiles.id),
+			)
+			.leftJoin(
+				workNodes,
+				eq(placements.workNodeId, workNodes.id),
 			)
 			.where(and(...conditions))
 			.orderBy(
@@ -118,38 +154,54 @@ export async function GET(request: NextRequest) {
 			.where(and(...conditions));
 
 		// Format response
-		const formattedTasks = taskList.map((task) => ({
-			id: task.id,
-			organisationId: task.organisationId,
-			title: task.title,
-			description: task.description,
-			priority: task.priority,
-			category: task.category,
-			status: task.status,
-			source: task.source,
-			agentId: task.agentId,
-			insightId: task.insightId,
-			aiReasoning: task.aiReasoning,
-			subjectType: task.subjectType,
-			subjectId: task.subjectId,
-			subject: task.subjectType === "profile" && task.profileFirstName
-				? {
-						type: task.subjectType,
-						id: task.subjectId,
-						name: `${task.profileFirstName} ${task.profileLastName}`,
-						email: task.profileEmail,
-					}
-				: task.subjectType
-					? { type: task.subjectType, id: task.subjectId }
-					: null,
-			assigneeId: task.assigneeId,
-			assigneeRole: task.assigneeRole,
-			dueAt: task.dueAt?.toISOString(),
-			snoozedUntil: task.snoozedUntil?.toISOString(),
-			completedAt: task.completedAt?.toISOString(),
-			createdAt: task.createdAt.toISOString(),
-			updatedAt: task.updatedAt.toISOString(),
-		}));
+		const formattedTasks = taskList.map((task) => {
+			let subject: { type: string; id: string | null; name?: string; email?: string; facility?: string } | null = null;
+
+			if (task.subjectType === "profile" && task.profileFirstName) {
+				subject = {
+					type: "profile",
+					id: task.subjectId,
+					name: `${task.profileFirstName} ${task.profileLastName}`,
+					email: task.profileEmail ?? undefined,
+				};
+			} else if (task.subjectType === "placement" && task.placementCandidateFirstName) {
+				subject = {
+					type: "placement",
+					id: task.subjectId,
+					name: `${task.placementCandidateFirstName} ${task.placementCandidateLastName}`,
+					facility: task.placementFacilityName ?? undefined,
+				};
+			} else if (task.subjectType) {
+				subject = { type: task.subjectType, id: task.subjectId };
+			}
+
+			return {
+				id: task.id,
+				organisationId: task.organisationId,
+				title: task.title,
+				description: task.description,
+				priority: task.priority,
+				category: task.category,
+				status: task.status,
+				source: task.source,
+				agentId: task.agentId,
+				executionId: task.executionId,
+				insightId: task.insightId,
+				aiReasoning: task.aiReasoning,
+				complianceElementSlugs: task.complianceElementSlugs ?? [],
+				subjectType: task.subjectType,
+				subjectId: task.subjectId,
+				subject,
+				assigneeId: task.assigneeId,
+				assigneeRole: task.assigneeRole,
+				scheduledFor: task.scheduledFor?.toISOString() ?? null,
+				dueAt: task.dueAt?.toISOString(),
+				snoozedUntil: task.snoozedUntil?.toISOString(),
+				completedAt: task.completedAt?.toISOString(),
+				createdAt: task.createdAt.toISOString(),
+				updatedAt: task.updatedAt.toISOString(),
+			};
+		});
 
 		return NextResponse.json({
 			tasks: formattedTasks,
@@ -187,6 +239,7 @@ export async function POST(request: NextRequest) {
 			agentId,
 			insightId,
 			dueAt,
+			complianceElementSlugs,
 		} = body;
 
 		if (!organisationId || !title) {
@@ -211,6 +264,7 @@ export async function POST(request: NextRequest) {
 				source,
 				agentId,
 				insightId,
+				complianceElementSlugs: complianceElementSlugs ?? [],
 				status: "pending",
 				dueAt: dueAt ? new Date(dueAt) : undefined,
 			})

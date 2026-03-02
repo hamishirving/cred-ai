@@ -32,7 +32,8 @@ export function resolveShareExpiresAt({
 		return date;
 	}
 
-	const ttl = ttlHours && ttlHours > 0 ? ttlHours : DEFAULT_SHARE_LINK_TTL_HOURS;
+	const ttl =
+		ttlHours && ttlHours > 0 ? ttlHours : DEFAULT_SHARE_LINK_TTL_HOURS;
 	return new Date(Date.now() + ttl * 60 * 60 * 1000);
 }
 
@@ -61,7 +62,10 @@ export async function createProfileShareLink({
 	return record;
 }
 
-export async function listActiveProfileShareLinks(profileId: string, organisationId: string) {
+export async function listActiveProfileShareLinks(
+	profileId: string,
+	organisationId: string,
+) {
 	return db
 		.select()
 		.from(profileShareLinks)
@@ -112,7 +116,9 @@ export async function revokeProfileShareLink({
 	return record ?? null;
 }
 
-export function buildProfileShareUrl(token: string): string {
-	const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").trim();
-	return new URL(`/share/${token}`, baseUrl).toString();
+export function buildProfileShareUrl(token: string, baseUrl?: string): string {
+	const origin =
+		baseUrl ||
+		(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").trim();
+	return new URL(`/share/${token}`, origin).toString();
 }

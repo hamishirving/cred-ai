@@ -11,21 +11,43 @@ import {
 	revokeProfileShareLink,
 } from "@/lib/share-links/profile-share-links";
 
-async function getRequestContext(profileId: string) {
+function getBaseUrl(request: NextRequest): string {
+	const proto = request.headers.get("x-forwarded-proto") || "http";
+	const host = request.headers.get("host") || "localhost:3000";
+	return `${proto}://${host}`;
+}
+
+async function getRequestContext(profileId: string, orgIdOverride?: string) {
 	const session = await auth();
-	if (!session?.membership?.organisationId || !session.user.id) {
-		return { error: NextResponse.json({ error: "Unauthorised" }, { status: 401 }) };
+	if (!session?.user.id) {
+		return {
+			error: NextResponse.json({ error: "Unauthorised" }, { status: 401 }),
+		};
 	}
 
-	const organisationId = session.membership.organisationId;
+	// Use override if provided, fall back to session org
+	const organisationId = orgIdOverride || session.membership?.organisationId;
+	if (!organisationId) {
+		return {
+			error: NextResponse.json({ error: "Unauthorised" }, { status: 401 }),
+		};
+	}
+
 	const [profile] = await db
 		.select({ id: profiles.id })
 		.from(profiles)
-		.where(and(eq(profiles.id, profileId), eq(profiles.organisationId, organisationId)))
+		.where(
+			and(
+				eq(profiles.id, profileId),
+				eq(profiles.organisationId, organisationId),
+			),
+		)
 		.limit(1);
 
 	if (!profile) {
-		return { error: NextResponse.json({ error: "Profile not found" }, { status: 404 }) };
+		return {
+			error: NextResponse.json({ error: "Profile not found" }, { status: 404 }),
+		};
 	}
 
 	return {
@@ -35,20 +57,26 @@ async function getRequestContext(profileId: string) {
 }
 
 export async function GET(
-	_request: NextRequest,
+	request: NextRequest,
 	{ params }: { params: Promise<{ id: string }> },
 ) {
 	try {
 		const { id: profileId } = await params;
-		const context = await getRequestContext(profileId);
+		const orgId =
+			request.nextUrl.searchParams.get("organisationId") || undefined;
+		const context = await getRequestContext(profileId, orgId);
 		if ("error" in context) return context.error;
+		const baseUrl = getBaseUrl(request);
 
-		const links = await listActiveProfileShareLinks(profileId, context.organisationId);
+		const links = await listActiveProfileShareLinks(
+			profileId,
+			context.organisationId,
+		);
 
 		return NextResponse.json({
 			links: links.map((link) => ({
 				id: link.id,
-				url: buildProfileShareUrl(link.token),
+				url: buildProfileShareUrl(link.token, baseUrl),
 				token: link.token,
 				expiresAt: link.expiresAt.toISOString(),
 				createdAt: link.createdAt.toISOString(),
@@ -56,7 +84,10 @@ export async function GET(
 		});
 	} catch (error) {
 		console.error("Failed to list profile share links:", error);
-		return NextResponse.json({ error: "Failed to list profile share links" }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Failed to list profile share links" },
+			{ status: 500 },
+		);
 	}
 }
 
@@ -66,10 +97,14 @@ export async function POST(
 ) {
 	try {
 		const { id: profileId } = await params;
-		const context = await getRequestContext(profileId);
+		const body = (await request.json()) as {
+			expiresAt?: string;
+			ttlHours?: number;
+			organisationId?: string;
+		};
+		const context = await getRequestContext(profileId, body?.organisationId);
 		if ("error" in context) return context.error;
-
-		const body = (await request.json()) as { expiresAt?: string; ttlHours?: number };
+		const baseUrl = getBaseUrl(request);
 		const expiresAt = resolveShareExpiresAt({
 			expiresAt: body?.expiresAt,
 			ttlHours: body?.ttlHours,
@@ -85,15 +120,19 @@ export async function POST(
 		return NextResponse.json({
 			link: {
 				id: link.id,
-				url: buildProfileShareUrl(link.token),
+				url: buildProfileShareUrl(link.token, baseUrl),
 				token: link.token,
 				expiresAt: link.expiresAt.toISOString(),
 				createdAt: link.createdAt.toISOString(),
 			},
 		});
 	} catch (error) {
-		const message = error instanceof Error ? error.message : "Failed to create profile share link";
-		const status = message.includes("Expiry") || message.includes("expiresAt") ? 400 : 500;
+		const message =
+			error instanceof Error
+				? error.message
+				: "Failed to create profile share link";
+		const status =
+			message.includes("Expiry") || message.includes("expiresAt") ? 400 : 500;
 		console.error("Failed to create profile share link:", error);
 		return NextResponse.json({ error: message }, { status });
 	}
@@ -105,12 +144,17 @@ export async function DELETE(
 ) {
 	try {
 		const { id: profileId } = await params;
-		const context = await getRequestContext(profileId);
+		const body = (await request.json()) as {
+			linkId?: string;
+			organisationId?: string;
+		};
+		const context = await getRequestContext(profileId, body?.organisationId);
 		if ("error" in context) return context.error;
-
-		const body = (await request.json()) as { linkId?: string };
 		if (!body?.linkId) {
-			return NextResponse.json({ error: "linkId is required" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "linkId is required" },
+				{ status: 400 },
+			);
 		}
 
 		const [exists] = await db
@@ -126,7 +170,10 @@ export async function DELETE(
 			.limit(1);
 
 		if (!exists) {
-			return NextResponse.json({ error: "Share link not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Share link not found" },
+				{ status: 404 },
+			);
 		}
 
 		const revoked = await revokeProfileShareLink({
@@ -135,12 +182,18 @@ export async function DELETE(
 		});
 
 		if (!revoked) {
-			return NextResponse.json({ error: "Share link already revoked" }, { status: 400 });
+			return NextResponse.json(
+				{ error: "Share link already revoked" },
+				{ status: 400 },
+			);
 		}
 
 		return NextResponse.json({ success: true });
 	} catch (error) {
 		console.error("Failed to revoke profile share link:", error);
-		return NextResponse.json({ error: "Failed to revoke profile share link" }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Failed to revoke profile share link" },
+			{ status: 500 },
+		);
 	}
 }

@@ -1,6 +1,5 @@
-import { cookies } from "next/headers";
-import { geolocation } from "@vercel/functions";
 import { withTracing } from "@posthog/ai";
+import { geolocation } from "@vercel/functions";
 import {
 	convertToModelMessages,
 	createUIMessageStream,
@@ -10,10 +9,10 @@ import {
 	streamText,
 } from "ai";
 import { unstable_cache as cache } from "next/cache";
+import { cookies } from "next/headers";
 import type { ModelCatalog } from "tokenlens/core";
 import { fetchModels } from "tokenlens/fetch";
 import { getUsage } from "tokenlens/helpers";
-import { auth, type UserType } from "@/lib/auth";
 import type { VisibilityType } from "@/components/visibility-selector";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import type { ChatModel } from "@/lib/ai/models";
@@ -21,19 +20,22 @@ import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { myProvider } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { createForm } from "@/lib/ai/tools/create-form";
+import { createTaskTool } from "@/lib/ai/tools/create-task";
 import { draftEmail } from "@/lib/ai/tools/draft-email";
-import { getCompliancePackages } from "@/lib/ai/tools/get-compliance-packages";
-import { getMetadata } from "@/lib/ai/tools/get-org-metadata";
-import { getProfile } from "@/lib/ai/tools/get-profile";
-import { getDocuments } from "@/lib/ai/tools/get-profile-documents";
-import { manageProfile } from "@/lib/ai/tools/manage-profile";
+import { getCallStatusTool } from "@/lib/ai/tools/get-call-status";
+import { getLocalCompliance } from "@/lib/ai/tools/get-local-compliance";
+import { getLocalDocuments } from "@/lib/ai/tools/get-local-documents";
+import { getLocalProfile } from "@/lib/ai/tools/get-local-profile";
+import { applyFollowupVoiceOutcomeTool } from "@/lib/ai/tools/apply-followup-voice-outcome";
+import { initiateFollowupVoiceCallTool } from "@/lib/ai/tools/initiate-followup-voice-call";
 import { queryDataAgent } from "@/lib/ai/tools/query-data-agent";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
-import { searchKnowledge } from "@/lib/ai/tools/search-knowledge";
-import { createTaskTool } from "@/lib/ai/tools/create-task";
+import { createSearchKnowledge } from "@/lib/ai/tools/search-knowledge";
+import { searchLocalCandidates } from "@/lib/ai/tools/search-local-candidates";
+import { sendSms } from "@/lib/ai/tools/send-sms";
 import { updateDocument } from "@/lib/ai/tools/update-document";
+import { auth, type UserType } from "@/lib/auth";
 import { isProductionEnvironment } from "@/lib/constants";
-import { getPostHogClient } from "@/lib/posthog-server";
 import {
 	createStreamId,
 	deleteChatById,
@@ -47,13 +49,14 @@ import {
 } from "@/lib/db/queries";
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatSDKError } from "@/lib/errors";
+import { getPostHogClient } from "@/lib/posthog-server";
 import type { ChatMessage } from "@/lib/types";
 import type { AppUsage } from "@/lib/usage";
 import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const getTokenlensCatalog = cache(
 	async (): Promise<ModelCatalog | undefined> => {
@@ -165,11 +168,13 @@ export async function POST(request: Request) {
 
 		// Fetch org settings for custom AI instructions (from cookie set by org switcher)
 		const cookieStore = await cookies();
-		const selectedOrgId = cookieStore.get("selectedOrgId")?.value || session.user.currentOrgId;
+		const selectedOrgId =
+			cookieStore.get("selectedOrgId")?.value || session.user.currentOrgId;
 		const org = selectedOrgId
 			? await getOrganisationById({ id: selectedOrgId })
 			: null;
 		const orgInstructions = org?.settings?.aiCompanion?.orgPrompt;
+		const searchKnowledge = createSearchKnowledge(selectedOrgId ?? undefined);
 
 		await saveMessages({
 			messages: [
@@ -203,7 +208,12 @@ export async function POST(request: Request) {
 
 				const result = streamText({
 					model: tracedModel,
-					system: systemPrompt({ selectedChatModel, requestHints, orgInstructions }),
+					system: systemPrompt({
+						selectedChatModel,
+						requestHints,
+						orgInstructions,
+						orgId: selectedOrgId ?? undefined,
+					}),
 					messages: await convertToModelMessages(uiMessages),
 					stopWhen: stepCountIs(5),
 					experimental_activeTools:
@@ -211,29 +221,32 @@ export async function POST(request: Request) {
 							? []
 							: [
 									"queryDataAgent",
-									"getProfile",
-									"getDocuments",
-									"getCompliancePackages",
-									"getMetadata",
-									"manageProfile",
+									"searchLocalCandidates",
+									"getLocalProfile",
+									"getLocalDocuments",
+									"getLocalCompliance",
 									"createForm",
 									"draftEmail",
+									"sendSms",
 									"createDocument",
 									"updateDocument",
 									"requestSuggestions",
 									"searchKnowledge",
 									"createTask",
+									"initiateFollowupVoiceCall",
+									"getCallStatus",
+									"applyFollowupVoiceOutcome",
 								],
 					experimental_transform: smoothStream({ chunking: "word" }),
 					tools: {
 						queryDataAgent,
-						getProfile,
-						getDocuments,
-						getCompliancePackages,
-						getMetadata,
-						manageProfile,
+						searchLocalCandidates,
+						getLocalProfile,
+						getLocalDocuments,
+						getLocalCompliance,
 						createForm,
 						draftEmail,
+						sendSms,
 						createDocument: createDocument({ session, dataStream }),
 						updateDocument: updateDocument({ session, dataStream }),
 						requestSuggestions: requestSuggestions({
@@ -242,6 +255,9 @@ export async function POST(request: Request) {
 						}),
 						searchKnowledge,
 						createTask: createTaskTool,
+						initiateFollowupVoiceCall: initiateFollowupVoiceCallTool,
+						getCallStatus: getCallStatusTool,
+						applyFollowupVoiceOutcome: applyFollowupVoiceOutcomeTool,
 					},
 					experimental_telemetry: {
 						isEnabled: isProductionEnvironment,

@@ -6,6 +6,7 @@ export interface RetrieveParams {
 	rerank?: boolean;
 	filter?: Record<string, unknown>;
 	max_chunks_per_document?: number;
+	partition?: string;
 }
 
 export interface DocumentMetadata {

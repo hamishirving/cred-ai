@@ -1,8 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { drizzle } from "drizzle-orm/postgres-js";
+import { type NextRequest, NextResponse } from "next/server";
 import postgres from "postgres";
-import { tasks, profiles } from "@/lib/db/schema";
+import { placements, profiles, tasks, workNodes } from "@/lib/db/schema";
+
+const placementProfiles = alias(profiles, "placement_profiles");
 
 // Database connection
 const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
@@ -34,12 +37,15 @@ export async function GET(
 				status: tasks.status,
 				source: tasks.source,
 				agentId: tasks.agentId,
+				executionId: tasks.executionId,
 				insightId: tasks.insightId,
 				aiReasoning: tasks.aiReasoning,
+				complianceElementSlugs: tasks.complianceElementSlugs,
 				subjectType: tasks.subjectType,
 				subjectId: tasks.subjectId,
 				assigneeId: tasks.assigneeId,
 				assigneeRole: tasks.assigneeRole,
+				scheduledFor: tasks.scheduledFor,
 				dueAt: tasks.dueAt,
 				snoozedUntil: tasks.snoozedUntil,
 				completedAt: tasks.completedAt,
@@ -47,45 +53,75 @@ export async function GET(
 				completionNotes: tasks.completionNotes,
 				createdAt: tasks.createdAt,
 				updatedAt: tasks.updatedAt,
-				// Profile info
+				// Profile subject info
 				profileFirstName: profiles.firstName,
 				profileLastName: profiles.lastName,
 				profileEmail: profiles.email,
+				// Placement subject info
+				placementCandidateFirstName: placementProfiles.firstName,
+				placementCandidateLastName: placementProfiles.lastName,
+				placementFacilityName: workNodes.name,
 			})
 			.from(tasks)
 			.leftJoin(
 				profiles,
+				and(eq(tasks.subjectType, "profile"), eq(tasks.subjectId, profiles.id)),
+			)
+			.leftJoin(
+				placements,
 				and(
-					eq(tasks.subjectType, "profile"),
-					eq(tasks.subjectId, profiles.id),
+					eq(tasks.subjectType, "placement"),
+					eq(tasks.subjectId, placements.id),
 				),
 			)
+			.leftJoin(
+				placementProfiles,
+				eq(placements.profileId, placementProfiles.id),
+			)
+			.leftJoin(workNodes, eq(placements.workNodeId, workNodes.id))
 			.where(eq(tasks.id, id))
 			.limit(1);
 
 		if (!task) {
-			return NextResponse.json(
-				{ error: "Task not found" },
-				{ status: 404 },
-			);
+			return NextResponse.json({ error: "Task not found" }, { status: 404 });
+		}
+
+		let subject: {
+			type: string;
+			id: string | null;
+			name?: string;
+			email?: string;
+			facility?: string;
+		} | null = null;
+		if (task.subjectType === "profile" && task.profileFirstName) {
+			subject = {
+				type: "profile",
+				id: task.subjectId,
+				name: `${task.profileFirstName} ${task.profileLastName}`,
+				email: task.profileEmail ?? undefined,
+			};
+		} else if (
+			task.subjectType === "placement" &&
+			task.placementCandidateFirstName
+		) {
+			subject = {
+				type: "placement",
+				id: task.subjectId,
+				name: `${task.placementCandidateFirstName} ${task.placementCandidateLastName}`,
+				facility: task.placementFacilityName ?? undefined,
+			};
+		} else if (task.subjectType) {
+			subject = { type: task.subjectType, id: task.subjectId };
 		}
 
 		return NextResponse.json({
 			task: {
 				...task,
-				subject: task.subjectType === "profile" && task.profileFirstName
-					? {
-							type: task.subjectType,
-							id: task.subjectId,
-							name: `${task.profileFirstName} ${task.profileLastName}`,
-							email: task.profileEmail,
-						}
-					: task.subjectType
-						? { type: task.subjectType, id: task.subjectId }
-						: null,
+				subject,
 				dueAt: task.dueAt?.toISOString(),
 				snoozedUntil: task.snoozedUntil?.toISOString(),
 				completedAt: task.completedAt?.toISOString(),
+				scheduledFor: task.scheduledFor?.toISOString() ?? null,
 				createdAt: task.createdAt.toISOString(),
 				updatedAt: task.updatedAt.toISOString(),
 			},
@@ -119,10 +155,7 @@ export async function PATCH(
 			.limit(1);
 
 		if (!currentTask) {
-			return NextResponse.json(
-				{ error: "Task not found" },
-				{ status: 404 },
-			);
+			return NextResponse.json({ error: "Task not found" }, { status: 404 });
 		}
 
 		// Build update object
@@ -170,6 +203,30 @@ export async function PATCH(
 			updateData.dueAt = body.dueAt ? new Date(body.dueAt) : null;
 		}
 
+		// Handle title/description/category changes
+		if (body.title !== undefined) {
+			updateData.title = body.title;
+		}
+		if (body.description !== undefined) {
+			updateData.description = body.description;
+		}
+		if (body.category !== undefined) {
+			updateData.category = body.category;
+		}
+
+		// Handle agent delegation fields
+		if (body.agentId !== undefined) {
+			updateData.agentId = body.agentId;
+		}
+		if (body.executionId !== undefined) {
+			updateData.executionId = body.executionId;
+		}
+		if (body.scheduledFor !== undefined) {
+			updateData.scheduledFor = body.scheduledFor
+				? new Date(body.scheduledFor)
+				: null;
+		}
+
 		// Update task
 		const [updatedTask] = await db
 			.update(tasks)
@@ -204,10 +261,7 @@ export async function DELETE(
 			.returning();
 
 		if (!deletedTask) {
-			return NextResponse.json(
-				{ error: "Task not found" },
-				{ status: 404 },
-			);
+			return NextResponse.json({ error: "Task not found" }, { status: 404 });
 		}
 
 		return NextResponse.json({ success: true });

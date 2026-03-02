@@ -105,6 +105,7 @@ export interface VoiceCallStatusResponse {
 	status: VoiceCallStatus;
 	duration?: number;
 	outcome?: VoiceCallOutcome;
+	endedReason?: string;
 	recordingUrl?: string;
 	transcript?: TranscriptMessage[];
 	capturedData?: Record<string, unknown>;
@@ -166,4 +167,34 @@ export interface VapiCallStatus {
 		content: string;
 		time?: number;
 	}>;
+}
+
+// ============================================
+// Follow-up Structured Output Types
+// ============================================
+
+export interface FollowupStructuredAddress {
+	line1?: string;
+	line2?: string;
+	city?: string;
+	state?: string;
+	postcode?: string;
+	country?: string;
+}
+
+export interface FollowupStructuredUpdates {
+	phone?: string;
+	email?: string;
+	professionalRegistration?: string;
+	firstName?: string;
+	lastName?: string;
+	dateOfBirth?: string;
+	nationalId?: string;
+	address?: FollowupStructuredAddress;
+}
+
+export interface FollowupCallStructuredData {
+	updates?: FollowupStructuredUpdates;
+	candidateQuestions?: string[];
+	summary?: string;
 }

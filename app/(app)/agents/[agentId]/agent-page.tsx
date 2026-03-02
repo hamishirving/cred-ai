@@ -161,13 +161,24 @@ function createRunColumns(agentId: string): ColumnDef<AgentExecution>[] {
 // =============================================================================
 
 const PAGE_SIZE = 10;
+const DEFAULT_TEST_PHONE_NUMBER = "+44778078141";
 
 interface AgentPageProps {
 	agent: SerializedAgentDefinition;
-	sampleCandidate?: { name: string; email: string } | null;
+	sampleCandidate?: {
+		profileId: string;
+		name: string;
+		email: string;
+		sampleElement?: string;
+	} | null;
+	selectedOrgId?: string | null;
 }
 
-export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
+export function AgentPage({
+	agent,
+	sampleCandidate,
+	selectedOrgId,
+}: AgentPageProps) {
 	const router = useRouter();
 	const [executions, setExecutions] = useState<AgentExecution[]>([]);
 	const [loadingExecs, setLoadingExecs] = useState(true);
@@ -178,6 +189,9 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 			if (field.defaultValue) {
 				defaults[field.key] = field.defaultValue;
 			}
+			if (!field.defaultValue && field.key === "phoneNumber") {
+				defaults[field.key] = DEFAULT_TEST_PHONE_NUMBER;
+			}
 			// Pre-populate candidate fields with sample from DB
 			if (sampleCandidate && !field.defaultValue) {
 				if (field.key === "candidateName" || field.key === "senderName") {
@@ -186,15 +200,22 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 				if (field.key === "senderEmail") {
 					defaults[field.key] = sampleCandidate.email;
 				}
+				if (field.key === "profileId") {
+					defaults[field.key] = sampleCandidate.profileId;
+				}
 			}
-			// Demo defaults for inbound email responder
+			if (selectedOrgId && !field.defaultValue && field.key === "organisationId") {
+				defaults[field.key] = selectedOrgId;
+			}
+			// Dynamic defaults based on org's compliance elements
 			if (!field.defaultValue) {
+				const elementName = sampleCandidate?.sampleElement || "compliance document";
 				if (field.key === "subject") {
-					defaults[field.key] = "Question about my DBS check";
+					defaults[field.key] = `Question about my ${elementName}`;
 				}
 				if (field.key === "bodyText") {
 					defaults[field.key] =
-						"Hi, I uploaded my DBS certificate last week but I haven't heard anything back. Can you let me know what the status is? Thanks";
+						`Hi, I submitted my ${elementName} last week but I haven't heard anything back. Can you let me know what the status is? Thanks`;
 				}
 			}
 		}
@@ -205,6 +226,13 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 	const [uploadError, setUploadError] = useState("");
 	const [uploadedFileName, setUploadedFileName] = useState("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const attachmentInputRef = useRef<HTMLInputElement>(null);
+	const [attachmentFiles, setAttachmentFiles] = useState<Array<{
+		fileName: string;
+		contentType: string;
+		base64Content: string;
+		contentLength: number;
+	}>>([]);
 	const [sorting, setSorting] = useState<SortingState>([]);
 
 	const { execute, executionId } = useAgentExecution();
@@ -284,14 +312,52 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 		}
 	}
 
+	async function handleAttachmentFiles(e: React.ChangeEvent<HTMLInputElement>) {
+		const files = e.target.files;
+		if (!files || files.length === 0) return;
+
+		const newAttachments: typeof attachmentFiles = [];
+		for (const file of Array.from(files)) {
+			const base64 = await new Promise<string>((resolve, reject) => {
+				const reader = new FileReader();
+				reader.onload = () => {
+					const result = reader.result as string;
+					// Strip the data URL prefix to get raw base64
+					const base64Data = result.includes(",") ? result.split(",")[1] : result;
+					resolve(base64Data);
+				};
+				reader.onerror = reject;
+				reader.readAsDataURL(file);
+			});
+
+			newAttachments.push({
+				fileName: file.name,
+				contentType: file.type || "application/octet-stream",
+				base64Content: base64,
+				contentLength: file.size,
+			});
+		}
+
+		setAttachmentFiles((prev) => [...prev, ...newAttachments]);
+		// Reset the input so the same file can be re-added
+		if (attachmentInputRef.current) {
+			attachmentInputRef.current.value = "";
+		}
+	}
+
 	const handleSubmit = useCallback(
 		(e: React.FormEvent) => {
 			e.preventDefault();
 			setIsSubmitting(true);
 			setDialogOpen(false);
-			execute(agent.id, formData);
+			// Merge string form data with structured attachment data
+			const input: Record<string, unknown> = { ...formData };
+			if (attachmentFiles.length > 0) {
+				input.attachments = attachmentFiles;
+			}
+			execute(agent.id, input);
 		},
-		[agent.id, formData, execute],
+		[agent.id, formData, attachmentFiles, execute],
 	);
 
 	const pageIndex = table.getState().pagination.pageIndex;
@@ -339,22 +405,108 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 								</DialogHeader>
 								<form onSubmit={handleSubmit} className="flex flex-col gap-3">
 									{agent.inputFields.map((field) => {
+										const isBlsTest = agent.id === "verify-bls-certificate";
 										const isUrl = field.key.toLowerCase().includes("url");
 										const isPhoneNumber = field.key.toLowerCase().includes("phone");
 										const isBodyText = field.key.toLowerCase().includes("body");
+										const isAttachment = field.key.toLowerCase().includes("attachment");
+										const isOrganisationId = field.key === "organisationId";
+										const isElementSlug = field.key === "elementSlug";
+										const isEvidenceId = field.key === "evidenceId";
+										const isProfileId = field.key === "profileId";
+										const hasSampleProfile =
+											isProfileId && !!sampleCandidate?.profileId;
 										// Only lock URL fields with defaults (e.g., pre-configured document URLs)
 										const hasDefault = isUrl && !!field.defaultValue;
+										const fieldLabel = hasSampleProfile ? "Candidate" : field.label;
+
+										if (isOrganisationId) {
+											return null;
+										}
+										if (isBlsTest && (isElementSlug || isEvidenceId)) {
+											return null;
+										}
 
 										return (
 											<div key={field.key} className="flex flex-col gap-1.5">
 												<Label htmlFor={field.key} className="text-xs">
-													{field.label}
+													{fieldLabel}
 													{field.required && (
 														<span className="text-destructive ml-0.5">*</span>
 													)}
 												</Label>
 
-												{isUrl ? (
+												{hasSampleProfile ? (
+													<div className="space-y-1">
+														<Input
+															id={field.key}
+															value={`${sampleCandidate?.name} (${sampleCandidate?.email})`}
+															disabled
+															className="text-sm text-foreground"
+														/>
+														<p className="text-[11px] text-muted-foreground">
+															Using current org default candidate for this test run.
+														</p>
+													</div>
+												) : isAttachment ? (
+													<div className="flex flex-col gap-2">
+														{attachmentFiles.length > 0 && (
+															<div className="flex flex-col gap-1">
+																{attachmentFiles.map((att, idx) => (
+																	<div
+																		key={`${att.fileName}-${idx}`}
+																		className="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-1.5"
+																	>
+																		<span className="flex items-center gap-1.5 text-xs text-foreground">
+																			<CheckCircle2 className="size-3 text-[var(--positive)]" />
+																			{att.fileName}
+																			<span className="text-muted-foreground">
+																				({(att.contentLength / 1024).toFixed(0)} KB)
+																			</span>
+																		</span>
+																		<button
+																			type="button"
+																			className="text-muted-foreground hover:text-destructive"
+																			onClick={() =>
+																				setAttachmentFiles((prev) =>
+																					prev.filter((_, i) => i !== idx),
+																				)
+																			}
+																		>
+																			<X className="size-3" />
+																		</button>
+																	</div>
+																))}
+															</div>
+														)}
+														<div
+															className="flex items-center gap-2 rounded-md border border-dashed border-border p-3 cursor-pointer transition-colors duration-150 hover:bg-muted"
+															onClick={() => attachmentInputRef.current?.click()}
+															onKeyDown={(e) => {
+																if (e.key === "Enter" || e.key === " ") {
+																	attachmentInputRef.current?.click();
+																}
+															}}
+															role="button"
+															tabIndex={0}
+														>
+															<input
+																ref={attachmentInputRef}
+																type="file"
+																accept="image/*,application/pdf"
+																multiple
+																className="hidden"
+																onChange={handleAttachmentFiles}
+															/>
+															<Upload className="size-4 text-muted-foreground" />
+															<span className="text-xs text-muted-foreground">
+																{attachmentFiles.length === 0
+																	? "Add files (PDF, images)"
+																	: "Add more files"}
+															</span>
+														</div>
+													</div>
+												) : isUrl ? (
 													<div className="flex flex-col gap-2">
 														<div
 															className={cn(

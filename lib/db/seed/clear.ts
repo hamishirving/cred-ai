@@ -40,8 +40,12 @@ import {
 	assignmentRules,
 	packageElements,
 	compliancePackages,
+	acceptableDocuments,
 	complianceElements,
+	// External Integrations
+	faScreenings,
 	// Identity & People
+	profileShareLinks,
 	orgMemberships,
 	profiles,
 	users,
@@ -139,7 +143,14 @@ export async function clearAllData() {
 	}
 	console.log("   ✓ Cleared evidence");
 
-	// Work
+	// Work - fa_screenings must be deleted before placements
+	if (preservedOrgIds.length > 0) {
+		await db.delete(faScreenings).where(notInArray(faScreenings.organisationId, preservedOrgIds));
+	} else {
+		await db.delete(faScreenings);
+	}
+	console.log("   ✓ Cleared fa_screenings");
+
 	if (preservedOrgIds.length > 0) {
 		await db.delete(placements).where(notInArray(placements.organisationId, preservedOrgIds));
 	} else {
@@ -200,6 +211,9 @@ export async function clearAllData() {
 	}
 	console.log("   ✓ Cleared compliance_packages");
 
+	await db.delete(acceptableDocuments);
+	console.log("   ✓ Cleared acceptable_documents");
+
 	if (preservedOrgIds.length > 0) {
 		await db.delete(complianceElements).where(notInArray(complianceElements.organisationId, preservedOrgIds));
 	} else {
@@ -229,6 +243,14 @@ export async function clearAllData() {
 		await db.delete(referenceContacts);
 	}
 	console.log("   ✓ Cleared reference_contacts");
+
+	// Profile share links (must delete before profiles)
+	if (preservedOrgIds.length > 0) {
+		await db.delete(profileShareLinks).where(notInArray(profileShareLinks.organisationId, preservedOrgIds));
+	} else {
+		await db.delete(profileShareLinks);
+	}
+	console.log("   ✓ Cleared profile_share_links");
 
 	// Profiles: preserve those in preserved orgs
 	if (preservedOrgIds.length > 0) {
@@ -374,7 +396,8 @@ export async function clearOrgData(orgId: string): Promise<void> {
 	}
 	await db.delete(evidence).where(eq(evidence.organisationId, orgId));
 
-	// 4. Work - applications are profile/job scoped
+	// 4. Work - fa_screenings must be deleted before placements
+	await db.delete(faScreenings).where(eq(faScreenings.organisationId, orgId));
 	if (profileIds.length > 0) {
 		await db.delete(applications).where(inArray(applications.profileId, profileIds));
 	}
@@ -399,9 +422,20 @@ export async function clearOrgData(orgId: string): Promise<void> {
 	}
 	await db.delete(assignmentRules).where(eq(assignmentRules.organisationId, orgId));
 	await db.delete(compliancePackages).where(eq(compliancePackages.organisationId, orgId));
+	// acceptable_documents FK to compliance_elements — delete before elements
+	const orgElements = await db
+		.select({ id: complianceElements.id })
+		.from(complianceElements)
+		.where(eq(complianceElements.organisationId, orgId));
+	const elementIds = orgElements.map(e => e.id);
+	if (elementIds.length > 0) {
+		await db.delete(acceptableDocuments).where(inArray(acceptableDocuments.complianceElementId, elementIds));
+	}
 	await db.delete(complianceElements).where(eq(complianceElements.organisationId, orgId));
 
 	// 7. Identity
+	// Profile share links (must delete before profiles)
+	await db.delete(profileShareLinks).where(eq(profileShareLinks.organisationId, orgId));
 	// Reference contacts (must delete before profiles)
 	await db.delete(referenceContacts).where(eq(referenceContacts.organisationId, orgId));
 	// Delete all org memberships (will be restored for real users after roles recreated)

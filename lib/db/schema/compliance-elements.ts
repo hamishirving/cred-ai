@@ -74,6 +74,13 @@ export const complianceElements = pgTable("compliance_elements", {
 		.notNull()
 		.default("inherit"),
 
+	/** Who is expected to fulfil this requirement */
+	fulfilmentProvider: varchar("fulfilment_provider", {
+		enum: ["candidate", "organisation_staff", "external_provider", "system", "flexible"],
+	})
+		.notNull()
+		.default("candidate"),
+
 	/** Evidence type expected */
 	evidenceType: varchar("evidence_type", {
 		enum: ["document", "form", "check", "attestation", "external"],

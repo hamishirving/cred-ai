@@ -231,12 +231,10 @@
 
 	body {
 		@apply bg-background text-foreground;
-		overflow-x: hidden;
-		position: relative;
 	}
 
 	html {
-		overflow-x: hidden;
+		overflow-x: clip;
 	}
 }
 

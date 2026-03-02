@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowUp, BarChart3, TrendingUp, Users, FileCheck } from "lucide-react";
+import { ArrowUp, BarChart3, FileCheck, TrendingUp, Users } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AgentActivityReport } from "@/components/reports/agent-activity-report";
+import { Badge } from "@/components/ui/badge";
 import {
 	Card,
 	CardContent,
@@ -10,6 +12,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Table,
 	TableBody,
@@ -18,8 +21,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 // =============================================================================
@@ -50,7 +51,11 @@ const pipelineStages: PipelineStage[] = [
 		change: 12,
 		segments: [
 			{ name: "This week", value: 45, color: "var(--primary)" },
-			{ name: "Last week", value: 200, color: "color-mix(in srgb, var(--primary) 65%, white)" },
+			{
+				name: "Last week",
+				value: 200,
+				color: "color-mix(in srgb, var(--primary) 65%, white)",
+			},
 		],
 	},
 	{
@@ -59,7 +64,11 @@ const pipelineStages: PipelineStage[] = [
 		change: 8,
 		segments: [
 			{ name: "Complete", value: 120, color: "var(--positive)" },
-			{ name: "In Progress", value: 60, color: "color-mix(in srgb, var(--positive) 65%, white)" },
+			{
+				name: "In Progress",
+				value: 60,
+				color: "color-mix(in srgb, var(--positive) 65%, white)",
+			},
 		],
 	},
 	{
@@ -68,8 +77,16 @@ const pipelineStages: PipelineStage[] = [
 		change: 5,
 		segments: [
 			{ name: "Verified", value: 85, color: "var(--chart-2)" },
-			{ name: "Pending", value: 40, color: "color-mix(in srgb, var(--chart-2) 72%, white)" },
-			{ name: "Requested", value: 17, color: "color-mix(in srgb, var(--chart-2) 50%, white)" },
+			{
+				name: "Pending",
+				value: 40,
+				color: "color-mix(in srgb, var(--chart-2) 72%, white)",
+			},
+			{
+				name: "Requested",
+				value: 17,
+				color: "color-mix(in srgb, var(--chart-2) 50%, white)",
+			},
 		],
 	},
 	{
@@ -78,7 +95,11 @@ const pipelineStages: PipelineStage[] = [
 		change: 3,
 		segments: [
 			{ name: "Cleared", value: 65, color: "var(--chart-5)" },
-			{ name: "Processing", value: 33, color: "color-mix(in srgb, var(--chart-5) 65%, white)" },
+			{
+				name: "Processing",
+				value: 33,
+				color: "color-mix(in srgb, var(--chart-5) 65%, white)",
+			},
 		],
 	},
 	{
@@ -87,7 +108,11 @@ const pipelineStages: PipelineStage[] = [
 		change: 4,
 		segments: [
 			{ name: "Complete", value: 50, color: "var(--chart-4)" },
-			{ name: "In Progress", value: 26, color: "color-mix(in srgb, var(--chart-4) 65%, white)" },
+			{
+				name: "In Progress",
+				value: 26,
+				color: "color-mix(in srgb, var(--chart-4) 65%, white)",
+			},
 		],
 	},
 	{
@@ -175,6 +200,24 @@ const dayColumns = [
 	"Day 10",
 ];
 
+const pipelineSkeletonIds = [
+	"stage-1",
+	"stage-2",
+	"stage-3",
+	"stage-4",
+	"stage-5",
+	"stage-6",
+];
+
+const cohortSkeletonIds = [
+	"cohort-1",
+	"cohort-2",
+	"cohort-3",
+	"cohort-4",
+	"cohort-5",
+	"cohort-6",
+];
+
 // =============================================================================
 // REPORT TABS
 // =============================================================================
@@ -183,6 +226,7 @@ const reportTabs = [
 	{ value: "overview", label: "Overview" },
 	{ value: "pipeline", label: "Pipeline" },
 	{ value: "cohorts", label: "Cohorts" },
+	{ value: "agents", label: "Agent Activity" },
 ] as const;
 
 type ReportTab = (typeof reportTabs)[number]["value"];
@@ -191,7 +235,11 @@ type ReportTab = (typeof reportTabs)[number]["value"];
 // HELPER FUNCTIONS
 // =============================================================================
 
-function getCellColor(value: number | null, isMean: boolean, isDay0: boolean): string {
+function getCellColor(
+	value: number | null,
+	isMean: boolean,
+	isDay0: boolean,
+): string {
 	if (value === null) return "transparent";
 	if (isDay0) {
 		return isMean
@@ -224,7 +272,7 @@ function getTextColor(value: number | null, isDay0: boolean): string {
 // SKELETON COMPONENTS
 // =============================================================================
 
-function PipelineSkeleton() {
+function _PipelineSkeleton() {
 	return (
 		<Card className="shadow-none! bg-card">
 			<CardHeader className="pb-2">
@@ -232,8 +280,8 @@ function PipelineSkeleton() {
 			</CardHeader>
 			<CardContent>
 				<div className="grid grid-cols-6 gap-4 mb-6">
-					{Array.from({ length: 6 }).map((_, i) => (
-						<div key={i} className="space-y-2">
+					{pipelineSkeletonIds.map((id) => (
+						<div key={id} className="space-y-2">
 							<Skeleton className="h-3 w-[60px]" />
 							<Skeleton className="h-6 w-[40px]" />
 							<Skeleton className="h-3 w-[30px]" />
@@ -241,9 +289,12 @@ function PipelineSkeleton() {
 					))}
 				</div>
 				<div className="grid grid-cols-6 gap-4 h-[280px]">
-					{Array.from({ length: 6 }).map((_, i) => (
-						<div key={i} className="flex flex-col justify-end items-center">
-							<Skeleton className="w-full rounded-t-lg" style={{ height: `${60 + i * 5}%` }} />
+					{pipelineSkeletonIds.map((id, i) => (
+						<div key={id} className="flex flex-col justify-end items-center">
+							<Skeleton
+								className="w-full rounded-t-lg"
+								style={{ height: `${60 + i * 5}%` }}
+							/>
 						</div>
 					))}
 				</div>
@@ -252,15 +303,19 @@ function PipelineSkeleton() {
 	);
 }
 
-function CohortTableSkeleton() {
+function _CohortTableSkeleton() {
 	return (
 		<>
-			{Array.from({ length: 6 }).map((_, i) => (
-				<TableRow key={i} className="bg-card">
-					<TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
-					<TableCell><Skeleton className="h-4 w-[30px]" /></TableCell>
-					{Array.from({ length: 11 }).map((_, j) => (
-						<TableCell key={j} className="px-1">
+			{cohortSkeletonIds.map((id) => (
+				<TableRow key={id} className="bg-card">
+					<TableCell>
+						<Skeleton className="h-4 w-[120px]" />
+					</TableCell>
+					<TableCell>
+						<Skeleton className="h-4 w-[30px]" />
+					</TableCell>
+					{dayColumns.map((day) => (
+						<TableCell key={`${id}-${day}`} className="px-1">
 							<Skeleton className="h-7 w-full rounded" />
 						</TableCell>
 					))}
@@ -290,8 +345,12 @@ function StatsOverview({ stages }: { stages: PipelineStage[] }) {
 					<CardContent className="p-4">
 						<div className="flex items-start justify-between">
 							<div>
-								<p className="mt-1 text-sm text-muted-foreground">Total Candidates</p>
-								<p className="mt-1 text-2xl font-semibold text-foreground">{totalCandidates}</p>
+								<p className="mt-1 text-sm text-muted-foreground">
+									Total Candidates
+								</p>
+								<p className="mt-1 text-2xl font-semibold text-foreground">
+									{totalCandidates}
+								</p>
 								<p className="mt-1 flex items-center gap-0.5 text-xs text-[var(--positive)]">
 									<TrendingUp className="h-3 w-3" />
 									12% from last month
@@ -312,7 +371,9 @@ function StatsOverview({ stages }: { stages: PipelineStage[] }) {
 						<div className="flex items-start justify-between">
 							<div>
 								<p className="text-sm text-muted-foreground">Ready to Start</p>
-								<p className="mt-1 text-2xl font-semibold text-foreground">{readyCount}</p>
+								<p className="mt-1 text-2xl font-semibold text-foreground">
+									{readyCount}
+								</p>
 								<p className="mt-1 flex items-center gap-0.5 text-xs text-[var(--positive)]">
 									<TrendingUp className="h-3 w-3" />
 									6% from last month
@@ -333,8 +394,12 @@ function StatsOverview({ stages }: { stages: PipelineStage[] }) {
 						<div className="flex items-start justify-between">
 							<div>
 								<p className="text-sm text-muted-foreground">Conversion Rate</p>
-								<p className="mt-1 text-2xl font-semibold text-foreground">{conversionRate}%</p>
-								<p className="mt-1 text-xs text-muted-foreground">Applied to ready</p>
+								<p className="mt-1 text-2xl font-semibold text-foreground">
+									{conversionRate}%
+								</p>
+								<p className="mt-1 text-xs text-muted-foreground">
+									Applied to ready
+								</p>
 							</div>
 							<BarChart3 className="h-5 w-5 text-muted-foreground/80" />
 						</div>
@@ -356,7 +421,9 @@ function PipelineChart({ stages }: { stages: PipelineStage[] }) {
 		>
 			<Card className="shadow-none! bg-card">
 				<CardHeader className="pb-2">
-					<CardTitle className="text-base font-semibold tracking-tight text-foreground">Pipeline Overview</CardTitle>
+					<CardTitle className="text-base font-semibold tracking-tight text-foreground">
+						Pipeline Overview
+					</CardTitle>
 				</CardHeader>
 				<CardContent>
 					{/* Metric cards row */}
@@ -364,7 +431,9 @@ function PipelineChart({ stages }: { stages: PipelineStage[] }) {
 						{stages.map((stage) => (
 							<div key={stage.name} className="space-y-1">
 								<p className="text-xs text-muted-foreground">{stage.name}</p>
-								<p className="text-xl font-semibold text-foreground">{stage.total}</p>
+								<p className="text-xl font-semibold text-foreground">
+									{stage.total}
+								</p>
 								<p className="flex items-center gap-0.5 text-xs text-[var(--positive)]">
 									{stage.change}% <ArrowUp className="h-3 w-3" />
 								</p>
@@ -387,12 +456,12 @@ function PipelineChart({ stages }: { stages: PipelineStage[] }) {
 										transition={{ duration: 0.6, delay: stageIdx * 0.08 }}
 										className="w-full rounded-t-lg overflow-hidden flex flex-col-reverse"
 									>
-										{stage.segments.map((segment, idx) => {
+										{stage.segments.map((segment) => {
 											const segmentPercent =
 												(segment.value / stage.total) * 100;
 											return (
 												<div
-													key={idx}
+													key={`${stage.name}-${segment.name}`}
 													className="w-full relative group cursor-pointer transition-opacity hover:opacity-90"
 													style={{
 														height: `${segmentPercent}%`,
@@ -405,7 +474,9 @@ function PipelineChart({ stages }: { stages: PipelineStage[] }) {
 													</span>
 													{/* Tooltip on hover */}
 													<div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded border border-border bg-card px-2 py-1 text-xs opacity-0 transition-opacity group-hover:opacity-100">
-														<p className="font-medium text-foreground">{segment.name}</p>
+														<p className="font-medium text-foreground">
+															{segment.name}
+														</p>
 														<p className="text-muted-foreground">
 															{segment.value} candidates
 														</p>
@@ -467,23 +538,19 @@ function CohortTable({ data }: { data: CohortRow[] }) {
 								return (
 									<TableRow
 										key={row.cohort}
-										className={cn(
-											"bg-card",
-											isMean && "font-medium"
-										)}
+										className={cn("bg-card", isMean && "font-medium")}
 									>
 										<TableCell className="py-2 pr-4">
 											{isMean ? (
 												<span className="flex items-center gap-1">
-													<Badge
-														variant="info"
-														className="px-1.5 text-[10px]"
-													>
+													<Badge variant="info" className="px-1.5 text-[10px]">
 														Mean
 													</Badge>
 												</span>
 											) : (
-												<span className="text-sm text-foreground">{row.cohort}</span>
+												<span className="text-sm text-foreground">
+													{row.cohort}
+												</span>
 											)}
 										</TableCell>
 										<TableCell className="px-2 py-2 text-center text-sm tabular-nums text-muted-foreground">
@@ -492,14 +559,22 @@ function CohortTable({ data }: { data: CohortRow[] }) {
 										{row.days.map((value, dayIdx) => {
 											const isDay0 = dayIdx === 0;
 											return (
-												<TableCell key={dayIdx} className="py-1.5 px-1">
+												<TableCell
+													key={`${row.cohort}-${dayColumns[dayIdx]}`}
+													className="py-1.5 px-1"
+												>
 													<div
 														className={cn(
 															"rounded px-2 py-1.5 text-center text-xs font-medium transition-colors",
-															value === null && "border border-dashed border-border"
+															value === null &&
+																"border border-dashed border-border",
 														)}
 														style={{
-															backgroundColor: getCellColor(value, isMean, isDay0),
+															backgroundColor: getCellColor(
+																value,
+																isMean,
+																isDay0,
+															),
 															color: getTextColor(value, isDay0),
 														}}
 													>
@@ -544,9 +619,9 @@ export default function ReportsPage() {
 					</div>
 				);
 			case "cohorts":
-				return (
-					<CohortTable data={cohortData} />
-				);
+				return <CohortTable data={cohortData} />;
+			case "agents":
+				return <AgentActivityReport />;
 			default:
 				return null;
 		}
@@ -556,7 +631,9 @@ export default function ReportsPage() {
 		<div className="flex min-h-full flex-1 flex-col gap-10 bg-background p-8">
 			{/* Header */}
 			<div>
-				<h1 className="text-balance text-4xl font-semibold tracking-tight text-foreground">Reports</h1>
+				<h1 className="text-balance text-4xl font-semibold tracking-tight text-foreground">
+					Reports
+				</h1>
 				<p className="mt-1 text-sm text-muted-foreground">
 					Analytics and compliance reporting
 				</p>
@@ -568,13 +645,14 @@ export default function ReportsPage() {
 					const isSelected = activeTab === tab.value;
 					return (
 						<button
+							type="button"
 							key={tab.value}
 							onClick={() => setActiveTab(tab.value)}
 							className={cn(
 								"px-3 py-2 text-sm font-medium border-b-2 transition-colors duration-150 cursor-pointer whitespace-nowrap outline-none",
 								isSelected
 									? "border-primary text-primary"
-									: "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
+									: "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
 							)}
 						>
 							{tab.label}

@@ -1,0 +1,1 @@
+ALTER TABLE "compliance_elements" ADD COLUMN "fulfilment_provider" varchar DEFAULT 'candidate' NOT NULL;

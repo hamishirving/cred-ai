@@ -1,12 +1,22 @@
 "use client";
 
-import { Loader2, Globe, Navigation, MousePointer, Type, Monitor, Eye } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+	Loader2,
+	Globe,
+	Navigation,
+	MousePointer,
+	Type,
+	Monitor,
+	Eye,
+} from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { AgentStep, BrowserAction } from "@/lib/ai/agents/types";
 import { ToolStepCard } from "./step-cards/tool-step-card";
 import { ReasoningStepCard } from "./step-cards/reasoning-step-card";
 import { BrowserStepCard } from "./step-cards/browser-step-card";
 import { DecisionStepCard } from "./step-cards/decision-step-card";
+import { StructuredOutputStepCard } from "./step-cards/structured-output-step-card";
 
 interface ExecutionTimelineProps {
 	steps: AgentStep[];
@@ -30,8 +40,17 @@ function StepCard({
 	isLastStep: boolean;
 	isRunning: boolean;
 }) {
+	if (step.type === "structured-output") {
+		return <StructuredOutputStepCard step={step} />;
+	}
+
 	if (step.type === "tool-call") {
-		if (step.toolName === "browseAndVerify" || step.toolName === "dvlaBrowseVerify" || step.toolName === "gdcBrowseVerify") {
+		if (
+			step.toolName === "browseAndVerify" ||
+			step.toolName === "dvlaBrowseVerify" ||
+			step.toolName === "gdcBrowseVerify" ||
+			step.toolName === "bonBrowseVerify"
+		) {
 			const isActive = isLastStep && isRunning;
 			return (
 				<BrowserStepCard
@@ -83,12 +102,32 @@ function formatPreviewAction(action: BrowserAction): string {
 /** Icon for browser action type */
 function PreviewActionIcon({ type }: { type: string }) {
 	const lower = type.toLowerCase();
-	if (lower === "goto" || lower === "navigate") return <Navigation className="size-3" />;
-	if (lower === "click" || lower === "act") return <MousePointer className="size-3" />;
-	if (lower === "type" || lower === "fillform") return <Type className="size-3" />;
+	if (lower === "goto" || lower === "navigate")
+		return <Navigation className="size-3" />;
+	if (lower === "click" || lower === "act")
+		return <MousePointer className="size-3" />;
+	if (lower === "type" || lower === "fillform")
+		return <Type className="size-3" />;
 	if (lower === "screenshot") return <Monitor className="size-3" />;
-	if (lower === "extract" || lower === "observe") return <Eye className="size-3" />;
+	if (lower === "extract" || lower === "observe")
+		return <Eye className="size-3" />;
 	return <Globe className="size-3" />;
+}
+
+async function resolveScreenshotUrl(action: BrowserAction): Promise<string | null> {
+	if (action.screenshotUrl) return action.screenshotUrl;
+	if (!action.screenshotPath) return null;
+
+	try {
+		const res = await fetch(
+			`/api/documents/signed-url?path=${encodeURIComponent(action.screenshotPath)}`,
+		);
+		if (!res.ok) return null;
+		const data = (await res.json()) as { url?: string };
+		return data.url || null;
+	} catch {
+		return null;
+	}
 }
 
 /**
@@ -110,10 +149,11 @@ function reorderSteps(steps: AgentStep[]): AgentStep[] {
 			i++;
 		}
 
-		// Text first, then tool calls
+		// Text first, then tool calls, then structured output last
 		const text = group.filter((s) => s.type === "text");
 		const tools = group.filter((s) => s.type === "tool-call");
-		result.push(...text, ...tools);
+		const structured = group.filter((s) => s.type === "structured-output");
+		result.push(...text, ...tools, ...structured);
 	}
 
 	return result;
@@ -126,6 +166,52 @@ export function ExecutionTimeline({
 	browserActions = [],
 }: ExecutionTimelineProps) {
 	const orderedSteps = reorderSteps(steps);
+	const latestPreviewAction = useMemo(
+		() =>
+			browserActions.length > 0
+				? browserActions[browserActions.length - 1]
+				: null,
+		[browserActions],
+	);
+	const [previewScreenshotUrl, setPreviewScreenshotUrl] = useState<string | null>(
+		null,
+	);
+	const [isPreviewScreenshotLoading, setIsPreviewScreenshotLoading] =
+		useState(false);
+
+	useEffect(() => {
+		let cancelled = false;
+
+		async function loadPreviewScreenshot() {
+			if (!latestPreviewAction) {
+				setPreviewScreenshotUrl(null);
+				setIsPreviewScreenshotLoading(false);
+				return;
+			}
+
+			const hasScreenshotSource = !!(
+				latestPreviewAction.screenshotUrl || latestPreviewAction.screenshotPath
+			);
+			if (!hasScreenshotSource) {
+				setPreviewScreenshotUrl(null);
+				setIsPreviewScreenshotLoading(false);
+				return;
+			}
+
+			setPreviewScreenshotUrl(null);
+			setIsPreviewScreenshotLoading(true);
+			const url = await resolveScreenshotUrl(latestPreviewAction);
+			if (!cancelled) {
+				setPreviewScreenshotUrl(url);
+				setIsPreviewScreenshotLoading(false);
+			}
+		}
+
+		void loadPreviewScreenshot();
+		return () => {
+			cancelled = true;
+		};
+	}, [latestPreviewAction]);
 
 	return (
 		<div className="flex flex-col gap-3">
@@ -136,7 +222,11 @@ export function ExecutionTimeline({
 						allSteps={orderedSteps}
 						liveViewUrl={liveViewUrl}
 						browserActions={
-							step.type === "tool-call" && (step.toolName === "browseAndVerify" || step.toolName === "dvlaBrowseVerify" || step.toolName === "gdcBrowseVerify")
+							step.type === "tool-call" &&
+							(step.toolName === "browseAndVerify" ||
+								step.toolName === "dvlaBrowseVerify" ||
+								step.toolName === "gdcBrowseVerify" ||
+								step.toolName === "bonBrowseVerify")
 								? browserActions
 								: undefined
 						}
@@ -147,36 +237,74 @@ export function ExecutionTimeline({
 			))}
 
 			{/* Browser actions preview before the tool step has completed */}
-			{status === "running" && browserActions.length > 0 && !steps.some((s) => s.type === "tool-call" && (s.toolName === "browseAndVerify" || s.toolName === "dvlaBrowseVerify" || s.toolName === "gdcBrowseVerify")) && (
-				<div className="flex flex-col gap-1 rounded-lg border border-border/50 bg-card p-3">
-					<div className="flex items-center gap-2 text-xs font-medium text-foreground">
-						<Loader2 className="size-3 animate-spin text-muted-foreground" />
-						Browser working...
+			{status === "running" &&
+				browserActions.length > 0 &&
+				!steps.some(
+					(s) =>
+						s.type === "tool-call" &&
+						(s.toolName === "browseAndVerify" ||
+							s.toolName === "dvlaBrowseVerify" ||
+							s.toolName === "gdcBrowseVerify" ||
+							s.toolName === "bonBrowseVerify"),
+				) && (
+					<div className="flex flex-col gap-1 rounded-lg border border-border/50 bg-card p-3">
+						<div className="flex items-center gap-2 text-xs font-medium text-foreground">
+							<Loader2 className="size-3 animate-spin text-muted-foreground" />
+							Browser working...
+						</div>
+						<div className="ml-5">
+							<AnimatePresence mode="wait">
+								{latestPreviewAction && (
+									<motion.div
+										key={latestPreviewAction.index}
+										initial={{ opacity: 0 }}
+										animate={{ opacity: 1 }}
+										exit={{ opacity: 0 }}
+										transition={{ duration: 0.25 }}
+										className="space-y-1.5"
+									>
+										<div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+											<div className="flex items-center justify-center size-4 shrink-0 mt-0.5">
+												<PreviewActionIcon type={latestPreviewAction.type} />
+											</div>
+											<span className="leading-relaxed truncate">
+												<span className="font-medium text-foreground/80">
+													{previewActionVerb(latestPreviewAction.type)}:
+												</span>{" "}
+												{formatPreviewAction(latestPreviewAction)}
+											</span>
+										</div>
+										{(previewScreenshotUrl ||
+											isPreviewScreenshotLoading) && (
+											<div className="rounded border border-border/50 bg-muted/20 aspect-[16/10] overflow-hidden">
+												{previewScreenshotUrl ? (
+													<a
+														href={previewScreenshotUrl}
+														target="_blank"
+														rel="noopener noreferrer"
+														className="block h-full"
+													>
+														{/* eslint-disable-next-line @next/next/no-img-element */}
+														<img
+															src={previewScreenshotUrl}
+															alt="Browser action screenshot"
+															className="w-full h-full object-cover"
+														/>
+													</a>
+												) : (
+													<div className="h-full flex items-center justify-center gap-2 text-xs text-muted-foreground">
+														<Loader2 className="size-3 animate-spin" />
+														Loading screenshot...
+													</div>
+												)}
+											</div>
+										)}
+									</motion.div>
+								)}
+							</AnimatePresence>
+						</div>
 					</div>
-					<div className="ml-5 relative h-5">
-						<AnimatePresence mode="wait">
-							{browserActions.length > 0 && (
-								<motion.div
-									key={browserActions[browserActions.length - 1].index}
-									initial={{ opacity: 0 }}
-									animate={{ opacity: 1 }}
-									exit={{ opacity: 0 }}
-									transition={{ duration: 0.25 }}
-									className="absolute inset-0 flex items-start gap-1.5 text-xs text-muted-foreground"
-								>
-									<div className="flex items-center justify-center size-4 shrink-0 mt-0.5">
-										<PreviewActionIcon type={browserActions[browserActions.length - 1].type} />
-									</div>
-									<span className="leading-relaxed truncate">
-										<span className="font-medium text-foreground/80">{previewActionVerb(browserActions[browserActions.length - 1].type)}:</span>{" "}
-										{formatPreviewAction(browserActions[browserActions.length - 1])}
-									</span>
-								</motion.div>
-							)}
-						</AnimatePresence>
-					</div>
-				</div>
-			)}
+				)}
 
 			{status === "running" && (
 				<div className="flex items-center gap-2 p-2 text-xs text-muted-foreground">
