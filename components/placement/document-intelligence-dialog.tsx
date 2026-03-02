@@ -42,7 +42,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.vers
 interface VerificationResult {
 	decision: "approved" | "rejected" | "needs_review";
 	reasoning: string;
-	extractedFields: Record<string, string>;
+	extractedFields: Record<string, unknown>;
 	nextStep: string | null;
 	matchedDocumentType: string;
 }
@@ -59,7 +59,15 @@ interface DocumentIntelligenceDialogProps {
 	existingFileName?: string | null;
 	existingMimeType?: string | null;
 	existingExtractedData?: Record<string, unknown> | null;
+	existingCheckResult?: Record<string, unknown> | null;
+	existingEvidenceId?: string | null;
 	profileId?: string | null;
+}
+
+interface StoredLookupEvidence {
+	verifiedAt?: string;
+	browserSessionId?: string;
+	screenshotPaths: string[];
 }
 
 // ============================================
@@ -85,10 +93,133 @@ function parseStoredVerification(
 		reasoning: v.reasoning || "",
 		matchedDocumentType: v.matchedDocumentType || "Unknown",
 		nextStep: v.nextStep || null,
-		extractedFields: Object.fromEntries(
-			Object.entries(fields).map(([k, val]) => [k, String(val)]),
-		),
+		extractedFields: fields,
 	};
+}
+
+function parseStoredLookupEvidence(
+	data: Record<string, unknown> | null | undefined,
+): StoredLookupEvidence | null {
+	if (!data) return null;
+	const lastLookup =
+		typeof data.lastLookup === "object" && data.lastLookup
+			? (data.lastLookup as Record<string, unknown>)
+			: null;
+	if (!lastLookup) return null;
+
+	const screenshotPaths = Array.isArray(lastLookup.screenshotPaths)
+		? lastLookup.screenshotPaths.filter(
+				(path): path is string => typeof path === "string" && path.length > 0,
+			)
+		: [];
+
+	return {
+		verifiedAt:
+			typeof lastLookup.verifiedAt === "string"
+				? lastLookup.verifiedAt
+				: undefined,
+		browserSessionId:
+			typeof lastLookup.browserSessionId === "string"
+				? lastLookup.browserSessionId
+				: undefined,
+		screenshotPaths,
+	};
+}
+
+function formatFieldLabel(key: string): string {
+	return key.replace(/([A-Z])/g, " $1").trim();
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function renderExtractedFieldValue(key: string, value: unknown) {
+	if (key === "workHistory" && Array.isArray(value)) {
+		const items = value.filter(isPlainObject);
+		if (items.length === 0) {
+			return <span className="text-muted-foreground">No work history found</span>;
+		}
+		return (
+			<div className="space-y-1.5">
+				{items.map((item, index) => {
+					const role =
+						typeof item.role === "string" && item.role
+							? item.role
+							: typeof item.title === "string" && item.title
+								? item.title
+								: "Role not specified";
+					const employer =
+						typeof item.employer === "string" && item.employer
+							? item.employer
+							: "Employer not specified";
+					const dateParts = [
+						typeof item.startDate === "string" ? item.startDate : null,
+						typeof item.endDate === "string" && item.endDate
+							? item.endDate
+							: item.isCurrent === true
+								? "Present"
+								: null,
+					].filter(Boolean);
+					const responsibilities = Array.isArray(item.responsibilities)
+						? item.responsibilities.filter(
+								(entry): entry is string => typeof entry === "string" && entry.length > 0,
+							)
+						: [];
+
+					return (
+						<div
+							key={`${index}-${employer}-${role}`}
+							className="rounded border border-border/60 px-2 py-1.5"
+						>
+							<p className="text-xs font-medium">{role}</p>
+							<p className="text-xs text-muted-foreground">{employer}</p>
+							{dateParts.length > 0 && (
+								<p className="text-[11px] text-muted-foreground">
+									{dateParts.join(" - ")}
+								</p>
+							)}
+							{responsibilities.length > 0 && (
+								<p className="text-[11px] mt-1">
+									{responsibilities.slice(0, 2).join("; ")}
+								</p>
+							)}
+						</div>
+					);
+				})}
+			</div>
+		);
+	}
+
+	if (Array.isArray(value)) {
+		if (value.length === 0) {
+			return <span className="text-muted-foreground">None</span>;
+		}
+		const primitiveValues = value.filter(
+			(item) =>
+				typeof item === "string" ||
+				typeof item === "number" ||
+				typeof item === "boolean",
+		);
+		if (primitiveValues.length === value.length) {
+			return <span>{primitiveValues.map(String).join(", ")}</span>;
+		}
+		return <span>{value.length} entries</span>;
+	}
+
+	if (isPlainObject(value)) {
+		return (
+			<pre className="text-[11px] whitespace-pre-wrap break-words rounded border border-border/60 bg-muted/40 px-2 py-1.5">
+				{JSON.stringify(value, null, 2)}
+			</pre>
+		);
+	}
+
+	if (value === null || value === undefined || value === "") {
+		return <span className="text-muted-foreground">—</span>;
+	}
+
+	return <span>{String(value)}</span>;
 }
 
 // ============================================
@@ -107,6 +238,8 @@ export function DocumentIntelligenceDialog({
 	existingFileName,
 	existingMimeType,
 	existingExtractedData,
+	existingCheckResult,
+	existingEvidenceId,
 	profileId,
 }: DocumentIntelligenceDialogProps) {
 	const hasExistingFile = !!existingFilePath;
@@ -127,6 +260,11 @@ export function DocumentIntelligenceDialog({
 	const [replacing, setReplacing] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
 	const [result, setResult] = useState<VerificationResult | null>(null);
+	const [registryEvidence, setRegistryEvidence] =
+		useState<StoredLookupEvidence | null>(null);
+	const [registryScreenshotUrls, setRegistryScreenshotUrls] = useState<string[]>(
+		[],
+	);
 
 	// After uploading a new file, update the preview on the left
 	const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null);
@@ -184,6 +322,47 @@ export function DocumentIntelligenceDialog({
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally run on open/data change, not result
 	}, [open, existingExtractedData]);
+
+	useEffect(() => {
+		let cancelled = false;
+
+		async function loadRegistryEvidence() {
+			if (!open) return;
+			const parsed = parseStoredLookupEvidence(existingCheckResult);
+			setRegistryEvidence(parsed);
+
+			if (!parsed || parsed.screenshotPaths.length === 0) {
+				setRegistryScreenshotUrls([]);
+				return;
+			}
+
+			const urls = await Promise.all(
+				parsed.screenshotPaths.map(async (path) => {
+					try {
+						const res = await fetch(
+							`/api/documents/signed-url?path=${encodeURIComponent(path)}`,
+						);
+						if (!res.ok) return null;
+						const data = (await res.json()) as { url?: string };
+						return data.url || null;
+					} catch {
+						return null;
+					}
+				}),
+			);
+
+			if (!cancelled) {
+				setRegistryScreenshotUrls(
+					urls.filter((url): url is string => typeof url === "string"),
+				);
+			}
+		}
+
+		void loadRegistryEvidence();
+		return () => {
+			cancelled = true;
+		};
+	}, [open, existingCheckResult]);
 
 	// Set verifiedDocumentUrl when reopening with a stored approved result
 	useEffect(() => {
@@ -346,6 +525,8 @@ export function DocumentIntelligenceDialog({
 			setDocError(null);
 			setVerifiedDocumentUrl(null);
 			setVerifyingWithRegistry(false);
+			setRegistryEvidence(null);
+			setRegistryScreenshotUrls([]);
 		}
 		onOpenChange(openState);
 	}
@@ -367,6 +548,8 @@ export function DocumentIntelligenceDialog({
 		setUploadedFileUrl(null);
 		setVerifiedDocumentUrl(null);
 		setVerifyingWithRegistry(false);
+		setRegistryEvidence(null);
+		setRegistryScreenshotUrls([]);
 	}
 
 	// BLS registry verification
@@ -387,13 +570,15 @@ export function DocumentIntelligenceDialog({
 				{
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						profileId,
-						organisationId,
-						documentUrl: verifiedDocumentUrl,
-					}),
-				},
-			);
+						body: JSON.stringify({
+							profileId,
+							organisationId,
+							documentUrl: verifiedDocumentUrl,
+							elementSlug,
+							evidenceId: existingEvidenceId || undefined,
+						}),
+					},
+				);
 			if (!response.ok || !response.body) {
 				toast({
 					type: "error",
@@ -401,14 +586,17 @@ export function DocumentIntelligenceDialog({
 				});
 				return;
 			}
-			await streamAgentExecution(response, (execId) => {
-				setModalExecution({
-					agentId: "verify-bls-certificate",
-					executionId: execId,
-					agentName: "BLS Verification",
+				const status = await streamAgentExecution(response, (execId) => {
+					setModalExecution({
+						agentId: "verify-bls-certificate",
+						executionId: execId,
+						agentName: "BLS Verification",
+					});
 				});
-			});
-		} catch {
+				if (status === "completed") {
+					onVerified?.();
+				}
+			} catch {
 			toast({
 				type: "error",
 				description: "Failed to verify with registry",
@@ -681,19 +869,19 @@ export function DocumentIntelligenceDialog({
 												<p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
 													Extracted Fields
 												</p>
-												<div className="grid grid-cols-1 gap-y-1">
+												<div className="grid grid-cols-1 gap-y-1.5">
 													{Object.entries(result.extractedFields).map(
 														([key, value]) => (
 															<div
 																key={key}
-																className="flex items-baseline justify-between gap-2"
+																className="space-y-1 rounded border border-border/50 px-2 py-1.5"
 															>
-																<span className="text-[10px] text-muted-foreground capitalize">
-																	{key.replace(/([A-Z])/g, " $1").trim()}
-																</span>
-																<span className="text-xs text-right truncate">
-																	{value}
-																</span>
+																<p className="text-[10px] text-muted-foreground capitalize">
+																	{formatFieldLabel(key)}
+																</p>
+																<div className="text-xs">
+																	{renderExtractedFieldValue(key, value)}
+																</div>
 															</div>
 														),
 													)}
@@ -707,6 +895,59 @@ export function DocumentIntelligenceDialog({
 													Next Step
 												</p>
 												<p className="text-xs">{result.nextStep}</p>
+											</div>
+										)}
+
+										{registryEvidence && (
+											<div className="rounded-md border border-border bg-muted/30 px-3 py-2.5 space-y-2">
+												<div className="flex items-center justify-between gap-2">
+													<p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+														Registry Evidence
+													</p>
+													{registryEvidence.verifiedAt && (
+														<span className="text-[10px] text-muted-foreground">
+															{new Date(registryEvidence.verifiedAt).toLocaleString("en-GB", {
+																day: "numeric",
+																month: "short",
+																hour: "2-digit",
+																minute: "2-digit",
+															})}
+														</span>
+													)}
+												</div>
+
+												{registryEvidence.browserSessionId && (
+													<a
+														href={`https://www.browserbase.com/sessions/${registryEvidence.browserSessionId}`}
+														target="_blank"
+														rel="noopener noreferrer"
+														className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+													>
+														<ExternalLink className="size-3" />
+														Open Browser Session
+													</a>
+												)}
+
+												{registryScreenshotUrls.length > 0 && (
+													<div className="grid grid-cols-2 gap-2">
+														{registryScreenshotUrls.map((url) => (
+															<a
+																key={url}
+																href={url}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="block"
+															>
+																{/* eslint-disable-next-line @next/next/no-img-element */}
+																<img
+																	src={url}
+																	alt="Registry lookup screenshot"
+																	className="w-full rounded border border-border/60 object-cover"
+																/>
+															</a>
+														))}
+													</div>
+												)}
 											</div>
 										)}
 									</div>

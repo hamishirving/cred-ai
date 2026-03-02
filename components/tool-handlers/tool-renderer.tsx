@@ -36,7 +36,7 @@ export function ToolLoading({
 	if (!isRunning) return null;
 
 	return (
-		<Tool defaultOpen={false} key={toolCallId}>
+		<Tool defaultOpen={false} key={toolCallId} className="max-w-sm">
 			<ToolHeader state={derivedState} type={toolName} />
 			<ToolContent>
 				{input !== undefined ? (

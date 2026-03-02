@@ -5,9 +5,23 @@ import { getVoiceCallByVapiId, updateVoiceCall } from "@/lib/db/queries";
 
 const POLL_INTERVAL_MS = 5000;
 const MAX_POLL_DURATION_MS = 180000; // 3 minutes
+const POST_END_POLL_INTERVAL_MS = 3000;
+const MAX_POST_END_ARTIFACT_WAIT_MS = 30000; // wait up to 30s for transcript/analysis hydration
 
 function sleep(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function hasCallArtifacts(result: {
+	transcript?: unknown[];
+	capturedData?: Record<string, unknown>;
+	recordingUrl?: string;
+}) {
+	return Boolean(
+		(result.transcript && result.transcript.length > 0) ||
+			result.capturedData ||
+			result.recordingUrl,
+	);
 }
 
 /**
@@ -24,7 +38,9 @@ Polls automatically every 5 seconds until the call ends (up to 3 minutes).
 Returns transcript and captured data when complete. Only call this once — it handles all polling internally.`,
 
 	inputSchema: z.object({
-		vapiCallId: z.string().describe("VAPI call ID (returned from initiateVoiceCall)"),
+		vapiCallId: z
+			.string()
+			.describe("VAPI call ID (returned from initiateVoiceCall)"),
 	}),
 
 	execute: async ({ vapiCallId }) => {
@@ -37,29 +53,55 @@ Returns transcript and captured data when complete. Only call this once — it h
 			while (Date.now() - startTime < MAX_POLL_DURATION_MS) {
 				pollCount++;
 				const result = await getVapiCallStatus(vapiCallId);
-				console.log(`[getCallStatus] Poll ${pollCount}: status=${result.status}`);
+				console.log(
+					`[getCallStatus] Poll ${pollCount}: status=${result.status}`,
+				);
 
 				if (result.status === "ended") {
+					let finalResult = result;
+
+					// Vapi can return status=ended before analysis/artifacts are fully hydrated.
+					// If outcome looks completed but data is empty, wait briefly and re-poll.
+					if (!hasCallArtifacts(result) && result.outcome === "completed") {
+						const postEndStart = Date.now();
+						while (Date.now() - postEndStart < MAX_POST_END_ARTIFACT_WAIT_MS) {
+							await sleep(POST_END_POLL_INTERVAL_MS);
+							pollCount++;
+							const retry = await getVapiCallStatus(vapiCallId);
+							if (retry.status !== "ended") continue;
+							finalResult = retry;
+							if (
+								hasCallArtifacts(retry) ||
+								(retry.outcome && retry.outcome !== "completed")
+							) {
+								break;
+							}
+						}
+					}
+
 					// Update our DB record
 					const voiceCall = await getVoiceCallByVapiId({ vapiCallId });
 					if (voiceCall) {
 						await updateVoiceCall({
 							id: voiceCall.id,
 							status: "ended",
-							outcome: result.outcome,
-							duration: result.duration,
-							capturedData: result.capturedData,
-							transcript: result.transcript,
+							outcome: finalResult.outcome,
+							duration: finalResult.duration,
+							recordingUrl: finalResult.recordingUrl,
+							capturedData: finalResult.capturedData,
+							transcript: finalResult.transcript,
 						});
 					}
 
 					return {
 						data: {
-							status: result.status,
-							outcome: result.outcome,
-							capturedData: result.capturedData,
-							transcript: result.transcript,
-							duration: result.duration,
+							status: finalResult.status,
+							outcome: finalResult.outcome,
+							endedReason: finalResult.endedReason,
+							capturedData: finalResult.capturedData,
+							transcript: finalResult.transcript,
+							recordingUrl: finalResult.recordingUrl,
+							duration: finalResult.duration,
 							pollCount,
 						},
 					};
@@ -74,8 +116,10 @@ Returns transcript and captured data when complete. Only call this once — it h
 				data: {
 					status: finalResult.status,
 					outcome: finalResult.outcome ?? "timeout",
+					endedReason: finalResult.endedReason,
 					capturedData: finalResult.capturedData,
 					transcript: finalResult.transcript,
+					recordingUrl: finalResult.recordingUrl,
 					duration: finalResult.duration,
 					pollCount,
 					timedOut: true,
@@ -83,7 +127,9 @@ Returns transcript and captured data when complete. Only call this once — it h
 			};
 		} catch (error) {
 			console.error("[getCallStatus] Error:", error);
-			return { error: `Failed to get call status: ${error instanceof Error ? error.message : String(error)}` };
+			return {
+				error: `Failed to get call status: ${error instanceof Error ? error.message : String(error)}`,
+			};
 		}
 	},
 });

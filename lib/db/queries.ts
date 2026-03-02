@@ -1609,15 +1609,29 @@ export async function getSampleCandidate({
 	organisationId,
 }: {
 	organisationId: string;
-}): Promise<{ name: string; email: string; sampleElement?: string } | null> {
+}): Promise<{
+	profileId: string;
+	name: string;
+	email: string;
+	sampleElement?: string;
+} | null> {
 	const [result] = await db
 		.select({
+			profileId: profiles.id,
 			firstName: profiles.firstName,
 			lastName: profiles.lastName,
 			email: profiles.email,
 		})
 		.from(profiles)
 		.where(eq(profiles.organisationId, organisationId))
+		.orderBy(
+			sql`CASE
+				WHEN lower(${profiles.firstName}) = 'spencer'
+					AND lower(${profiles.lastName}) = 'evans'
+				THEN 0
+				ELSE 1
+			END`,
+		)
 		.limit(1);
 
 	if (!result) return null;
@@ -1643,6 +1657,7 @@ export async function getSampleCandidate({
 		.limit(1);
 
 	return {
+		profileId: result.profileId,
 		name: `${result.firstName} ${result.lastName}`,
 		email: result.email,
 		sampleElement: element?.name,

@@ -72,6 +72,7 @@ interface ScreeningItem {
 		| "requires_review"
 		| "missing";
 	expiresAt: string | null;
+	evidenceCheckResult?: Record<string, unknown> | null;
 }
 
 interface PlacementContext {
@@ -162,6 +163,27 @@ const isChaseTask = (task: PlacementTask) =>
 	task.category === "expiry" ||
 	task.category === "review_document" ||
 	(task.category === "escalation" && !isScreeningEscalation(task));
+
+function hasPendingDohsOrder(item: ScreeningItem): boolean {
+	if (item.status !== "pending") return false;
+	if (
+		!item.evidenceCheckResult ||
+		typeof item.evidenceCheckResult !== "object" ||
+		Array.isArray(item.evidenceCheckResult)
+	) {
+		return false;
+	}
+
+	const lastOrder = (item.evidenceCheckResult as Record<string, unknown>)
+		.lastOrder;
+	if (!lastOrder || typeof lastOrder !== "object" || Array.isArray(lastOrder)) {
+		return false;
+	}
+
+	return (
+		(lastOrder as Record<string, unknown>).orderType === "dohs_alacarte"
+	);
+}
 
 // ============================================
 // Screening item row
@@ -322,6 +344,7 @@ export function NextActionsSection({
 		.filter((i) => i.status !== "met" && DHS_ELEMENT_SLUGS.has(i.slug))
 		.map((i) => i.slug);
 	const hasDHSItems = missingDHSSlugs.length > 0;
+	const hasActiveDohsOrder = screeningItems.some(hasPendingDohsOrder);
 	const hasDrugScreenGap = missingDHSSlugs.includes("drug-screen");
 	const normalisedFacilityAnalytes = normaliseDrugAnalytes(
 		facilityDrugTestRequirements,
@@ -755,7 +778,7 @@ export function NextActionsSection({
 						onClick={() => setDhsDialogOpen(true)}
 						className="text-xs gap-1.5 h-6"
 					>
-						Order D&OHS
+						{hasActiveDohsOrder ? "Order Additional D&OHS" : "Order D&OHS"}
 						<Image src={faIcon} alt="FA" className="size-3.5" />
 					</Button>
 				)}
@@ -833,7 +856,9 @@ export function NextActionsSection({
 								<ScreeningItemRow
 									key={item.slug}
 									item={item}
-									ordered={faTask?.status === "in_progress"}
+									ordered={
+										faTask?.status === "in_progress" || hasPendingDohsOrder(item)
+									}
 								/>
 							))}
 							{screeningEscalations.map(renderTaskRow)}

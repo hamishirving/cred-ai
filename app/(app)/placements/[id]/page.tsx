@@ -20,6 +20,7 @@ import {
 	ChevronDown,
 	ChevronRight,
 	FileText,
+	RefreshCw,
 	Upload,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -98,6 +99,7 @@ interface ComplianceItem {
 	evidenceFileName: string | null;
 	evidenceMimeType: string | null;
 	evidenceExtractedData: Record<string, unknown> | null;
+	evidenceCheckResult: Record<string, unknown> | null;
 }
 
 interface ComplianceSummary {
@@ -334,15 +336,33 @@ function getReasonLabel(reason: string): string {
 	return reason;
 }
 
+function hasPendingDohsOrder(
+	checkResult: Record<string, unknown> | null | undefined,
+): boolean {
+	if (!checkResult) return false;
+	const lastOrder = checkResult.lastOrder;
+	if (!lastOrder || typeof lastOrder !== "object" || Array.isArray(lastOrder)) {
+		return false;
+	}
+	return (
+		(lastOrder as Record<string, unknown>).orderType === "dohs_alacarte"
+	);
+}
+
 // ============================================
 // Sub-components
 // ============================================
 
 function ComplianceStatusIcon({
 	status,
+	ordered,
 }: {
 	status: ComplianceItem["status"];
+	ordered?: boolean;
 }) {
+	if (ordered && status !== "met" && status !== "expired") {
+		return <RefreshCw className="size-4 text-primary shrink-0" />;
+	}
 	switch (status) {
 		case "met":
 			return (
@@ -375,13 +395,18 @@ function ComplianceItemRow({
 	onSelect,
 	candidateLabel,
 	evidenceType,
+	ordered,
 }: {
 	item: ComplianceItem;
 	isSelected: boolean;
 	onSelect: () => void;
 	candidateLabel: string;
 	evidenceType: string | null;
+	ordered?: boolean;
 }) {
+	const showOrdered =
+		ordered && item.status !== "met" && item.status !== "expired";
+
 	return (
 		<button
 			type="button"
@@ -391,7 +416,7 @@ function ComplianceItemRow({
 				isSelected ? "bg-muted/40" : "hover:bg-muted/40",
 			)}
 		>
-			<ComplianceStatusIcon status={item.status} />
+			<ComplianceStatusIcon status={item.status} ordered={showOrdered} />
 			<div className="flex-1 min-w-0">
 				<div className="flex items-center gap-2">
 					<span className="text-sm">{item.name}</span>
@@ -432,12 +457,18 @@ function ComplianceItemRow({
 						Carry-forward
 					</span>
 				)}
-				<Badge
-					variant={COMPLIANCE_STATUS_VARIANT[item.status] || "neutral"}
-					className="text-xs font-medium capitalize"
-				>
-					{item.status === "requires_review" ? "Review" : item.status}
-				</Badge>
+				{showOrdered ? (
+					<Badge variant="info" className="text-xs font-medium">
+						Ordered
+					</Badge>
+				) : (
+					<Badge
+						variant={COMPLIANCE_STATUS_VARIANT[item.status] || "neutral"}
+						className="text-xs font-medium capitalize"
+					>
+						{item.status === "requires_review" ? "Review" : item.status}
+					</Badge>
+				)}
 			</div>
 		</button>
 	);
@@ -449,12 +480,14 @@ function RequirementGroupCard({
 	selectedItemSlug,
 	onSelectItem,
 	candidateLabel,
+	orderedSlugs,
 }: {
 	group: RequirementGroup;
 	items: ComplianceItem[];
 	selectedItemSlug: string | null;
 	onSelectItem: (slug: string) => void;
 	candidateLabel: string;
+	orderedSlugs: Set<string>;
 }) {
 	const source = getSourceFromReason(group.reason);
 	const Icon = SOURCE_ICONS[source] || Shield;
@@ -507,6 +540,7 @@ function RequirementGroupCard({
 								onSelect={() => onSelectItem(item.slug)}
 								candidateLabel={candidateLabel}
 								evidenceType={el?.evidenceType || null}
+								ordered={orderedSlugs.has(item.slug)}
 							/>
 						);
 					})}
@@ -536,6 +570,7 @@ function ComplianceDetailPanel({
 	organisationId,
 	profileId,
 	onVerified,
+	ordered,
 }: {
 	item: ComplianceItem | null;
 	element: ElementDefinition | null;
@@ -545,6 +580,7 @@ function ComplianceDetailPanel({
 	organisationId: string;
 	profileId: string;
 	onVerified?: () => void;
+	ordered?: boolean;
 }) {
 	const [docDialogOpen, setDocDialogOpen] = useState(false);
 
@@ -565,12 +601,18 @@ function ComplianceDetailPanel({
 			{/* Header */}
 			<div className="flex items-start justify-between gap-2">
 				<h3 className="text-sm font-semibold">{item.name}</h3>
-				<Badge
-					variant={COMPLIANCE_STATUS_VARIANT[item.status] || "neutral"}
-					className="text-xs font-medium capitalize shrink-0"
-				>
-					{item.status === "requires_review" ? "Review" : item.status}
-				</Badge>
+				{ordered && item.status !== "met" && item.status !== "expired" ? (
+					<Badge variant="info" className="text-xs font-medium shrink-0">
+						Ordered
+					</Badge>
+				) : (
+					<Badge
+						variant={COMPLIANCE_STATUS_VARIANT[item.status] || "neutral"}
+						className="text-xs font-medium capitalize shrink-0"
+					>
+						{item.status === "requires_review" ? "Review" : item.status}
+					</Badge>
+				)}
 			</div>
 
 			{/* Description */}
@@ -738,6 +780,8 @@ function ComplianceDetailPanel({
 				existingFileName={item.evidenceFileName}
 				existingMimeType={item.evidenceMimeType}
 				existingExtractedData={item.evidenceExtractedData}
+				existingCheckResult={item.evidenceCheckResult}
+				existingEvidenceId={item.evidenceId}
 				onVerified={onVerified}
 			/>
 		</Card>
@@ -959,6 +1003,27 @@ export default function PlacementDetailPage() {
 		return map;
 	}, [data]);
 
+	// Slugs that should show as "Ordered" in compliance list:
+	// - any in-progress task slugs
+	// - D&OHS items with a pending external order recorded in evidence.checkResult
+	const orderedSlugs = useMemo(() => {
+		if (!data) return new Set<string>();
+		const slugs = new Set<string>();
+		for (const task of data.tasks) {
+			if (task.status === "in_progress") {
+				for (const slug of task.complianceElementSlugs) {
+					slugs.add(slug);
+				}
+			}
+		}
+		for (const item of data.compliance.items) {
+			if (item.status === "pending" && hasPendingDohsOrder(item.evidenceCheckResult)) {
+				slugs.add(item.slug);
+			}
+		}
+		return slugs;
+	}, [data]);
+
 	// Selection state
 	const [selectedItemSlug, setSelectedItemSlug] = useState<string | null>(null);
 
@@ -1035,9 +1100,12 @@ export default function PlacementDetailPage() {
 						</AvatarFallback>
 					</Avatar>
 					<div>
-						<h1 className="text-balance text-4xl font-semibold tracking-tight text-foreground">
+						<Link
+							href={`/candidates/${placement.profileId}`}
+							className="text-balance text-4xl font-semibold tracking-tight text-foreground hover:text-brand-blue transition-colors duration-150"
+						>
 							{placement.candidateName}
-						</h1>
+						</Link>
 						<div className="mt-2 flex items-center gap-3 flex-wrap">
 							<Badge variant="info" className="text-xs font-medium">
 								{placement.roleName}
@@ -1175,6 +1243,7 @@ export default function PlacementDetailPage() {
 									selectedItemSlug={selectedItemSlug}
 									onSelectItem={setSelectedItemSlug}
 									candidateLabel={candidateLabel}
+									orderedSlugs={orderedSlugs}
 								/>
 							);
 						})}
@@ -1195,6 +1264,7 @@ export default function PlacementDetailPage() {
 							organisationId={placement.organisationId}
 							profileId={placement.profileId}
 							onVerified={refreshData}
+							ordered={!!selectedItemSlug && orderedSlugs.has(selectedItemSlug)}
 						/>
 					</div>
 				</div>

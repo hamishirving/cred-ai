@@ -7,10 +7,14 @@
  */
 
 import { tool } from "ai";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { chromium } from "playwright-core";
 import Browserbase from "@browserbasehq/sdk";
 import type { BrowserAction } from "@/lib/ai/agents/types";
+import { db } from "@/lib/db";
+import { complianceElements, evidence } from "@/lib/db/schema";
+import { captureAndUploadScreenshot } from "@/lib/ai/tools/screenshot-uploader";
 
 /** XPath selectors for the AHA verification page */
 const SELECTORS = {
@@ -64,11 +68,142 @@ function parseResultFields(raw: string): Record<string, string> {
 /** Callback for streaming browser actions as they happen */
 export type BrowserActionCallback = (action: BrowserAction) => void;
 
+export type BrowseAndVerifyContext = {
+	onAction?: BrowserActionCallback;
+	agentId?: string;
+	executionId?: string;
+	organisationId?: string;
+	executionInput?: Record<string, unknown>;
+};
+
+function readString(value: unknown): string | undefined {
+	return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+async function persistBlsLookupEvidence({
+	context,
+	fields,
+	verified,
+	browserSessionId,
+	portalUrl,
+	screenshotPaths,
+}: {
+	context?: BrowseAndVerifyContext;
+	fields: Record<string, string>;
+	verified: boolean;
+	browserSessionId: string;
+	portalUrl: string;
+	screenshotPaths: string[];
+}) {
+	if (!context || context.agentId !== "verify-bls-certificate") {
+		return;
+	}
+
+	const organisationId =
+		readString(context.executionInput?.organisationId) || context.organisationId;
+	const profileId = readString(context.executionInput?.profileId);
+	const evidenceId = readString(context.executionInput?.evidenceId);
+	const elementSlug =
+		readString(context.executionInput?.elementSlug) || "bls-certification";
+	const documentUrl = readString(context.executionInput?.documentUrl);
+
+	if (!organisationId || !profileId) {
+		return;
+	}
+
+	try {
+		let targetEvidenceId: string | undefined = evidenceId;
+
+		if (!targetEvidenceId) {
+			const [element] = await db
+				.select({ id: complianceElements.id })
+				.from(complianceElements)
+				.where(
+					and(
+						eq(complianceElements.organisationId, organisationId),
+						eq(complianceElements.slug, elementSlug),
+					),
+				);
+
+			if (!element) {
+				return;
+			}
+
+			const [latestEvidence] = await db
+				.select({ id: evidence.id })
+				.from(evidence)
+				.where(
+					and(
+						eq(evidence.organisationId, organisationId),
+						eq(evidence.profileId, profileId),
+						eq(evidence.complianceElementId, element.id),
+					),
+				)
+				.orderBy(desc(evidence.updatedAt))
+				.limit(1);
+
+			targetEvidenceId = latestEvidence?.id;
+		}
+
+		if (!targetEvidenceId) {
+			return;
+		}
+
+		const [existingEvidence] = await db
+			.select({ checkResult: evidence.checkResult })
+			.from(evidence)
+			.where(eq(evidence.id, targetEvidenceId))
+			.limit(1);
+
+		const currentCheckResult =
+			existingEvidence?.checkResult &&
+			typeof existingEvidence.checkResult === "object" &&
+			!Array.isArray(existingEvidence.checkResult)
+				? (existingEvidence.checkResult as Record<string, unknown>)
+				: {};
+		const currentLookups = Array.isArray(currentCheckResult.lookups)
+			? currentCheckResult.lookups
+			: [];
+
+		const lookupRecord = {
+			provider: "aha_registry",
+			verifiedAt: new Date().toISOString(),
+			verified,
+			portalUrl,
+			browserSessionId,
+			fields,
+			screenshotPaths,
+			executionId: context.executionId || null,
+			documentUrl: documentUrl || null,
+		};
+
+		await db
+			.update(evidence)
+			.set({
+				verificationStatus: verified ? "external_verified" : undefined,
+				verifiedAt: verified ? new Date() : undefined,
+				checkResult: {
+					...currentCheckResult,
+					provider: "aha_registry",
+					lastLookup: lookupRecord,
+					lookups: [...currentLookups, lookupRecord].slice(-10),
+				},
+				updatedAt: new Date(),
+			})
+			.where(eq(evidence.id, targetEvidenceId));
+	} catch (error) {
+		console.warn(
+			"[browseAndVerify] Failed to persist BLS lookup evidence:",
+			error instanceof Error ? error.message : "Unknown error",
+		);
+	}
+}
+
 /**
  * Create a browseAndVerify tool instance.
  * Accepts an optional onAction callback for real-time action streaming.
  */
-export function createBrowseAndVerify(onAction?: BrowserActionCallback) {
+export function createBrowseAndVerify(context?: BrowseAndVerifyContext) {
 	return tool({
 		description: `Navigates to a web verification portal, enters a certificate code, and extracts structured results.
 Used for source verification against external portals like the AHA certificate verification site.
@@ -113,6 +248,7 @@ When to use:
 						liveViewUrl: string;
 						browserSessionId: string;
 						verified: boolean;
+						screenshotPaths: string[];
 					};
 			  }
 			| { error: string }
@@ -134,18 +270,47 @@ When to use:
 			let bb: Browserbase | null = null;
 			let bbSessionId: string | null = null;
 			let actionIndex = 0;
+			let page: import("playwright-core").Page | null = null;
+			const screenshotPaths: string[] = [];
+			const organisationId =
+				readString(context?.executionInput?.organisationId) ||
+				context?.organisationId;
+			const profileId = readString(context?.executionInput?.profileId);
 
-			const emit = (
+			const emit = async (
 				type: string,
 				reasoning: string,
 				action?: string,
 			) => {
-				if (!onAction) return;
-				onAction({
-					index: actionIndex++,
+				const nextIndex = actionIndex++;
+				let screenshotPath: string | undefined;
+				let screenshotUrl: string | undefined;
+
+				if (page && type !== "browser-ready") {
+					const screenshot = await captureAndUploadScreenshot({
+						page,
+						agentId: context?.agentId,
+						executionId: context?.executionId,
+						actionIndex: nextIndex,
+						organisationId,
+						profileId,
+					});
+					screenshotPath = screenshot.screenshotPath;
+					screenshotUrl = screenshot.screenshotUrl;
+					if (screenshotPath) {
+						screenshotPaths.push(screenshotPath);
+					}
+				}
+
+				if (!context?.onAction) return;
+
+				context.onAction({
+					index: nextIndex,
 					type,
 					reasoning,
 					action,
+					screenshotPath,
+					screenshotUrl,
 					timestamp: new Date().toISOString(),
 				});
 			};
@@ -176,20 +341,20 @@ When to use:
 				// 3. Connect Playwright via CDP
 				browser = await chromium.connectOverCDP(session.connectUrl);
 				const defaultContext = browser.contexts()[0];
-				const page = defaultContext.pages()[0] || (await defaultContext.newPage());
+				page = defaultContext.pages()[0] || (await defaultContext.newPage());
 
 				// 4. Navigate to verification URL
 				const verifyUrl =
 					url ||
 					"https://certificates.rqi1stop.com/certificates/us/verify_certificate";
 				await page.goto(verifyUrl, { waitUntil: "networkidle" });
-				emit("navigate", "Navigated to verification portal", verifyUrl);
+				await emit("navigate", "Navigated to verification portal", verifyUrl);
 
 				// 5. Fill eCard input
 				const input = page.locator(SELECTORS.input);
 				await input.waitFor({ state: "visible", timeout: 15000 });
 				await input.fill(ecardCode);
-				emit("type", `Entered eCard code: ${ecardCode}`, ecardCode);
+				await emit("type", `Entered eCard code: ${ecardCode}`, ecardCode);
 
 				// 6. Click submit and wait for results
 				const submitBtn = page.locator(SELECTORS.submit);
@@ -199,11 +364,15 @@ When to use:
 				const resultsDiv = page.locator(SELECTORS.results);
 				await resultsDiv.waitFor({ state: "visible", timeout: 15000 });
 				await page.waitForTimeout(1000);
-				emit("click", "Clicked submit and waiting for results", "submit");
+				await emit("click", "Clicked submit and waiting for results", "submit");
 
 				// 7. Extract result text
 				const resultText = await resultsDiv.textContent();
-				emit("extract", "Extracted verification results", resultText || "No results found");
+				await emit(
+					"extract",
+					"Extracted verification results",
+					resultText || "No results found",
+				);
 
 				console.log(
 					"[browseAndVerify] Result text:",
@@ -247,6 +416,15 @@ When to use:
 					.map(([k, v]) => `${k}: ${v}`)
 					.join("\n");
 
+				await persistBlsLookupEvidence({
+					context,
+					fields,
+					verified,
+					browserSessionId: sessionId,
+					portalUrl: verifyUrl,
+					screenshotPaths,
+				});
+
 				return {
 					data: {
 						result: {
@@ -258,6 +436,7 @@ When to use:
 						liveViewUrl,
 						browserSessionId: sessionId,
 						verified,
+						screenshotPaths,
 					},
 				};
 			} catch (error) {

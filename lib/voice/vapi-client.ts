@@ -6,6 +6,7 @@
  */
 
 import { VapiClient } from "@vapi-ai/server-sdk";
+import type { Vapi } from "@vapi-ai/server-sdk";
 import type {
 	TranscriptMessage,
 	VoiceCallStatus,
@@ -18,6 +19,13 @@ import type {
 
 const VAPI_API_KEY = process.env.VAPI_API_KEY;
 const VAPI_PHONE_NUMBER_ID = process.env.VAPI_PHONE_NUMBER_ID;
+const VOICE_TEST_OVERRIDE_TO = process.env.VOICE_TEST_OVERRIDE_TO?.trim() || (
+	process.env.NODE_ENV !== "production" ? "+447780781414" : undefined
+);
+
+function isE164Phone(phone: string): boolean {
+	return /^\+[1-9]\d{1,14}$/.test(phone);
+}
 
 function getVapiClient(): VapiClient {
 	if (!VAPI_API_KEY) {
@@ -30,11 +38,20 @@ function getVapiClient(): VapiClient {
 // Types
 // ============================================
 
-export interface InitiateCallParams {
+type StaticAssistantCallConfig = {
 	assistantId: string;
+	assistant?: never;
+};
+
+type TransientAssistantCallConfig = {
+	assistant: Vapi.CreateAssistantDto;
+	assistantId?: never;
+};
+
+export type InitiateCallParams = (StaticAssistantCallConfig | TransientAssistantCallConfig) & {
 	phoneNumber: string;
 	variables: Record<string, string>;
-}
+};
 
 export interface InitiateCallResult {
 	success: true;
@@ -44,10 +61,39 @@ export interface InitiateCallResult {
 export interface CallStatusResult {
 	status: VoiceCallStatus;
 	outcome?: VoiceCallOutcome;
+	endedReason?: string;
 	duration?: number;
 	recordingUrl?: string;
 	transcript?: TranscriptMessage[];
 	capturedData?: Record<string, unknown>;
+}
+
+function parseCapturedDataValue(
+	value: unknown,
+): Record<string, unknown> | undefined {
+	if (!value) return undefined;
+
+	if (typeof value === "string") {
+		try {
+			const parsed = JSON.parse(value);
+			if (
+				typeof parsed === "object" &&
+				parsed !== null &&
+				!Array.isArray(parsed)
+			) {
+				return parsed as Record<string, unknown>;
+			}
+		} catch {
+			return undefined;
+		}
+		return undefined;
+	}
+
+	if (typeof value === "object" && !Array.isArray(value)) {
+		return value as Record<string, unknown>;
+	}
+
+	return undefined;
 }
 
 // ============================================
@@ -65,14 +111,29 @@ export async function initiateCall(
 	}
 
 	const vapi = getVapiClient();
+	const targetPhoneNumber =
+		VOICE_TEST_OVERRIDE_TO && isE164Phone(VOICE_TEST_OVERRIDE_TO)
+			? VOICE_TEST_OVERRIDE_TO
+			: params.phoneNumber;
+
+	if (process.env.NODE_ENV === "development" && targetPhoneNumber !== params.phoneNumber) {
+		console.log(
+			`[VAPI] Outbound number override applied: ${params.phoneNumber} -> ${targetPhoneNumber}`,
+		);
+	}
+
+	const callConfig =
+		"assistant" in params
+			? { assistant: params.assistant }
+			: { assistantId: params.assistantId };
 
 	const call = await vapi.calls.create({
-		assistantId: params.assistantId,
+		...callConfig,
 		assistantOverrides: {
 			variableValues: params.variables,
 		},
 		customer: {
-			number: params.phoneNumber,
+			number: targetPhoneNumber,
 		},
 		phoneNumberId: VAPI_PHONE_NUMBER_ID,
 	});
@@ -121,28 +182,27 @@ function mapVapiStatus(vapiStatus: string): VoiceCallStatus {
 function mapVapiOutcome(endedReason?: string): VoiceCallOutcome | undefined {
 	if (!endedReason) return undefined;
 
-	// Common VAPI ended reasons
-	switch (endedReason) {
-		case "assistant-ended-call":
-		case "customer-ended-call":
-		case "silence-timed-out":
-		case "max-duration-reached":
-			return "completed";
-		case "no-answer":
-			return "no_answer";
-		case "busy":
-			return "busy";
-		case "voicemail":
-		case "answering-machine":
-			return "voicemail";
-		case "failed":
-		case "error":
-		case "assistant-error":
-		case "assistant-request-failed":
-			return "failed";
-		default:
-			return "completed";
+	const reason = endedReason.toLowerCase();
+
+	if (reason.includes("no-answer") || reason.includes("no_answer")) {
+		return "no_answer";
 	}
+	if (reason.includes("busy")) {
+		return "busy";
+	}
+	if (reason.includes("voicemail") || reason.includes("answering-machine")) {
+		return "voicemail";
+	}
+	if (
+		reason.includes("error") ||
+		reason.includes("failed") ||
+		reason.includes("forbidden") ||
+		reason.includes("unauthorized") ||
+		reason.includes("denied")
+	) {
+		return "failed";
+	}
+	return "completed";
 }
 
 /**
@@ -174,6 +234,29 @@ function parseTranscript(
 		}));
 }
 
+function parseTranscriptText(transcript?: string): TranscriptMessage[] | undefined {
+	if (!transcript) return undefined;
+	const lines = transcript
+		.split("\n")
+		.map((line) => line.trim())
+		.filter(Boolean);
+	if (!lines.length) return undefined;
+
+	const parsed = lines.map((line) => {
+		const assistantMatch = line.match(/^assistant:\s*(.+)$/i);
+		if (assistantMatch) {
+			return { role: "assistant" as const, content: assistantMatch[1].trim() };
+		}
+		const userMatch = line.match(/^(user|customer|caller):\s*(.+)$/i);
+		if (userMatch) {
+			return { role: "user" as const, content: userMatch[2].trim() };
+		}
+		return { role: "user" as const, content: line };
+	});
+
+	return parsed.length ? parsed : undefined;
+}
+
 /**
  * Get the current status of a call from VAPI
  */
@@ -190,32 +273,57 @@ export async function getCallStatus(
 	};
 
 	// Only include additional data if call has ended
-	if (status === "ended" && call.artifact) {
+	if (status === "ended") {
+		result.endedReason = call.endedReason || undefined;
 		result.outcome = mapVapiOutcome(call.endedReason);
-		result.recordingUrl = call.artifact.recordingUrl;
-		result.transcript = parseTranscript(
-			call.artifact.messages as Array<{
-				role?: string;
-				message?: string;
-				content?: string;
-				time?: number;
-			}>,
-		);
+
+		if (call.artifact) {
+			result.recordingUrl = call.artifact.recordingUrl;
+			result.transcript = parseTranscript(
+				call.artifact.messages as Array<{
+					role?: string;
+					message?: string;
+					content?: string;
+					time?: number;
+				}>,
+			);
+		}
+
+		if (!result.transcript) {
+			result.transcript = parseTranscript(
+				call.messages as Array<{
+					role?: string;
+					message?: string;
+					content?: string;
+					time?: number;
+				}>,
+			);
+		}
+
+		if (!result.transcript) {
+			result.transcript = parseTranscriptText(call.artifact?.transcript);
+		}
 
 		// VAPI can return structured data in multiple places:
 		// 1. artifact.structuredOutputs - from function calls/tools
 		// 2. analysis - from post-call analysis (if configured)
-		const structuredOutputs = call.artifact.structuredOutputs as Record<string, unknown> | undefined;
-		const analysis = (call as unknown as { analysis?: Record<string, unknown> }).analysis;
+		const structuredOutputsRaw = call.artifact?.structuredOutputs;
+		const analysisRaw = (call as unknown as { analysis?: unknown }).analysis;
+		const structuredOutputs = parseCapturedDataValue(structuredOutputsRaw);
+		const analysis = parseCapturedDataValue(analysisRaw);
 
 		// Debug: log what VAPI returns so we can see where structured data lives
 		if (process.env.NODE_ENV === "development") {
-			console.log("[VAPI] Call artifact keys:", Object.keys(call.artifact));
+			console.log("[VAPI] endedReason:", call.endedReason);
+			console.log("[VAPI] Call artifact keys:", Object.keys(call.artifact ?? {}));
+			console.log("[VAPI] top-level message count:", Array.isArray(call.messages) ? call.messages.length : 0);
 			console.log("[VAPI] structuredOutputs:", structuredOutputs);
 			console.log("[VAPI] analysis:", analysis);
 		}
 
-		result.capturedData = structuredOutputs || analysis || undefined;
+		result.capturedData = analysis
+			? { analysis }
+			: structuredOutputs || undefined;
 	}
 
 	// Calculate duration if available

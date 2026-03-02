@@ -69,6 +69,16 @@ End with a brief summary of findings and the action taken.`,
 			.string()
 			.url()
 			.describe("URL of the certificate image to verify"),
+		elementSlug: z
+			.string()
+			.optional()
+			.default("bls-certification")
+			.describe("Compliance element slug to attach registry lookup evidence to"),
+		evidenceId: z
+			.string()
+			.uuid()
+			.optional()
+			.describe("Existing evidence ID for this BLS document (if known)"),
 	}),
 
 	constraints: {

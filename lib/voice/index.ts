@@ -18,6 +18,9 @@ export type {
 	VoiceCallStatusResponse,
 	VoiceCallDetailResponse,
 	VoiceCallListResponse,
+	FollowupStructuredAddress,
+	FollowupStructuredUpdates,
+	FollowupCallStructuredData,
 } from "./types";
 
 // Templates

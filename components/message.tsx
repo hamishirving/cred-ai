@@ -48,7 +48,8 @@ const PurePreviewMessage = ({
 					typeof part === "object" &&
 					"type" in part &&
 					typeof (part as { type?: unknown }).type === "string" &&
-					(part as { type: string }).type.startsWith("tool-"),
+					((part as { type: string }).type.startsWith("tool-") ||
+						(part as { type: string }).type === "dynamic-tool"),
 			)
 			.flatMap((part) => {
 				const toolPart = part as {
@@ -197,13 +198,15 @@ const PurePreviewMessage = ({
 						}
 
 						// Handle all tool types through the registry
-							if (hasToolHandler(type)) {
-								const toolPart = part as {
-									toolCallId?: string;
-									state?: string;
-									input?: unknown;
-									output?: unknown;
-								};
+							const toolPart = part as {
+								toolCallId?: string;
+								toolName?: string;
+								state?: string;
+								input?: unknown;
+								output?: unknown;
+							};
+
+							if (hasToolHandler(type, toolPart.toolName)) {
 								const toolCallId =
 									toolPart.toolCallId || `tool-part-${message.id}-${index}`;
 								// Some streams keep both a "call" part and a later "result" part
@@ -226,7 +229,7 @@ const PurePreviewMessage = ({
 										input: toolPart.input,
 										output: toolPart.output,
 										isReadonly,
-									})}
+									}, toolPart.toolName)}
 								</div>
 							);
 						}

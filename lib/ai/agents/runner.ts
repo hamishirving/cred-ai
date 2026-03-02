@@ -420,6 +420,9 @@ export async function executeAgent(
 			onBrowserAction: handleBrowserAction,
 			attachments,
 			organisationId: ctx.orgId || undefined,
+			agentId: agent.id,
+			executionId,
+			executionInput: ctx.input,
 		});
 		console.log("[agent-runner] Resolved tools:", Object.keys(tools));
 

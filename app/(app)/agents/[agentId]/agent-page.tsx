@@ -161,13 +161,24 @@ function createRunColumns(agentId: string): ColumnDef<AgentExecution>[] {
 // =============================================================================
 
 const PAGE_SIZE = 10;
+const DEFAULT_TEST_PHONE_NUMBER = "+44778078141";
 
 interface AgentPageProps {
 	agent: SerializedAgentDefinition;
-	sampleCandidate?: { name: string; email: string; sampleElement?: string } | null;
+	sampleCandidate?: {
+		profileId: string;
+		name: string;
+		email: string;
+		sampleElement?: string;
+	} | null;
+	selectedOrgId?: string | null;
 }
 
-export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
+export function AgentPage({
+	agent,
+	sampleCandidate,
+	selectedOrgId,
+}: AgentPageProps) {
 	const router = useRouter();
 	const [executions, setExecutions] = useState<AgentExecution[]>([]);
 	const [loadingExecs, setLoadingExecs] = useState(true);
@@ -178,6 +189,9 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 			if (field.defaultValue) {
 				defaults[field.key] = field.defaultValue;
 			}
+			if (!field.defaultValue && field.key === "phoneNumber") {
+				defaults[field.key] = DEFAULT_TEST_PHONE_NUMBER;
+			}
 			// Pre-populate candidate fields with sample from DB
 			if (sampleCandidate && !field.defaultValue) {
 				if (field.key === "candidateName" || field.key === "senderName") {
@@ -186,6 +200,12 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 				if (field.key === "senderEmail") {
 					defaults[field.key] = sampleCandidate.email;
 				}
+				if (field.key === "profileId") {
+					defaults[field.key] = sampleCandidate.profileId;
+				}
+			}
+			if (selectedOrgId && !field.defaultValue && field.key === "organisationId") {
+				defaults[field.key] = selectedOrgId;
 			}
 			// Dynamic defaults based on org's compliance elements
 			if (!field.defaultValue) {
@@ -385,23 +405,50 @@ export function AgentPage({ agent, sampleCandidate }: AgentPageProps) {
 								</DialogHeader>
 								<form onSubmit={handleSubmit} className="flex flex-col gap-3">
 									{agent.inputFields.map((field) => {
+										const isBlsTest = agent.id === "verify-bls-certificate";
 										const isUrl = field.key.toLowerCase().includes("url");
 										const isPhoneNumber = field.key.toLowerCase().includes("phone");
 										const isBodyText = field.key.toLowerCase().includes("body");
 										const isAttachment = field.key.toLowerCase().includes("attachment");
+										const isOrganisationId = field.key === "organisationId";
+										const isElementSlug = field.key === "elementSlug";
+										const isEvidenceId = field.key === "evidenceId";
+										const isProfileId = field.key === "profileId";
+										const hasSampleProfile =
+											isProfileId && !!sampleCandidate?.profileId;
 										// Only lock URL fields with defaults (e.g., pre-configured document URLs)
 										const hasDefault = isUrl && !!field.defaultValue;
+										const fieldLabel = hasSampleProfile ? "Candidate" : field.label;
+
+										if (isOrganisationId) {
+											return null;
+										}
+										if (isBlsTest && (isElementSlug || isEvidenceId)) {
+											return null;
+										}
 
 										return (
 											<div key={field.key} className="flex flex-col gap-1.5">
 												<Label htmlFor={field.key} className="text-xs">
-													{field.label}
+													{fieldLabel}
 													{field.required && (
 														<span className="text-destructive ml-0.5">*</span>
 													)}
 												</Label>
 
-												{isAttachment ? (
+												{hasSampleProfile ? (
+													<div className="space-y-1">
+														<Input
+															id={field.key}
+															value={`${sampleCandidate?.name} (${sampleCandidate?.email})`}
+															disabled
+															className="text-sm text-foreground"
+														/>
+														<p className="text-[11px] text-muted-foreground">
+															Using current org default candidate for this test run.
+														</p>
+													</div>
+												) : isAttachment ? (
 													<div className="flex flex-col gap-2">
 														{attachmentFiles.length > 0 && (
 															<div className="flex flex-col gap-1">

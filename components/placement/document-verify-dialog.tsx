@@ -28,7 +28,7 @@ import { toast } from "@/components/toast";
 interface VerificationResult {
 	decision: "approved" | "rejected" | "needs_review";
 	reasoning: string;
-	extractedFields: Record<string, string>;
+	extractedFields: Record<string, unknown>;
 	nextStep: string | null;
 	matchedDocumentType: string;
 }
@@ -47,6 +47,91 @@ interface DocumentVerifyDialogProps {
 	existingFileName?: string | null;
 	/** Profile ID for uploading new evidence */
 	profileId?: string | null;
+}
+
+function formatFieldLabel(key: string): string {
+	return key.replace(/([A-Z])/g, " $1").trim();
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function renderExtractedFieldValue(key: string, value: unknown) {
+	if (key === "workHistory" && Array.isArray(value)) {
+		const items = value.filter(isPlainObject);
+		if (items.length === 0) {
+			return <span className="text-muted-foreground">No work history found</span>;
+		}
+		return (
+			<div className="space-y-1.5">
+				{items.map((item, index) => {
+					const role =
+						typeof item.role === "string" && item.role
+							? item.role
+							: typeof item.title === "string" && item.title
+								? item.title
+								: "Role not specified";
+					const employer =
+						typeof item.employer === "string" && item.employer
+							? item.employer
+							: "Employer not specified";
+					const dateParts = [
+						typeof item.startDate === "string" ? item.startDate : null,
+						typeof item.endDate === "string" && item.endDate
+							? item.endDate
+							: item.isCurrent === true
+								? "Present"
+								: null,
+					].filter(Boolean);
+					return (
+						<div
+							key={`${index}-${employer}-${role}`}
+							className="rounded border border-border/60 px-2 py-1.5"
+						>
+							<p className="text-xs font-medium">{role}</p>
+							<p className="text-xs text-muted-foreground">{employer}</p>
+							{dateParts.length > 0 && (
+								<p className="text-[11px] text-muted-foreground">
+									{dateParts.join(" - ")}
+								</p>
+							)}
+						</div>
+					);
+				})}
+			</div>
+		);
+	}
+
+	if (Array.isArray(value)) {
+		if (value.length === 0) {
+			return <span className="text-muted-foreground">None</span>;
+		}
+		const primitiveValues = value.filter(
+			(item) =>
+				typeof item === "string" ||
+				typeof item === "number" ||
+				typeof item === "boolean",
+		);
+		if (primitiveValues.length === value.length) {
+			return <span>{primitiveValues.map(String).join(", ")}</span>;
+		}
+		return <span>{value.length} entries</span>;
+	}
+
+	if (isPlainObject(value)) {
+		return (
+			<pre className="text-[11px] whitespace-pre-wrap break-words rounded border border-border/60 bg-muted/40 px-2 py-1.5">
+				{JSON.stringify(value, null, 2)}
+			</pre>
+		);
+	}
+
+	if (value === null || value === undefined || value === "") {
+		return <span className="text-muted-foreground">—</span>;
+	}
+
+	return <span>{String(value)}</span>;
 }
 
 // ============================================
@@ -344,19 +429,19 @@ export function DocumentVerifyDialog({
 									<p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
 										Extracted Fields
 									</p>
-									<div className="grid grid-cols-2 gap-x-4 gap-y-1">
+									<div className="grid grid-cols-1 gap-y-1.5">
 										{Object.entries(result.extractedFields).map(
 											([key, value]) => (
 												<div
 													key={key}
-													className="flex items-baseline justify-between gap-2 col-span-1"
+													className="space-y-1 rounded border border-border/50 px-2 py-1.5"
 												>
-													<span className="text-[10px] text-muted-foreground capitalize">
-														{key.replace(/([A-Z])/g, " $1").trim()}
-													</span>
-													<span className="text-xs text-right truncate">
-														{value}
-													</span>
+													<p className="text-[10px] text-muted-foreground capitalize">
+														{formatFieldLabel(key)}
+													</p>
+													<div className="text-xs">
+														{renderExtractedFieldValue(key, value)}
+													</div>
 												</div>
 											),
 										)}

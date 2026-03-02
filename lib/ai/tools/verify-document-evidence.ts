@@ -8,7 +8,7 @@
  * Core logic extracted from app/api/placements/[id]/verify-document/route.ts.
  */
 
-import { generateText, tool } from "ai";
+import { generateObject, tool } from "ai";
 import { z } from "zod";
 import { myProvider } from "@/lib/ai/providers";
 import { getAcceptableDocumentsByElementIds } from "@/lib/db/queries";
@@ -23,6 +23,51 @@ if (!databaseUrl) {
 }
 const client = postgres(databaseUrl);
 const db = drizzle(client);
+
+const standardVerificationSchema = z.object({
+	decision: z.enum(["approved", "rejected", "needs_review", "accepted"]),
+	reasoning: z.string(),
+	extractedFields: z.record(z.unknown()).default({}),
+	nextStep: z.string().nullable().optional(),
+	matchedDocumentType: z.string().optional(),
+});
+
+const cvWorkHistoryItemSchema = z.object({
+	employer: z.string().optional(),
+	role: z.string().optional(),
+	title: z.string().optional(),
+	startDate: z.string().optional(),
+	endDate: z.string().optional(),
+	isCurrent: z.boolean().optional(),
+	location: z.string().optional(),
+	responsibilities: z.array(z.string()).optional(),
+	specialty: z.string().optional(),
+	environment: z.string().optional(),
+});
+
+const cvExtractionSchema = z.object({
+	candidateName: z.string().optional(),
+	location: z.string().optional(),
+	email: z.string().optional(),
+	phone: z.string().optional(),
+	profession: z.string().optional(),
+	yearsOfExperience: z.string().optional(),
+	specialty: z.string().optional(),
+	currentPosition: z.string().optional(),
+	education: z.array(z.string()).optional(),
+	licenses: z.array(z.string()).optional(),
+	certifications: z.array(z.string()).optional(),
+	skills: z.array(z.string()).optional(),
+	workHistory: z.array(cvWorkHistoryItemSchema).default([]),
+});
+
+const cvVerificationSchema = z.object({
+	decision: z.enum(["approved", "rejected", "needs_review", "accepted"]),
+	reasoning: z.string(),
+	extractedFields: cvExtractionSchema,
+	nextStep: z.string().nullable().optional(),
+	matchedDocumentType: z.string().optional(),
+});
 
 /** Determine media type from a URL */
 function inferMediaType(url: string): string {
@@ -92,6 +137,7 @@ When to use:
 			});
 
 			const hasCriteria = acceptableDocs.length > 0;
+			const isResumeCv = elementSlug === "resume-cv";
 
 			// 3. Build criteria block
 			const criteriaBlock = hasCriteria
@@ -141,21 +187,19 @@ No specific acceptance criteria are defined for this requirement. Please examine
 Use your best judgement. Flag for review if anything looks incomplete or questionable.`;
 
 			// 5. Call vision model
-			const result = await generateText({
+			const schema = isResumeCv
+				? cvVerificationSchema
+				: standardVerificationSchema;
+			const result = await generateObject({
 				model: myProvider.languageModel("chat-model"),
+				schema,
 				messages: [
 					{
 						role: "system",
 						content: `${systemPrompt}
 
-Respond ONLY with a JSON object in this exact format:
-{
-  "decision": "approved" | "rejected" | "needs_review",
-  "reasoning": "Detailed explanation",
-  "extractedFields": { "fieldName": "value" },
-  "nextStep": "What should happen next (only if rejected or needs_review, otherwise null)",
-  "matchedDocumentType": "What type of document this appears to be"
-}`,
+Return a structured object matching the output schema exactly.
+${isResumeCv ? "\nFor CV extraction, extract full work history into extractedFields.workHistory as an ARRAY of objects, one per role (do not merge into a single text field). Include employer, role, startDate, endDate, isCurrent, location, and responsibilities where available. Capture all visible roles." : ""}`,
 					},
 					{
 						role: "user",
@@ -168,18 +212,19 @@ Respond ONLY with a JSON object in this exact format:
 			});
 
 			// 6. Parse response
-			const text = result.text.trim();
-			const jsonMatch = text.match(/\{[\s\S]*\}/);
-			if (!jsonMatch) {
-				return { error: "Failed to parse verification result" };
-			}
-
-			const parsed = JSON.parse(jsonMatch[0]);
+			const parsed = result.object;
 			const decision =
-				parsed.decision === "accepted" ? "approved" : parsed.decision || "needs_review";
+				parsed.decision === "accepted"
+					? "approved"
+					: parsed.decision || "needs_review";
 			const reasoning = parsed.reasoning || "No reasoning provided";
-			const extractedFields = parsed.extractedFields || {};
-			const matchedDocumentType = parsed.matchedDocumentType || "Unknown";
+			const extractedFields =
+				parsed.extractedFields && typeof parsed.extractedFields === "object"
+					? (parsed.extractedFields as Record<string, unknown>)
+					: {};
+			const matchedDocumentType =
+				parsed.matchedDocumentType ||
+				(isResumeCv ? "Professional Resume/CV" : "Unknown");
 
 			// 7. Update evidence record with results
 			const whereConditions = [

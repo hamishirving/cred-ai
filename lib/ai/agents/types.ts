@@ -152,6 +152,10 @@ export interface BrowserAction {
 	reasoning?: string;
 	/** Specific action taken (e.g. "click", "type", "goto") */
 	action?: string;
+	/** Storage path of the captured screenshot for this action */
+	screenshotPath?: string;
+	/** Signed URL for immediate preview (short-lived) */
+	screenshotUrl?: string;
 	/** When this action occurred */
 	timestamp: string;
 }

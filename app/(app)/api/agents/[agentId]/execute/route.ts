@@ -12,7 +12,7 @@ import { auth } from "@/lib/auth";
 import { ChatSDKError } from "@/lib/errors";
 import { getAgentDefinition } from "@/lib/ai/agents/registry";
 import { executeAgent } from "@/lib/ai/agents/runner";
-import { getOrganisationById } from "@/lib/db/queries";
+import { getOrganisationById, getSampleCandidate } from "@/lib/db/queries";
 import type { AgentStep } from "@/lib/ai/agents/types";
 
 export const maxDuration = 120; // Increased to handle longer-running agents like DVLA
@@ -39,7 +39,12 @@ export async function POST(
 		);
 	}
 
-	// 3. Parse and validate input
+	// 3. Resolve org context early for input defaults
+	const cookieStore = await cookies();
+	const orgId =
+		cookieStore.get("selectedOrgId")?.value || session.user.currentOrgId || "";
+
+	// 4. Parse and validate input
 	let body: Record<string, unknown>;
 	try {
 		body = await request.json();
@@ -47,7 +52,28 @@ export async function POST(
 		return new ChatSDKError("bad_request:api").toResponse();
 	}
 
-	const parsed = agent.inputSchema.safeParse(body);
+	const normalizedInput = { ...body };
+	if (
+		orgId &&
+		(normalizedInput.organisationId == null ||
+			String(normalizedInput.organisationId).trim() === "")
+	) {
+		normalizedInput.organisationId = orgId;
+	}
+
+	if (
+		agent.id === "verify-bls-certificate" &&
+		orgId &&
+		(normalizedInput.profileId == null ||
+			String(normalizedInput.profileId).trim() === "")
+	) {
+		const sampleCandidate = await getSampleCandidate({ organisationId: orgId });
+		if (sampleCandidate?.profileId) {
+			normalizedInput.profileId = sampleCandidate.profileId;
+		}
+	}
+
+	const parsed = agent.inputSchema.safeParse(normalizedInput);
 	if (!parsed.success) {
 		return Response.json(
 			{ error: "Invalid input", details: parsed.error.flatten() },
@@ -55,14 +81,11 @@ export async function POST(
 		);
 	}
 
-	// 4. Load org context
-	const cookieStore = await cookies();
-	const orgId =
-		cookieStore.get("selectedOrgId")?.value || session.user.currentOrgId || "";
+	// 5. Load org prompt context
 	const org = orgId ? await getOrganisationById({ id: orgId }) : null;
 	const orgPrompt = org?.settings?.aiCompanion?.orgPrompt;
 
-	// 5. Create SSE stream
+	// 6. Create SSE stream
 	const encoder = new TextEncoder();
 
 	const stream = new ReadableStream({

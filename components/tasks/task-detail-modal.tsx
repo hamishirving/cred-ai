@@ -252,27 +252,29 @@ export function TaskDetailModal({
 								</DialogTitle>
 							)}
 						</div>
-						<DialogDescription className="flex items-center gap-2">
-							<StatusIcon
-								className={cn("h-3.5 w-3.5", statusConfig[task.status].color)}
-							/>
-							<span className={statusConfig[task.status].color}>
-								{statusConfig[task.status].label}
-							</span>
-							<span className="text-muted-foreground/50">&middot;</span>
-							<Badge
-								variant={priorityConfig[task.priority].badgeVariant}
-								className="text-xs"
-							>
-								{priorityConfig[task.priority].label}
-							</Badge>
-							{task.source === "ai_agent" && (
-								<>
-									<span className="text-muted-foreground/50">&middot;</span>
-									<Sparkles className="h-3 w-3 text-primary/60" />
-									<span className="text-xs text-muted-foreground">AI</span>
-								</>
-							)}
+						<DialogDescription asChild>
+							<div className="text-sm text-muted-foreground flex items-center gap-2">
+								<StatusIcon
+									className={cn("h-3.5 w-3.5", statusConfig[task.status].color)}
+								/>
+								<span className={statusConfig[task.status].color}>
+									{statusConfig[task.status].label}
+								</span>
+								<span className="text-muted-foreground/50">&middot;</span>
+								<Badge
+									variant={priorityConfig[task.priority].badgeVariant}
+									className="text-xs"
+								>
+									{priorityConfig[task.priority].label}
+								</Badge>
+								{task.source === "ai_agent" && (
+									<>
+										<span className="text-muted-foreground/50">&middot;</span>
+										<Sparkles className="h-3 w-3 text-primary/60" />
+										<span className="text-xs text-muted-foreground">AI</span>
+									</>
+								)}
+							</div>
 						</DialogDescription>
 					</DialogHeader>
 

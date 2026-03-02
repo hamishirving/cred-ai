@@ -32,6 +32,7 @@ export default async function AgentDetailPage(props: {
 		<AgentPage
 			agent={serializeAgent(agent)}
 			sampleCandidate={sampleCandidate}
+			selectedOrgId={organisationId || null}
 		/>
 	);
 }

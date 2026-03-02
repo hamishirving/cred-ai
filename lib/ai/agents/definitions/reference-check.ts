@@ -92,7 +92,7 @@ End with a brief summary of the reference check outcome.`,
 			.describe("Name or email of the candidate to check references for"),
 		phoneNumber: z
 			.string()
-			.default("+447780781414")
+			.default("+44778078141")
 			.describe("Phone number to call (E.164 format)"),
 	}),
 

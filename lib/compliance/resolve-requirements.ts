@@ -150,6 +150,8 @@ export interface PlacementComplianceItem {
 	evidenceMimeType: string | null;
 	/** Extracted data including AI verification results */
 	evidenceExtractedData: Record<string, unknown> | null;
+	/** Structured external-check results (e.g. registry lookups) */
+	evidenceCheckResult: Record<string, unknown> | null;
 }
 
 // ============================================
@@ -669,10 +671,11 @@ export async function checkPlacementCompliance(
 					evidenceVerifiedAt: null,
 					evidenceFilePath: null,
 					evidenceFileName: null,
-					evidenceMimeType: null,
-					evidenceExtractedData: null,
-				};
-			}
+						evidenceMimeType: null,
+						evidenceExtractedData: null,
+						evidenceCheckResult: null,
+					};
+				}
 
 			// Determine carry-forward: candidate-scoped items with approved evidence
 			// that were created before any current placement are carry-forward
@@ -729,6 +732,7 @@ export async function checkPlacementCompliance(
 					string,
 					unknown
 				> | null,
+				evidenceCheckResult: ev.checkResult as Record<string, unknown> | null,
 			};
 		},
 	);

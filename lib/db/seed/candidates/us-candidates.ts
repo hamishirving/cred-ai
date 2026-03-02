@@ -532,6 +532,40 @@ export const travelNurseCandidates: CandidateProfile[] = [
 			notes: "ACLS just expired. Cannot work ER until renewed. Urgent.",
 		},
 	},
+
+	// Scenario 6: BON PSV demo — TX licence 801653, RN + LVN/LPN, compact multistate
+	{
+		profile: {
+			email: "james.hickox@email.com",
+			firstName: "James",
+			lastName: "Hickox",
+			phone: generateUSPhone(),
+			dateOfBirth: new Date("1988-07-04"),
+			sex: "male",
+			status: "active",
+			nationalId: generateSSN(),
+			professionalRegistration: "TX-RN-801653",
+			address: {
+				line1: "2401 Elm Street",
+				city: "Dallas",
+				state: "TX",
+				postcode: "75226",
+				country: "USA",
+			},
+		},
+		roleSlug: "travel-icu-rn",
+		state: {
+			status: "in_progress",
+			missingElements: [
+				"bon-licence-verification",
+				"federal-background-check",
+				"drug-screen",
+			],
+			daysSinceActivity: 0,
+			notes:
+				"BON PSV demo candidate. TX licence 801653 (RN + LVN/LPN). Compact multistate. Licence needs primary source verification against TX Board of Nursing.",
+		},
+	},
 ];
 
 /**

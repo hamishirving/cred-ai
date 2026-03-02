@@ -22,9 +22,12 @@ import { createDocument } from "@/lib/ai/tools/create-document";
 import { createForm } from "@/lib/ai/tools/create-form";
 import { createTaskTool } from "@/lib/ai/tools/create-task";
 import { draftEmail } from "@/lib/ai/tools/draft-email";
+import { getCallStatusTool } from "@/lib/ai/tools/get-call-status";
 import { getLocalCompliance } from "@/lib/ai/tools/get-local-compliance";
 import { getLocalDocuments } from "@/lib/ai/tools/get-local-documents";
 import { getLocalProfile } from "@/lib/ai/tools/get-local-profile";
+import { applyFollowupVoiceOutcomeTool } from "@/lib/ai/tools/apply-followup-voice-outcome";
+import { initiateFollowupVoiceCallTool } from "@/lib/ai/tools/initiate-followup-voice-call";
 import { queryDataAgent } from "@/lib/ai/tools/query-data-agent";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { createSearchKnowledge } from "@/lib/ai/tools/search-knowledge";
@@ -53,7 +56,7 @@ import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const getTokenlensCatalog = cache(
 	async (): Promise<ModelCatalog | undefined> => {
@@ -230,6 +233,9 @@ export async function POST(request: Request) {
 									"requestSuggestions",
 									"searchKnowledge",
 									"createTask",
+									"initiateFollowupVoiceCall",
+									"getCallStatus",
+									"applyFollowupVoiceOutcome",
 								],
 					experimental_transform: smoothStream({ chunking: "word" }),
 					tools: {
@@ -249,6 +255,9 @@ export async function POST(request: Request) {
 						}),
 						searchKnowledge,
 						createTask: createTaskTool,
+						initiateFollowupVoiceCall: initiateFollowupVoiceCallTool,
+						getCallStatus: getCallStatusTool,
+						applyFollowupVoiceOutcome: applyFollowupVoiceOutcomeTool,
 					},
 					experimental_telemetry: {
 						isEnabled: isProductionEnvironment,
