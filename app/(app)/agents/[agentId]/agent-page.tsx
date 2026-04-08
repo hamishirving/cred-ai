@@ -10,7 +10,6 @@ import {
 	getCoreRowModel,
 	useReactTable,
 	getSortedRowModel,
-	getPaginationRowModel,
 	type SortingState,
 } from "@tanstack/react-table";
 import {
@@ -182,6 +181,9 @@ export function AgentPage({
 	const router = useRouter();
 	const [executions, setExecutions] = useState<AgentExecution[]>([]);
 	const [loadingExecs, setLoadingExecs] = useState(true);
+	const [page, setPage] = useState(1);
+	const [totalRows, setTotalRows] = useState(0);
+	const [pageCount, setPageCount] = useState(0);
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [formData, setFormData] = useState<Record<string, string>>(() => {
 		const defaults: Record<string, string> = {};
@@ -244,22 +246,20 @@ export function AgentPage({
 		columns,
 		getCoreRowModel: getCoreRowModel(),
 		getSortedRowModel: getSortedRowModel(),
-		getPaginationRowModel: getPaginationRowModel(),
 		onSortingChange: setSorting,
 		state: { sorting },
-		initialState: {
-			pagination: { pageSize: PAGE_SIZE },
-		},
 	});
 
 	useEffect(() => {
 		async function fetchExecutions() {
 			setLoadingExecs(true);
 			try {
-				const res = await fetch(`/api/agents/${agent.id}/executions`);
+				const res = await fetch(`/api/agents/${agent.id}/executions?page=${page}&limit=${PAGE_SIZE}`);
 				if (res.ok) {
 					const data = await res.json();
 					setExecutions(data.executions || []);
+					setTotalRows(data.total ?? 0);
+					setPageCount(data.pageCount ?? 0);
 				}
 			} catch {
 				// Silently fail
@@ -268,7 +268,7 @@ export function AgentPage({
 			}
 		}
 		fetchExecutions();
-	}, [agent.id]);
+	}, [agent.id, page]);
 
 	// Redirect to execution detail as soon as we have an execution ID
 	useEffect(() => {
@@ -360,11 +360,8 @@ export function AgentPage({
 		[agent.id, formData, attachmentFiles, execute],
 	);
 
-	const pageIndex = table.getState().pagination.pageIndex;
-	const pageCount = table.getPageCount();
-	const totalRows = executions.length;
-	const startRow = pageIndex * PAGE_SIZE + 1;
-	const endRow = Math.min((pageIndex + 1) * PAGE_SIZE, totalRows);
+	const startRow = (page - 1) * PAGE_SIZE + 1;
+	const endRow = Math.min(page * PAGE_SIZE, totalRows);
 
 	return (
 		<div className="min-h-0 bg-background">
@@ -748,8 +745,8 @@ export function AgentPage({
 									variant="ghost"
 									size="sm"
 									className="h-7 w-7 p-0"
-									disabled={!table.getCanPreviousPage()}
-									onClick={() => table.previousPage()}
+									disabled={page <= 1}
+									onClick={() => setPage((p) => p - 1)}
 								>
 									<ChevronLeft className="size-3.5" />
 								</Button>
@@ -757,8 +754,8 @@ export function AgentPage({
 									variant="ghost"
 									size="sm"
 									className="h-7 w-7 p-0"
-									disabled={!table.getCanNextPage()}
-									onClick={() => table.nextPage()}
+									disabled={page >= pageCount}
+									onClick={() => setPage((p) => p + 1)}
 								>
 									<ChevronRight className="size-3.5" />
 								</Button>

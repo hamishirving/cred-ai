@@ -8,7 +8,6 @@ import {
 	getCoreRowModel,
 	useReactTable,
 	getSortedRowModel,
-	getPaginationRowModel,
 	type SortingState,
 } from "@tanstack/react-table";
 import {
@@ -232,27 +231,23 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 	const [loadingExecs, setLoadingExecs] = useState(true);
 	const [agentSorting, setAgentSorting] = useState<SortingState>([]);
 	const [runSorting, setRunSorting] = useState<SortingState>([]);
+	const [runPage, setRunPage] = useState(1);
+	const [runTotal, setRunTotal] = useState(0);
+	const [runPageCount, setRunPageCount] = useState(0);
+
+	const RUN_PAGE_SIZE = 10;
 
 	useEffect(() => {
 		async function fetchExecutions() {
 			setLoadingExecs(true);
 			try {
-				const allExecs: AgentExecution[] = [];
-				for (const agent of agents) {
-					try {
-						const res = await fetch(`/api/agents/${agent.id}/executions`);
-						if (res.ok) {
-							const data = await res.json();
-							if (data.executions) {
-								allExecs.push(...data.executions);
-							}
-						}
-					} catch {
-						// Skip individual agent fetch failures
-					}
+				const res = await fetch(`/api/agents/executions?page=${runPage}&limit=${RUN_PAGE_SIZE}`);
+				if (res.ok) {
+					const data = await res.json();
+					setExecutions(data.executions || []);
+					setRunTotal(data.total ?? 0);
+					setRunPageCount(data.pageCount ?? 0);
 				}
-				allExecs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-				setExecutions(allExecs);
 			} catch {
 				// Silently fail
 			} finally {
@@ -260,17 +255,16 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 			}
 		}
 		fetchExecutions();
-	}, [agents]);
+	}, [runPage]);
 
 	const currency = detectCurrency(selectedOrg?.name);
 
 	const stats = useMemo(() => {
-		const completedRuns = executions.filter((e) => e.status === "completed").length;
-		const totalRuns = executions.length;
-		const hoursSaved = Math.round(completedRuns * HOURS_PER_RUN * 10) / 10;
+		// Use server total for run count; estimate hours/money from total (assumes most are completed)
+		const hoursSaved = Math.round(runTotal * HOURS_PER_RUN * 10) / 10;
 		const moneySaved = Math.round(hoursSaved * currency.rate);
-		return { totalAgents: agents.length, totalRuns, hoursSaved, moneySaved };
-	}, [executions, agents.length, currency.rate]);
+		return { totalAgents: agents.length, totalRuns: runTotal, hoursSaved, moneySaved };
+	}, [runTotal, agents.length, currency.rate]);
 
 	const agentNameMap = useMemo(() => {
 		const map: Record<string, string> = {};
@@ -294,19 +288,12 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 		columns: runColumns,
 		getCoreRowModel: getCoreRowModel(),
 		getSortedRowModel: getSortedRowModel(),
-		getPaginationRowModel: getPaginationRowModel(),
 		onSortingChange: setRunSorting,
 		state: { sorting: runSorting },
-		initialState: {
-			pagination: { pageSize: 10 },
-		},
 	});
 
-	const runPageIndex = runTable.getState().pagination.pageIndex;
-	const runPageCount = runTable.getPageCount();
-	const runTotalRows = executions.length;
-	const runStartRow = runPageIndex * 10 + 1;
-	const runEndRow = Math.min((runPageIndex + 1) * 10, runTotalRows);
+	const runStartRow = (runPage - 1) * RUN_PAGE_SIZE + 1;
+	const runEndRow = Math.min(runPage * RUN_PAGE_SIZE, runTotal);
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -438,7 +425,7 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 							Recent Runs
 						</h2>
 						<Badge variant="secondary" className="text-xs tabular-nums">
-							{executions.length}
+							{runTotal}
 						</Badge>
 					</div>
 					<Card className="shadow-none! bg-card">
@@ -501,15 +488,15 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 						{runPageCount > 1 && (
 							<div className="flex items-center justify-between border-t border-border px-4 py-2 text-xs text-muted-foreground">
 								<span>
-									{runStartRow}–{runEndRow} of {runTotalRows}
+									{runStartRow}–{runEndRow} of {runTotal}
 								</span>
 								<div className="flex items-center gap-1">
 									<Button
 										variant="ghost"
 										size="sm"
 										className="h-7 w-7 p-0"
-										disabled={!runTable.getCanPreviousPage()}
-										onClick={() => runTable.previousPage()}
+										disabled={runPage <= 1}
+										onClick={() => setRunPage((p) => p - 1)}
 									>
 										<ChevronLeft className="size-3.5" />
 									</Button>
@@ -517,8 +504,8 @@ export function AgentLibrary({ agents }: { agents: SerializedAgentDefinition[] }
 										variant="ghost"
 										size="sm"
 										className="h-7 w-7 p-0"
-										disabled={!runTable.getCanNextPage()}
-										onClick={() => runTable.nextPage()}
+										disabled={runPage >= runPageCount}
+										onClick={() => setRunPage((p) => p + 1)}
 									>
 										<ChevronRight className="size-3.5" />
 									</Button>

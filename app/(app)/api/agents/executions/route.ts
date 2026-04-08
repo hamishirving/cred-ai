@@ -1,20 +1,14 @@
 import { NextResponse } from "next/server";
-import { getAgentExecutionsByAgentId } from "@/lib/db/queries";
+import { getAllAgentExecutions } from "@/lib/db/queries";
 
-export async function GET(
-	request: Request,
-	{ params }: { params: Promise<{ agentId: string }> },
-) {
-	const { agentId } = await params;
-
+export async function GET(request: Request) {
 	try {
 		const url = new URL(request.url);
 		const page = parseInt(url.searchParams.get("page") || "1", 10);
 		const limit = parseInt(url.searchParams.get("limit") || "10", 10);
 		const offset = (page - 1) * limit;
 
-		const { executions, total } = await getAgentExecutionsByAgentId({
-			agentId,
+		const { executions, total } = await getAllAgentExecutions({
 			limit,
 			offset,
 		});
@@ -26,7 +20,7 @@ export async function GET(
 			pageCount: Math.ceil(total / limit),
 		});
 	} catch (error) {
-		console.error("Failed to fetch agent executions:", error);
+		console.error("Failed to fetch all agent executions:", error);
 		return NextResponse.json(
 			{ error: "Failed to fetch executions" },
 			{ status: 500 },

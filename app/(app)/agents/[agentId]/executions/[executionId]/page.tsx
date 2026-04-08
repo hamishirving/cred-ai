@@ -15,7 +15,7 @@ export default async function ExecutionDetailPage(props: {
 }) {
 	const { agentId, executionId } = await props.params;
 
-	const [execution, agentDef, allExecutions] = await Promise.all([
+	const [execution, agentDef, { executions: allExecutions }] = await Promise.all([
 		getAgentExecution({ id: executionId }),
 		Promise.resolve(getAgentDefinition(agentId)),
 		getAgentExecutionsByAgentId({ agentId, limit: 50 }),
