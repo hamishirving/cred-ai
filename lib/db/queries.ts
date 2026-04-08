@@ -1335,6 +1335,41 @@ export async function getAgentExecutionsByAgentId({
 	};
 }
 
+export async function getAgentExecutionsCursor({
+	agentId,
+	limit = 20,
+	endingBefore,
+}: {
+	agentId: string;
+	limit?: number;
+	endingBefore?: string | null;
+}): Promise<{ executions: AgentExecution[]; hasMore: boolean }> {
+	const conditions: SQL[] = [eq(agentExecutions.agentId, agentId)];
+
+	if (endingBefore) {
+		const [cursor] = await db
+			.select({ createdAt: agentExecutions.createdAt })
+			.from(agentExecutions)
+			.where(eq(agentExecutions.id, endingBefore));
+
+		if (cursor) {
+			conditions.push(lt(agentExecutions.createdAt, cursor.createdAt));
+		}
+	}
+
+	const results = await db
+		.select()
+		.from(agentExecutions)
+		.where(and(...conditions))
+		.orderBy(desc(agentExecutions.createdAt))
+		.limit(limit + 1);
+
+	const hasMore = results.length > limit;
+	const executions = hasMore ? results.slice(0, limit) : results;
+
+	return { executions, hasMore };
+}
+
 export async function getAllAgentExecutions({
 	limit = 10,
 	offset = 0,
