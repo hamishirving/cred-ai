@@ -1,0 +1,49 @@
+{
+	"msProtocolassetid": "8cf1f17d-69ad-ed11-aad1-6045bd0069cd",
+	"msName": "MMR Results (Medical Solutions)",
+	"msDisplayname": "MMR Results",
+	"msProtocolassetcategoryname": "Health Items",
+	"msProtocolassettypename": "Conditional",
+	"msIsglobal": true,
+	"msProtocolexpirationtypename": "None",
+	"protocolAssetGroups": [
+		{
+			"msName": "MMR Negative/Equivocal Titer with Booster",
+			"msProtocolAsset1": "0b54778f-82ac-ed11-aad1-6045bd0069cd",
+			"msProtocolAsset2": "eb4e7533-82ac-ed11-aad1-6045bd0069cd",
+			"msProtocolAsset3": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset4": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset5": "00000000-0000-0000-0000-000000000000"
+		},
+		{
+			"msName": "MMR Negative/Equivocal Titer with Declination",
+			"msProtocolAsset1": "1f7f09dd-e7b6-ea11-a812-000d3a370a19",
+			"msProtocolAsset2": "eb4e7533-82ac-ed11-aad1-6045bd0069cd",
+			"msProtocolAsset3": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset4": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset5": "00000000-0000-0000-0000-000000000000"
+		},
+		{
+			"msName": "MMR Positive Titer",
+			"msProtocolAsset1": "fa0905c2-82ac-ed11-aad1-6045bd0069cd",
+			"msProtocolAsset2": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset3": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset4": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset5": "00000000-0000-0000-0000-000000000000"
+		},
+		{
+			"msName": "MMR Vaccines",
+			"msProtocolAsset1": "814dfc59-de88-eb11-a812-000d3a593818",
+			"msProtocolAsset2": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset3": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset4": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset5": "00000000-0000-0000-0000-000000000000"
+		}
+	],
+	"layerInternalInstructions": "",
+	"layerAffiliateInstructions": "Account overlay repeats the base acceptance logic with no extra operational rules in this sample.",
+	"layerTravelerInstructions": "Must include name and clinic information. Accepted paths are two vaccines 28 days apart, positive IGG titer, or negative/equivocal titer followed by booster or declination.",
+	"msInternalinstructions": "<div><strong>Must Include:</strong> Name, Clinic Information. Measles, Mumps, and Rubella <strong>TWO VACCINES</strong> at least 28 days apart OR <strong>POSITIVE TITER</strong> results. Titers must be IGG, listed individually, with date collected. Reactive is positive, Non-Reactive is negative. IMMUNE and NONIMMUNE are accepted if IGG is not listed. If the titer is <strong>Negative or Equivocal</strong>, either a booster vaccine after the titer OR a signed Medical Solutions MMR declination form is accepted.</div>",
+	"msAffiliateinstructions": "<div>Affiliate instructions mirror the accepted MMR paths: vaccine series, positive titer, or negative/equivocal titer followed by booster or declination.</div>",
+	"msTravelerinstructions": "<div>Upload MMR evidence showing either two vaccines 28 days apart, a positive IGG titer, or a negative/equivocal titer plus booster or declination. Include all pages.</div>"
+}

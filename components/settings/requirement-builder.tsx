@@ -36,7 +36,8 @@ import {
 	ContextNode,
 	SummaryNode,
 	ConditionGateNode,
-	LAYER_COLORS,
+	INACTIVE_STROKE,
+	LAYER_STYLES,
 	type LayerNodeData,
 	type ContextNodeData,
 	type SummaryNodeData,
@@ -304,7 +305,7 @@ function buildGraph(
 		});
 
 		// Edge from context to layer
-		const colors = LAYER_COLORS[layer.type] || LAYER_COLORS.federal;
+		const style = LAYER_STYLES[layer.type] || LAYER_STYLES.federal;
 		edges.push({
 			id: `context-${layer.id}`,
 			source: "context",
@@ -312,7 +313,7 @@ function buildGraph(
 			type: "smoothstep",
 			animated: isActive,
 			style: {
-				stroke: isActive ? colors.border : "#ccc8c0",
+				stroke: isActive ? style.color : INACTIVE_STROKE,
 				strokeWidth: isActive ? 2 : 1,
 				opacity: isActive ? 1 : 0.3,
 			},
@@ -352,7 +353,9 @@ function buildGraph(
 		type: "smoothstep",
 		animated: false,
 		style: {
-			stroke: conditionalActive ? "#c93d4e" : "#ccc8c0",
+			stroke: conditionalActive
+				? "var(--layer-conditional)"
+				: INACTIVE_STROKE,
 			strokeWidth: conditionalActive ? 2 : 1,
 			opacity: conditionalActive ? 1 : 0.3,
 			strokeDasharray: conditionalActive ? undefined : "5 5",
@@ -394,7 +397,9 @@ function buildGraph(
 		type: "smoothstep",
 		animated: conditionalActive,
 		style: {
-			stroke: conditionalActive ? "#c93d4e" : "#ccc8c0",
+			stroke: conditionalActive
+				? "var(--layer-conditional)"
+				: INACTIVE_STROKE,
 			strokeWidth: conditionalActive ? 2 : 1,
 			opacity: conditionalActive ? 1 : 0.3,
 		},
@@ -420,7 +425,7 @@ function buildGraph(
 		const matchingGroups =
 			result?.groups.filter((g) => layer.matchesGroup(g)) ?? [];
 		if (matchingGroups.length > 0) {
-			const colors = LAYER_COLORS[layer.type] || LAYER_COLORS.federal;
+			const style = LAYER_STYLES[layer.type] || LAYER_STYLES.federal;
 			edges.push({
 				id: `${layer.id}-summary`,
 				source: layer.id,
@@ -428,7 +433,7 @@ function buildGraph(
 				type: "smoothstep",
 				animated: true,
 				style: {
-					stroke: colors.border,
+					stroke: style.color,
 					strokeWidth: 2,
 				},
 			});
@@ -444,7 +449,7 @@ function buildGraph(
 			type: "smoothstep",
 			animated: true,
 			style: {
-				stroke: "#c93d4e",
+				stroke: "var(--layer-conditional)",
 				strokeWidth: 2,
 			},
 		});
@@ -658,7 +663,7 @@ export function RequirementBuilder({
 						className={cn(
 							"flex items-center gap-1.5 h-8 px-3 rounded-md border text-xs transition-colors duration-150",
 							activeConditionCount > 0
-								? "border-[#c93d4e]/30 bg-[#fdf0f1] text-[#c93d4e]"
+								? "border-negative/30 bg-negative-subtle text-negative"
 								: "border-border bg-card text-muted-foreground hover:bg-muted/50",
 						)}
 					>
@@ -667,7 +672,7 @@ export function RequirementBuilder({
 						{activeConditionCount > 0 && (
 							<Badge
 								variant="secondary"
-								className="text-[10px] px-1 py-0 h-3.5 min-w-[14px] bg-[#c93d4e] text-white"
+								className="text-[10px] px-1 py-0 h-3.5 min-w-[14px] bg-negative text-white"
 							>
 								{activeConditionCount}
 							</Badge>
@@ -698,7 +703,7 @@ export function RequirementBuilder({
 										className={cn(
 											"rounded-md border transition-colors duration-150",
 											isEnabled
-												? "border-[#c93d4e]/30 bg-[#fdf0f1]"
+												? "border-negative/30 bg-negative-subtle"
 												: "border-border",
 										)}
 									>
@@ -780,8 +785,8 @@ export function RequirementBuilder({
 
 			{/* Narrative callout */}
 			{result && !loading && (
-				<div className="rounded-lg border bg-[#faf5eb] px-4 py-2.5 text-sm">
-					<span className="text-[#3d3a32]">
+				<div className="rounded-lg border bg-warning-subtle px-4 py-2.5 text-sm">
+					<span className="text-foreground">
 						For a <strong>{roleName}</strong>
 						{jurisdiction !== "none" && (
 							<>

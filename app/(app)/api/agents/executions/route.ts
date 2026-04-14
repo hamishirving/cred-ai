@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { connection, NextResponse } from "next/server";
 import { getAllAgentExecutions } from "@/lib/db/queries";
 
 export async function GET(request: Request) {
+	await connection();
 	try {
 		const url = new URL(request.url);
 		const page = parseInt(url.searchParams.get("page") || "1", 10);

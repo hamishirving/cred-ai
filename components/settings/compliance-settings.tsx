@@ -1,9 +1,10 @@
 "use client";
 
-import { GitBranch, Package } from "lucide-react";
+import { GitBranch, Package, Wrench } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PackageBrowser } from "./package-browser";
 import { RequirementBuilder } from "./requirement-builder";
+import { RequirementCompiler } from "./requirement-compiler";
 
 export interface PackageData {
 	id: string;
@@ -82,7 +83,7 @@ export function ComplianceSettings({
 }: ComplianceSettingsProps) {
 	return (
 		<Tabs defaultValue="packages" className="flex flex-col gap-4">
-			<TabsList className="w-fit">
+			<TabsList className="w-fit bg-secondary">
 				<TabsTrigger value="packages" className="gap-1.5">
 					<Package className="h-3.5 w-3.5" />
 					Packages
@@ -90,6 +91,10 @@ export function ComplianceSettings({
 				<TabsTrigger value="builder" className="gap-1.5">
 					<GitBranch className="h-3.5 w-3.5" />
 					Requirement Builder
+				</TabsTrigger>
+				<TabsTrigger value="compiler" className="gap-1.5">
+					<Wrench className="h-3.5 w-3.5" />
+					Requirement Compiler
 				</TabsTrigger>
 			</TabsList>
 
@@ -114,6 +119,10 @@ export function ComplianceSettings({
 					packages={packages}
 					rolePackageMapping={rolePackageMapping}
 				/>
+			</TabsContent>
+
+			<TabsContent value="compiler" className="mt-0">
+				<RequirementCompiler />
 			</TabsContent>
 		</Tabs>
 	);

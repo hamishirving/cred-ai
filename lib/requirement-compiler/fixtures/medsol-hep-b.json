@@ -1,0 +1,33 @@
+{
+	"msProtocolassetid": "37ccf659-7347-ee11-be6d-6045bd0064bd",
+	"msName": "Hepatitis B Positive Titer OR Negative/Equivocal Titer with Declination",
+	"msDisplayname": "Hepatitis B",
+	"msProtocolassetcategoryname": "Health Items",
+	"msProtocolassettypename": "Conditional",
+	"msIsglobal": false,
+	"msProtocolexpirationtypename": "None",
+	"protocolAssetGroups": [
+		{
+			"msName": "Hepatitis B Positive Titer",
+			"msProtocolAsset1": "34f8e5db-0bae-ed11-aad1-6045bd006295",
+			"msProtocolAsset2": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset3": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset4": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset5": "00000000-0000-0000-0000-000000000000"
+		},
+		{
+			"msName": "Hepatitis B Neg/Equivocal Titer & Declination",
+			"msProtocolAsset1": "4641319e-e4b6-ea11-a812-000d3a370a19",
+			"msProtocolAsset2": "eb9167b5-0bae-ed11-aad1-6045bd006295",
+			"msProtocolAsset3": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset4": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset5": "00000000-0000-0000-0000-000000000000"
+		}
+	],
+	"layerInternalInstructions": "Dialysis Clinic Inc: Required within 12 months of start. Must include numerical results and reference ranges. Required annually. Must be quantitative.",
+	"layerAffiliateInstructions": "Dialysis Clinic Inc: Required within 12 months of start. Must include numerical results and reference ranges. Required annually. Must be quantitative.",
+	"layerTravelerInstructions": "Dialysis Clinic Inc: Must include numerical results and reference ranges, required annually, and must be quantitative.",
+	"msInternalinstructions": "<div><strong>Must include:</strong> Name and Clinic Information. <strong>POSITIVE ANTIBODY TITER</strong> results are accepted. Reactive or Immune means positive, Non-Reactive or Non-Immune means negative. If the titer is Negative, Non-Immune, or Equivocal, a Medical Solutions Hep B Declination form is required. NOTE: redact Hep C or HIV if shown. If Hep C or HIV is positive, send to clinical. Use Sterling, Labcorp, Quest or equivalent quantitative ordering labels.</div>",
+	"msAffiliateinstructions": "<div>Provide a positive antibody titer, or if the titer is negative/non-immune/equivocal, provide the titer plus a Medical Solutions Hep B declination form.</div>",
+	"msTravelerinstructions": "<div>Upload Hep B evidence showing either a positive antibody titer or a negative/non-immune/equivocal titer together with a Medical Solutions Hep B declination form. Include all pages.</div>"
+}

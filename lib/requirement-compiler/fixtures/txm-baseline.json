@@ -1,0 +1,67 @@
+{
+	"organisation": "TXM Healthcare",
+	"model": "open-ended-review-window",
+	"placementReviewCadenceMonths": 3,
+	"requirements": [
+		{
+			"id": "txm-dbs",
+			"title": "Enhanced DBS",
+			"category": "Professional checks",
+			"scope": "profile",
+			"evidenceKinds": ["dbs_certificate"],
+			"physicalExpiryMonths": 36,
+			"reviewCadenceMonths": 12,
+			"carryForward": true,
+			"allowsWaiver": false,
+			"notes": [
+				"Physical DBS expiry is three years, but policy requires annual review.",
+				"Candidate can carry this forward across placements."
+			]
+		},
+		{
+			"id": "txm-rtw",
+			"title": "Right to Work",
+			"category": "Identity",
+			"scope": "profile",
+			"evidenceKinds": ["passport", "share_code"],
+			"physicalExpiryMonths": null,
+			"reviewCadenceMonths": 12,
+			"carryForward": true,
+			"allowsWaiver": false,
+			"notes": [
+				"Profile-scoped evidence should carry forward cleanly.",
+				"Review confirms nothing material has changed."
+			]
+		},
+		{
+			"id": "txm-client-induction",
+			"title": "Client induction pack",
+			"category": "Placement paperwork",
+			"scope": "placement",
+			"evidenceKinds": ["signed_assignment_pack"],
+			"physicalExpiryMonths": null,
+			"reviewCadenceMonths": null,
+			"carryForward": false,
+			"allowsWaiver": false,
+			"notes": [
+				"Placement-specific paperwork for the trust or framework.",
+				"Must be completed again for a new placement."
+			]
+		},
+		{
+			"id": "txm-training-variance",
+			"title": "Trust-specific training variance",
+			"category": "Training",
+			"scope": "placement",
+			"evidenceKinds": ["client_email_sign_off"],
+			"physicalExpiryMonths": null,
+			"reviewCadenceMonths": 3,
+			"carryForward": false,
+			"allowsWaiver": true,
+			"notes": [
+				"Client may accept an intentional waiver with audit trail while a renewal course is booked.",
+				"Used to model TXM case-by-case sign-off."
+			]
+		}
+	]
+}

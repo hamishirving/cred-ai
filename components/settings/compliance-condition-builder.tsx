@@ -169,7 +169,7 @@ export function ComplianceConditionBuilder({
 				return (
 					<div key={index} className="flex flex-col gap-1">
 						{index > 0 && (
-							<span className="text-[10px] font-medium text-[#c93d4e] ml-1">
+							<span className="text-[10px] font-medium text-layer-conditional ml-1">
 								OR
 							</span>
 						)}

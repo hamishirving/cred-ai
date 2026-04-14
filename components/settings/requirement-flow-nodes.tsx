@@ -1,48 +1,68 @@
 "use client";
 
+import { Handle, type Node, Position } from "@xyflow/react";
 import { memo } from "react";
-import { Handle, Position, type Node } from "@xyflow/react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 // ============================================
-// Layer colours
+// Layer styles — backed by CSS tokens in globals.css
 // ============================================
 
-export const LAYER_COLORS: Record<string, { border: string; text: string; bg: string }> = {
+type LayerStyle = {
+	/** CSS var ref — for inline styles (React Flow edges, border-top accents) */
+	color: string;
+	/** Tailwind utility classes backed by the same token */
+	textClass: string;
+	bgClass: string;
+	borderClass: string;
+};
+
+export const LAYER_STYLES: Record<string, LayerStyle> = {
 	federal: {
-		border: "#4444cf",
-		text: "text-[#4444cf]",
-		bg: "bg-[#eeedf8]",
+		color: "var(--layer-federal)",
+		textClass: "text-layer-federal",
+		bgClass: "bg-layer-federal-subtle",
+		borderClass: "border-layer-federal",
 	},
 	role: {
-		border: "#3a9960",
-		text: "text-[#3a9960]",
-		bg: "bg-[#eef6f1]",
+		color: "var(--layer-role)",
+		textClass: "text-layer-role",
+		bgClass: "bg-layer-role-subtle",
+		borderClass: "border-layer-role",
 	},
 	state: {
-		border: "#c49332",
-		text: "text-[#c49332]",
-		bg: "bg-[#faf5eb]",
+		color: "var(--layer-state)",
+		textClass: "text-layer-state",
+		bgClass: "bg-layer-state-subtle",
+		borderClass: "border-layer-state",
 	},
 	facility: {
-		border: "#8a857d",
-		text: "text-[#6b6760]",
-		bg: "bg-[#f0ede7]",
+		color: "var(--layer-facility)",
+		textClass: "text-layer-facility",
+		bgClass: "bg-layer-facility-subtle",
+		borderClass: "border-layer-facility",
 	},
 	conditional: {
-		border: "#c93d4e",
-		text: "text-[#c93d4e]",
-		bg: "bg-[#fdf0f1]",
+		color: "var(--layer-conditional)",
+		textClass: "text-layer-conditional",
+		bgClass: "bg-layer-conditional-subtle",
+		borderClass: "border-layer-conditional",
 	},
 };
 
+/** Kept as alias so external consumers keep working. */
+export const LAYER_COLORS = LAYER_STYLES;
+
+/** Muted/inactive stroke color for unreachable edges/nodes */
+export const INACTIVE_STROKE = "var(--border)";
+
 const ELEMENT_CATEGORY_DOTS: Record<string, string> = {
-	identity: "bg-[#4444cf]",
-	professional: "bg-[#3a9960]",
-	training: "bg-[#c49332]",
-	health: "bg-[#c93d4e]",
-	orientation: "bg-[#6b6760]",
+	identity: "bg-primary",
+	professional: "bg-positive",
+	training: "bg-warning",
+	health: "bg-negative",
+	orientation: "bg-muted-foreground",
 };
 
 // ============================================
@@ -93,14 +113,17 @@ export type ConditionGateNodeData = Record<string, unknown> & {
 export type LayerNodeType = Node<LayerNodeData, "layerNode">;
 export type ContextNodeType = Node<ContextNodeData, "contextNode">;
 export type SummaryNodeType = Node<SummaryNodeData, "summaryNode">;
-export type ConditionGateNodeType = Node<ConditionGateNodeData, "conditionGateNode">;
+export type ConditionGateNodeType = Node<
+	ConditionGateNodeData,
+	"conditionGateNode"
+>;
 
 // ============================================
 // Layer Node
 // ============================================
 
 function LayerNodeComponent({ data }: { data: LayerNodeData }) {
-	const colors = LAYER_COLORS[data.layerType] || LAYER_COLORS.federal;
+	const style = LAYER_STYLES[data.layerType] || LAYER_STYLES.federal;
 
 	return (
 		<div
@@ -110,14 +133,14 @@ function LayerNodeComponent({ data }: { data: LayerNodeData }) {
 			)}
 			style={{
 				borderTopWidth: 3,
-				borderTopColor: colors.border,
+				borderTopColor: style.color,
 			}}
 		>
 			<Handle
 				type="target"
 				position={Position.Left}
 				className="!w-2 !h-2 !border !border-background"
-				style={{ background: colors.border }}
+				style={{ background: style.color }}
 			/>
 
 			{/* Header */}
@@ -141,10 +164,7 @@ function LayerNodeComponent({ data }: { data: LayerNodeData }) {
 				{data.active && data.reason ? (
 					<Badge
 						variant="outline"
-						className={cn(
-							"mt-1 text-[10px] px-1.5 py-0 h-4",
-							colors.text,
-						)}
+						className={cn("mt-1 text-[10px] px-1.5 py-0 h-4", style.textClass)}
 					>
 						{data.reason}
 					</Badge>
@@ -185,7 +205,7 @@ function LayerNodeComponent({ data }: { data: LayerNodeData }) {
 				type="source"
 				position={Position.Right}
 				className="!w-2 !h-2 !border !border-background"
-				style={{ background: colors.border }}
+				style={{ background: style.color }}
 			/>
 		</div>
 	);
@@ -204,9 +224,9 @@ function ContextNodeComponent({ data }: { data: ContextNodeData }) {
 	];
 
 	return (
-		<div className="min-w-[180px] rounded-lg border-2 border-[#4444cf] bg-card overflow-hidden">
-			<div className="px-3 py-2 bg-[#eeedf8] border-b">
-				<span className="text-xs font-semibold text-[#4444cf]">
+		<div className="min-w-[180px] rounded-lg border-2 border-layer-federal bg-card overflow-hidden">
+			<div className="px-3 py-2 bg-layer-federal-subtle border-b">
+				<span className="text-xs font-semibold text-layer-federal">
 					Placement Context
 				</span>
 			</div>
@@ -225,7 +245,7 @@ function ContextNodeComponent({ data }: { data: ContextNodeData }) {
 			<Handle
 				type="source"
 				position={Position.Right}
-				className="!w-2 !h-2 !bg-[#4444cf] !border !border-background"
+				className="!w-2 !h-2 !bg-layer-federal !border !border-background"
 			/>
 		</div>
 	);
@@ -246,15 +266,15 @@ function SummaryNodeComponent({ data }: { data: SummaryNodeData }) {
 	];
 
 	return (
-		<div className="min-w-[180px] rounded-lg border-2 border-[#3a9960] bg-card overflow-hidden">
+		<div className="min-w-[180px] rounded-lg border-2 border-layer-role bg-card overflow-hidden">
 			<Handle
 				type="target"
 				position={Position.Left}
-				className="!w-2 !h-2 !bg-[#3a9960] !border !border-background"
+				className="!w-2 !h-2 !bg-layer-role !border !border-background"
 			/>
 
-			<div className="px-3 py-2 bg-[#eef6f1] border-b">
-				<span className="text-xs font-semibold text-[#3a9960]">
+			<div className="px-3 py-2 bg-layer-role-subtle border-b">
+				<span className="text-xs font-semibold text-layer-role">
 					Resolved Requirements
 				</span>
 			</div>
@@ -282,19 +302,23 @@ function SummaryNodeComponent({ data }: { data: SummaryNodeData }) {
 // ============================================
 
 function ConditionGateNodeComponent({ data }: { data: ConditionGateNodeData }) {
+	const accentColor = data.anyTriggered
+		? "var(--layer-conditional)"
+		: INACTIVE_STROKE;
+
 	return (
 		<div
 			className="min-w-[200px] rounded-lg border bg-card overflow-hidden"
 			style={{
 				borderTopWidth: 3,
-				borderTopColor: data.anyTriggered ? "#c93d4e" : "#ccc8c0",
+				borderTopColor: accentColor,
 			}}
 		>
 			<Handle
 				type="target"
 				position={Position.Left}
 				className="!w-2 !h-2 !border !border-background"
-				style={{ background: data.anyTriggered ? "#c93d4e" : "#ccc8c0" }}
+				style={{ background: accentColor }}
 			/>
 
 			<div className="px-3 py-2 border-b">
@@ -306,14 +330,13 @@ function ConditionGateNodeComponent({ data }: { data: ConditionGateNodeData }) {
 
 			<div className="divide-y divide-border/50">
 				{data.conditions.map((cond) => (
-					<div
-						key={cond.label}
-						className="flex items-start gap-2 px-3 py-1.5"
-					>
+					<div key={cond.label} className="flex items-start gap-2 px-3 py-1.5">
 						<span
 							className={cn(
 								"mt-0.5 shrink-0 text-[11px] leading-none",
-								cond.active ? "text-[#c93d4e]" : "text-[#ccc8c0]",
+								cond.active
+									? "text-layer-conditional"
+									: "text-muted-foreground/60",
 							)}
 						>
 							{cond.active ? "●" : "○"}
@@ -339,7 +362,7 @@ function ConditionGateNodeComponent({ data }: { data: ConditionGateNodeData }) {
 				type="source"
 				position={Position.Right}
 				className="!w-2 !h-2 !border !border-background"
-				style={{ background: data.anyTriggered ? "#c93d4e" : "#ccc8c0" }}
+				style={{ background: accentColor }}
 			/>
 		</div>
 	);

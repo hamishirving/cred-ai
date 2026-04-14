@@ -42,32 +42,32 @@ const GROUP_CONFIG: Record<
 	core: {
 		label: "Core",
 		icon: Shield,
-		color: "text-[#4444cf]",
-		bgColor: "bg-[#eeedf8]",
+		color: "text-layer-federal",
+		bgColor: "bg-layer-federal-subtle",
 	},
 	role: {
 		label: "Role",
 		icon: Briefcase,
-		color: "text-[#3a9960]",
-		bgColor: "bg-[#eef6f1]",
+		color: "text-layer-role",
+		bgColor: "bg-layer-role-subtle",
 	},
 	jurisdiction: {
 		label: "State",
 		icon: MapPin,
-		color: "text-[#c49332]",
-		bgColor: "bg-[#faf5eb]",
+		color: "text-layer-state",
+		bgColor: "bg-layer-state-subtle",
 	},
 	facility: {
 		label: "Facility",
 		icon: Building2,
-		color: "text-[#6b6760]",
-		bgColor: "bg-[#f0ede7]",
+		color: "text-layer-facility",
+		bgColor: "bg-layer-facility-subtle",
 	},
 	conditional: {
 		label: "Conditional",
 		icon: AlertTriangle,
-		color: "text-[#c93d4e]",
-		bgColor: "bg-[#fdf0f1]",
+		color: "text-layer-conditional",
+		bgColor: "bg-layer-conditional-subtle",
 	},
 };
 
@@ -307,7 +307,7 @@ export function PackageBrowser({
 														{pkg.isDefault && (
 															<Badge
 																variant="outline"
-																className="text-[10px] px-1.5 py-0 h-4 border-[#4444cf]/30 text-[#4444cf]"
+																className="text-[10px] px-1.5 py-0 h-4 border-primary/30 text-primary"
 															>
 																default
 															</Badge>

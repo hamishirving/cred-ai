@@ -77,6 +77,19 @@
 	/* border radius unit — 5px to match Credentially */
 	--radius: 0.3125rem;
 	--sidebar: #ffffff;
+
+	/* Layer tokens — requirement flow diagram layer identity
+	   Aliased onto existing semantic tokens so dark mode inherits automatically */
+	--layer-federal: var(--brand-blue);
+	--layer-federal-subtle: var(--brand-light-blue);
+	--layer-role: var(--positive);
+	--layer-role-subtle: var(--positive-bg);
+	--layer-state: var(--warning);
+	--layer-state-subtle: var(--warning-bg);
+	--layer-facility: var(--muted-foreground);
+	--layer-facility-subtle: var(--muted);
+	--layer-conditional: var(--negative);
+	--layer-conditional-subtle: var(--negative-bg);
 }
 
 /* define design tokens (dark mode) */
@@ -164,6 +177,30 @@
 	--color-chart-3: var(--chart-3);
 	--color-chart-4: var(--chart-4);
 	--color-chart-5: var(--chart-5);
+
+	/* Semantic status colors exposed as Tailwind utilities
+	   (bg-positive, text-warning-strong, border-negative-subtle, etc.) */
+	--color-positive: var(--positive);
+	--color-positive-strong: var(--positive-dark);
+	--color-positive-subtle: var(--positive-bg);
+	--color-warning: var(--warning);
+	--color-warning-strong: var(--warning-dark);
+	--color-warning-subtle: var(--warning-bg);
+	--color-negative: var(--negative);
+	--color-negative-strong: var(--negative-dark);
+	--color-negative-subtle: var(--negative-bg);
+
+	/* Layer tokens exposed as Tailwind utilities */
+	--color-layer-federal: var(--layer-federal);
+	--color-layer-federal-subtle: var(--layer-federal-subtle);
+	--color-layer-role: var(--layer-role);
+	--color-layer-role-subtle: var(--layer-role-subtle);
+	--color-layer-state: var(--layer-state);
+	--color-layer-state-subtle: var(--layer-state-subtle);
+	--color-layer-facility: var(--layer-facility);
+	--color-layer-facility-subtle: var(--layer-facility-subtle);
+	--color-layer-conditional: var(--layer-conditional);
+	--color-layer-conditional-subtle: var(--layer-conditional-subtle);
 
 	--color-sidebar: var(--sidebar-background);
 	--color-sidebar-foreground: var(--sidebar-foreground);

@@ -1,0 +1,41 @@
+{
+	"msProtocolassetid": "7bb80519-d4c8-ed11-b597-6045bd0067c9",
+	"msName": "TB 2 Skin Tests (12 months & 30 days) OR TB Quant/TB Spot (within 30 days)",
+	"msDisplayname": "TB 2 Skin Tests or TB Quant/TB Spot",
+	"msProtocolassetcategoryname": "Health Items",
+	"msProtocolassettypename": "Conditional",
+	"msIsglobal": false,
+	"msProtocolexpirationtypename": "None",
+	"protocolAssetGroups": [
+		{
+			"msName": "TB Quantiferon",
+			"msProtocolAsset1": "c90669e8-daab-ed11-aad1-6045bd006f44",
+			"msProtocolAsset2": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset3": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset4": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset5": "00000000-0000-0000-0000-000000000000"
+		},
+		{
+			"msName": "TB Spot",
+			"msProtocolAsset1": "12fa9d55-efab-ed11-aad1-6045bd006f44",
+			"msProtocolAsset2": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset3": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset4": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset5": "00000000-0000-0000-0000-000000000000"
+		},
+		{
+			"msName": "TB Skin Tests (12 mo & 30 days)",
+			"msProtocolAsset1": "08ab1dc3-d8ab-ed11-aad1-6045bd006f44",
+			"msProtocolAsset2": "8623d49d-d888-eb11-a812-000d3a593818",
+			"msProtocolAsset3": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset4": "00000000-0000-0000-0000-000000000000",
+			"msProtocolAsset5": "00000000-0000-0000-0000-000000000000"
+		}
+	],
+	"layerInternalInstructions": "",
+	"layerAffiliateInstructions": "Required annually. If result is positive, first-time and past positive TB should be escalated to the onboarding specialist for next steps.",
+	"layerTravelerInstructions": "",
+	"msInternalinstructions": "<div><strong>TWO TB Skin Tests OR TB Quant/TSpot:</strong> One skin test within 12 months of start and one within 30 days of start, OR TB Quant within 30 days, OR TB TSpot within 30 days. Required annually. Results must include name, clinic location, date administered or read, and a negative result. Date read must be 48-72 hrs after administered. If only the read date is listed, log administered date as 3 days prior. If result is positive, TB Screening Form, TB Clearance Physical and Chest X-ray noting past positive must be submitted and reviewed by authorised personnel. <strong>Compliance workaround:</strong> if a current TB is already on file and a new one is not needed, update the expiration date to 1/01/2099.</div>",
+	"msAffiliateinstructions": "<div>Provide either the two-step skin test path, TB Quant within 30 days, or TB TSpot within 30 days. If result is positive, submit TB Screening Form, TB Clearance Physical, and Chest X-ray for review.</div>",
+	"msTravelerinstructions": "<div>Upload either two TB skin tests, a TB Quant, or a TB TSpot within the required timing window. Include the administered or read date, clinic details, and the negative result. Positive results require additional TB clearance documents.</div>"
+}
