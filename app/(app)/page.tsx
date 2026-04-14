@@ -572,7 +572,7 @@ function ActivityFeed({
 }) {
 	return (
 		<div className="flex flex-col h-full">
-			<div className="flex items-center justify-between mb-2 px-1">
+			<div className="flex items-center justify-between mb-2 px-1 min-h-[28px]">
 				<h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
 					<Zap className="h-4 w-4 text-muted-foreground" />
 					Agent Activity
@@ -688,12 +688,12 @@ const priorityConfig = {
 function TasksPreview({ tasks }: { tasks: TaskPreview[] }) {
 	return (
 		<div className="flex flex-col h-full">
-			<div className="flex items-center justify-between mb-2 px-1">
+			<div className="flex items-center justify-between mb-2 px-1 min-h-[28px]">
 				<h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
 					<ClipboardList className="h-4 w-4 text-muted-foreground" />
 					Needs Attention
 				</h2>
-				<Button variant="outline" size="sm" asChild>
+				<Button variant="outline" size="sm" className="h-6 text-xs px-2" asChild>
 					<Link href="/tasks">View All</Link>
 				</Button>
 			</div>

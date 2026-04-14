@@ -13,68 +13,69 @@
 @plugin "tailwindcss-animate";
 @plugin "@tailwindcss/typography";
 
-/* define design tokens (light mode) */
+/* define design tokens (light mode) — aligned with Credentially design system */
 :root {
 	/* Brand colors */
 	--brand-blue: #4444cf;
 	--brand-dark-blue: #3030bc;
-	--brand-black: #1c1a15;
-	--brand-grey: #6b6760;
-	--brand-light-grey: #a8a49c;
-	--brand-lightest-grey: #ccc8c0;
-	--brand-dividers: #e5e2db;
-	--brand-dark-bg: #f0ede7;
-	--brand-light-bg: #f7f5f0;
-	--brand-light-blue: #f8f9ff;
+	--brand-purple: #735ef7;
+	--brand-black: #252222;
+	--brand-grey: #6e7391;
+	--brand-light-grey: #abafbf;
+	--brand-lightest-grey: #dfe1e9;
+	--brand-dividers: #eceef5;
+	--brand-dark-bg: #f3f5fa;
+	--brand-light-bg: #f8f9ff;
+	--brand-light-blue: #e4e4fe;
 	--brand-lightest-blue: #fcfdff;
 
 	/* Semantic colors */
-	--positive: #3a9960;
-	--positive-dark: #2e7a4d;
-	--positive-bg: #eef6f1;
-	--negative: #c93d4e;
-	--negative-dark: #a8303f;
-	--negative-bg: #fdf0f1;
-	--warning: #c49332;
-	--warning-dark: #a07828;
-	--warning-bg: #faf5eb;
+	--positive: #00c379;
+	--positive-dark: #248444;
+	--positive-bg: #f4fef3;
+	--negative: #f32e65;
+	--negative-dark: #d22959;
+	--negative-bg: #fff6f9;
+	--warning: #c29000;
+	--warning-dark: #a76502;
+	--warning-bg: #fffbf4;
 
-	--background: #fdfcfb;
-	--foreground: #1c1a15;
+	--background: #fcfdff;
+	--foreground: #252222;
 	--card: #ffffff;
-	--card-foreground: #1c1a15;
+	--card-foreground: #252222;
 	--popover: #ffffff;
-	--popover-foreground: #1c1a15;
+	--popover-foreground: #252222;
 	--primary: #4444cf;
 	--primary-foreground: #ffffff;
-	--secondary: #f7f5f0;
-	--secondary-foreground: #1c1a15;
-	--muted: #f0ede7;
-	--muted-foreground: #6b6760;
-	--accent: #f0ede7;
-	--accent-foreground: #1c1a15;
-	--hover-surface: #fcfbf8;
-	--table-head-surface: #faf9f7;
-	--destructive: #c93d4e;
+	--secondary: #f3f5fa;
+	--secondary-foreground: #252222;
+	--muted: #eceef5;
+	--muted-foreground: #6e7391;
+	--accent: #eceef5;
+	--accent-foreground: #252222;
+	--hover-surface: #f8f9ff;
+	--table-head-surface: #f3f5fa;
+	--destructive: #f32e65;
 	--destructive-foreground: #ffffff;
-	--border: #e5e2db;
-	--input: #ccc8c0;
+	--border: #dfe1e9;
+	--input: #abafbf;
 	--ring: #4444cf;
 	--chart-1: #4444cf;
-	--chart-2: #3a9960;
-	--chart-3: #c49332;
-	--chart-4: #c93d4e;
-	--chart-5: #3030bc;
+	--chart-2: #00c379;
+	--chart-3: #c29000;
+	--chart-4: #f32e65;
+	--chart-5: #735ef7;
 	--sidebar-background: #ffffff;
-	--sidebar-foreground: #3d3a32;
+	--sidebar-foreground: #393c41;
 	--sidebar-primary: #4444cf;
 	--sidebar-primary-foreground: #ffffff;
-	--sidebar-accent: #f0ede7;
-	--sidebar-accent-foreground: #1c1a15;
-	--sidebar-border: #e5e2db;
+	--sidebar-accent: #eceef5;
+	--sidebar-accent-foreground: #252222;
+	--sidebar-border: #dfe1e9;
 	--sidebar-ring: #4444cf;
-	/* border radius unit - tight for compact feel */
-	--radius: 0.375rem;
+	/* border radius unit — 5px to match Credentially */
+	--radius: 0.3125rem;
 	--sidebar: #ffffff;
 }
 
@@ -91,7 +92,7 @@
 	--secondary: #2a2c36;
 	--secondary-foreground: #f3f5fa;
 	--muted: #2a2c36;
-	--muted-foreground: #abafbf;
+	--muted-foreground: #8f939c;
 	--accent: #32354a;
 	--accent-foreground: #8888e8;
 	--hover-surface: #32354a;
@@ -102,10 +103,10 @@
 	--input: #3a3d4a;
 	--ring: #5858e0;
 	--chart-1: #5858e0;
-	--chart-2: #4ad87a;
-	--chart-3: #fdbb00;
+	--chart-2: #3dc46a;
+	--chart-3: #e6aa00;
 	--chart-4: #f32e65;
-	--chart-5: #4444cf;
+	--chart-5: #735ef7;
 	--sidebar-background: #1a1b21;
 	--sidebar-foreground: #f3f5fa;
 	--sidebar-primary: #5858e0;

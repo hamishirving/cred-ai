@@ -1307,17 +1307,91 @@ export async function getAgentExecution({
 
 export async function getAgentExecutionsByAgentId({
 	agentId,
-	limit = 20,
+	limit = 10,
+	offset = 0,
 }: {
 	agentId: string;
 	limit?: number;
-}): Promise<AgentExecution[]> {
-	return db
+	offset?: number;
+}): Promise<{ executions: AgentExecution[]; total: number }> {
+	const where = eq(agentExecutions.agentId, agentId);
+
+	const [countResult] = await db
+		.select({ count: count() })
+		.from(agentExecutions)
+		.where(where);
+
+	const executions = await db
 		.select()
 		.from(agentExecutions)
-		.where(eq(agentExecutions.agentId, agentId))
+		.where(where)
 		.orderBy(desc(agentExecutions.createdAt))
-		.limit(limit);
+		.limit(limit)
+		.offset(offset);
+
+	return {
+		executions,
+		total: countResult?.count ?? 0,
+	};
+}
+
+export async function getAgentExecutionsCursor({
+	agentId,
+	limit = 20,
+	endingBefore,
+}: {
+	agentId: string;
+	limit?: number;
+	endingBefore?: string | null;
+}): Promise<{ executions: AgentExecution[]; hasMore: boolean }> {
+	const conditions: SQL[] = [eq(agentExecutions.agentId, agentId)];
+
+	if (endingBefore) {
+		const [cursor] = await db
+			.select({ createdAt: agentExecutions.createdAt })
+			.from(agentExecutions)
+			.where(eq(agentExecutions.id, endingBefore));
+
+		if (cursor) {
+			conditions.push(lt(agentExecutions.createdAt, cursor.createdAt));
+		}
+	}
+
+	const results = await db
+		.select()
+		.from(agentExecutions)
+		.where(and(...conditions))
+		.orderBy(desc(agentExecutions.createdAt))
+		.limit(limit + 1);
+
+	const hasMore = results.length > limit;
+	const executions = hasMore ? results.slice(0, limit) : results;
+
+	return { executions, hasMore };
+}
+
+export async function getAllAgentExecutions({
+	limit = 10,
+	offset = 0,
+}: {
+	limit?: number;
+	offset?: number;
+}): Promise<{ executions: AgentExecution[]; total: number }> {
+	const [countResult] = await db
+		.select({ count: count() })
+		.from(agentExecutions);
+
+	const executions = await db
+		.select()
+		.from(agentExecutions)
+		.orderBy(desc(agentExecutions.createdAt))
+		.limit(limit)
+		.offset(offset);
+
+	return {
+		executions,
+		total: countResult?.count ?? 0,
+	};
 }
 
 // ============================================
