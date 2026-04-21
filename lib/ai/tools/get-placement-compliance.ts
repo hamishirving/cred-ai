@@ -17,7 +17,7 @@ with carry-forward tagging and FA-handled flags.
 
 Use this tool when:
 - You need to see a candidate's compliance gap for a specific placement
-- You need to identify which items First Advantage needs to process
+- You need to identify which items the background screening provider needs to process
 - You need to determine what carries forward from a previous assignment
 - A user asks about a candidate's readiness for a placement
 

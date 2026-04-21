@@ -240,7 +240,7 @@ function SummaryNodeComponent({ data }: { data: SummaryNodeData }) {
 		{ label: "Total", value: data.total },
 		{ label: "Candidate", value: data.candidateScoped },
 		{ label: "Placement", value: data.placementScoped },
-		{ label: "FA-handled", value: data.faHandled },
+		{ label: "Screening-handled", value: data.faHandled },
 		{ label: "Carry-forward", value: data.carryForwardEligible },
 		{ label: "Packages", value: data.packageCount },
 	];

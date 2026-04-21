@@ -16,8 +16,8 @@ import {
 import { getProfileById } from "@/lib/db/queries";
 
 export const faCreateCandidate = tool({
-	description: `Create a candidate in First Advantage for background screening.
-Must be called before initiating a screening. Returns the FA candidate ID needed for screening.
+	description: `Create a candidate with the background screening provider.
+Must be called before initiating a screening. Returns the screening candidate ID needed for screening.
 The candidate needs: name, email, dob, ssn, address (with ISO 3166-2 regionCode like "US-FL"), and driversLicense if required by the package.
 For packages 626709 and 626711, a licenses array is required.
 If clientReferenceId is a local profile UUID, this tool auto-derives licenses[] from professionalRegistration.`,

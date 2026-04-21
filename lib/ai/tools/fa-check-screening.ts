@@ -14,7 +14,7 @@ import { faScreenings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export const faCheckScreening = tool({
-	description: `Check the status of a First Advantage background screening.
+	description: `Check the status of a background screening.
 Returns overall status and per-component breakdown (criminal, drug test, etc.).
 Updates the persistent screening record in the database.
 Poll this to track screening progress.`,

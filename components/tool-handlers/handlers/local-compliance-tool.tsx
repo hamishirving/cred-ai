@@ -153,7 +153,7 @@ function PackageGroup({
 								)}
 								{item.faHandled && (
 									<span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
-										FA
+										Screening
 									</span>
 								)}
 								<Badge

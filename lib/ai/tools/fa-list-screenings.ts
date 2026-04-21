@@ -13,7 +13,7 @@ import { faScreenings, profiles } from "@/lib/db/schema";
 import { getFAScreeningsByProfileId } from "@/lib/db/queries";
 
 export const faListScreenings = tool({
-	description: `Search for First Advantage screenings for a candidate.
+	description: `Search for background screenings for a candidate.
 Provide profileId for a direct lookup, or candidateName to search by name.
 Returns all screening records from the database, ordered by most recent first.`,
 
@@ -76,7 +76,7 @@ Returns all screening records from the database, ordered by most recent first.`,
 				if (screenings.length > 0) {
 					return { data: screenings };
 				}
-				return { data: null, message: "No screenings found for this candidate in First Advantage" };
+				return { data: null, message: "No screenings found for this candidate with the background screening provider" };
 			}
 
 			return { error: "Provide either profileId or candidateName" };

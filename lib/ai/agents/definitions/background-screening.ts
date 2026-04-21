@@ -1,8 +1,8 @@
 /**
  * Background Screening Agent
  *
- * Creates a candidate in First Advantage, selects the appropriate
- * screening package via faSelectPackage, initiates the background
+ * Creates a candidate with the background screening provider, selects the
+ * appropriate screening package via faSelectPackage, initiates the background
  * check, and sends a candidate update via SMS/email.
  */
 
@@ -13,12 +13,12 @@ export const backgroundScreeningAgent: AgentDefinition = {
 	id: "background-screening",
 	name: "Background Screening",
 	description:
-		"Creates a candidate in First Advantage, selects the appropriate screening package (background + drug/health when needed), initiates screening, and sends a concise candidate update via SMS/email.",
+		"Creates a candidate with the background screening provider, selects the appropriate screening package (background + drug/health when needed), initiates screening, and sends a concise candidate update via SMS/email.",
 	version: "1.2",
 
 	dynamicContext: async (ctx) => `Organisation ID: ${ctx.orgId}`,
 
-	systemPrompt: `You are initiating a background screening via First Advantage for a healthcare worker.
+	systemPrompt: `You are initiating a background screening via our background screening provider for a healthcare worker.
 
 The organisation ID for this session is provided in the CONTEXT section below. Use it for all tool calls that require an organisationId.
 
@@ -26,9 +26,9 @@ STEP 1 — LOOK UP THE CANDIDATE:
 Use searchLocalCandidates with the organisationId and the candidate's name or email, then getLocalProfile to get their full details. You need their full name, email, profile ID, date of birth, SSN (nationalId), sex, and address (including state for the ISO 3166-2 region code).
 
 STEP 2 — CHECK COMPLIANCE STATUS:
-Use getPlacementCompliance to understand what screening is needed. Focus on items that require FA screening: background checks, exclusion checks, AND health/drug screening (drug-screen, tb-test, physical-examination). Check what's already been screened and is still current — don't re-screen unnecessarily (this is the worker passport value).
+Use getPlacementCompliance to understand what screening is needed. Focus on items that require provider screening: background checks, exclusion checks, AND health/drug screening (drug-screen, tb-test, physical-examination). Check what's already been screened and is still current — don't re-screen unnecessarily (this is the worker passport value).
 
-STEP 3 — SELECT FA PACKAGE:
+STEP 3 — SELECT SCREENING PACKAGE:
 Use faSelectPackage to determine the correct package. ALWAYS call this tool — do not reason about package selection yourself. Cite the tool's output (package name, tier, and reason) in your explanation.
 
 If compliance gaps include drug-screen, tb-test, or physical-examination, set includeDrugHealth to true. This selects a package that bundles background + drug/health screening.
@@ -40,7 +40,7 @@ The tool implements this logic:
 - Drug & Health variant: adds Drug Screen (13-panel), TB Test (QuantiFERON), Physical Examination.
 - Triggers for #3: lapse deals, certain states, facility OIG/SAM requirements, government placements.
 
-STEP 4 — CREATE FA CANDIDATE:
+STEP 4 — CREATE SCREENING CANDIDATE:
 Use faCreateCandidate with the candidate's details from getLocalProfile. Use their Credentially profile ID as the clientReferenceId to maintain the link.
 
 Required fields for screening:
@@ -53,7 +53,7 @@ Required fields for screening:
 All these fields should be available from the candidate's profile. If any are missing, note what's missing in your summary.
 
 STEP 5 — INITIATE SCREENING:
-Use faInitiateScreening with the FA candidate ID and the package ID returned by faSelectPackage in step 3.
+Use faInitiateScreening with the screening candidate ID and the package ID returned by faSelectPackage in step 3.
 
 IMPORTANT: You must also pass organisationId (from context) and profileId (the candidate's profile UUID from step 1). These are required for the tool to persist the screening record to the database. The placement is auto-resolved from the profile.
 
@@ -64,7 +64,7 @@ If the package includes drug/health screening (includesDrugHealth was true), you
 - regionCode: "US-" + address.state (e.g. "US-FL")
 - postalCode: from the candidate's address.postcode
 
-FA uses this to route the candidate to the nearest collection clinic for their drug screen, TB test, and physical.
+The provider uses this to route the candidate to the nearest collection clinic for their drug screen, TB test, and physical.
 
 Note: The screening record is automatically persisted to the database by faInitiateScreening — no need to save it to agent memory. The Screening Status Monitor agent will find it via faListScreenings.
 
@@ -79,7 +79,7 @@ If both channels are unavailable, mention that in your summary.
 
 STEP 7 — SUMMARISE:
 Report what was initiated:
-- Candidate name and FA candidate ID
+- Candidate name and screening candidate ID
 - Package selected and why (cite faSelectPackage output)
 - Screening components included (background checks, and drug/health if applicable)
 - If drug/health included: mention clinic routing based on candidate address

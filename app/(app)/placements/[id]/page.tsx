@@ -2,9 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
-import faIcon from "@/app/FA-icon.png";
 import dynamic from "next/dynamic";
 import {
 	ArrowLeft,
@@ -447,11 +445,9 @@ function ComplianceItemRow({
 				<div className="flex items-center gap-2">
 					<span className="text-sm">{item.name}</span>
 					{item.faHandled && (
-						<Image
-							src={faIcon}
-							alt="First Advantage"
-							className="size-4 shrink-0"
-						/>
+						<span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+							Screening
+						</span>
 					)}
 					{evidenceType && (
 						<span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
@@ -1267,7 +1263,7 @@ export default function PlacementDetailPage() {
 					color="text-[var(--warning)]"
 				/>
 				<SummaryStatCard
-					label="FA Items"
+					label="Screening Items"
 					value={summary.faItemsMet}
 					color={
 						summary.faItemsMet === summary.faItemsTotal

@@ -149,7 +149,7 @@ export function FACandidateDisplay({ data }: ToolDisplayProps) {
 
 			<div className="grid grid-cols-2 gap-3 p-3 text-xs">
 				<div>
-					<p className="text-muted-foreground">FA Candidate ID</p>
+					<p className="text-muted-foreground">Screening Candidate ID</p>
 					<p className="font-mono">{candidate.id}</p>
 				</div>
 				<div>
@@ -209,7 +209,7 @@ export function FAScreeningInitiationDisplay({ data }: ToolDisplayProps) {
 				<div className="flex items-center justify-between gap-2">
 					<div>
 						<p className="text-sm font-medium">
-							{screening.packageName || "FA Screening"} ({screening.packageId || "—"})
+							{screening.packageName || "Background Screening"} ({screening.packageId || "—"})
 						</p>
 						<p className="text-xs text-muted-foreground font-mono">
 							Screening ID: {screening.id}
