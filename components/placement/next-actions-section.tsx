@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { forwardRef, useImperativeHandle, useState } from "react";
 import { toast } from "@/components/toast";
 import { streamAgentExecution } from "@/lib/ai/agents/stream-agent-execution";
 import {
@@ -254,9 +254,6 @@ function ScreeningItemRow({
 			<div className="flex-1 min-w-0">
 				<div className="flex items-center gap-2">
 					<span className="text-sm truncate">{item.name}</span>
-					<span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
-						Screening
-					</span>
 				</div>
 				{item.expiresAt && (
 					<p className="text-[10px] text-muted-foreground mt-0.5">
@@ -285,15 +282,25 @@ function ScreeningItemRow({
 // Component
 // ============================================
 
-export function NextActionsSection({
-	tasks: initialTasks,
-	screeningItems,
-	placement,
-	context,
-	candidateAddress,
-	facilityDrugTestRequirements = [],
-	onRefresh,
-}: NextActionsSectionProps) {
+export interface NextActionsSectionHandle {
+	initiateScreening: () => void;
+}
+
+export const NextActionsSection = forwardRef<
+	NextActionsSectionHandle,
+	NextActionsSectionProps
+>(function NextActionsSection(
+	{
+		tasks: initialTasks,
+		screeningItems,
+		placement,
+		context,
+		candidateAddress,
+		facilityDrugTestRequirements = [],
+		onRefresh,
+	},
+	ref,
+) {
 	const [tasks, setTasks] = useState(initialTasks);
 	const [submittingScreening, setSubmittingScreening] = useState(false);
 	const [checkingStatus, setCheckingStatus] = useState(false);
@@ -304,6 +311,12 @@ export function NextActionsSection({
 		executionId: string;
 		agentName: string;
 	} | null>(null);
+
+	useImperativeHandle(ref, () => ({
+		initiateScreening: () => {
+			void handleInitiateScreening();
+		},
+	}));
 
 	// Only show pending + in_progress tasks
 	const activeTasks = tasks.filter(
@@ -926,4 +939,4 @@ export function NextActionsSection({
 			/>
 		</Card>
 	);
-}
+});

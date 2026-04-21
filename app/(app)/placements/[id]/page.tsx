@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
 	ArrowLeft,
+	ArrowUpRight,
 	CheckCircle2,
 	Circle,
 	AlertTriangle,
@@ -36,7 +37,10 @@ import {
 	type TimelineData,
 } from "@/components/candidate/activity-timeline";
 import { FacilityDetailDialog } from "@/components/facility/facility-detail-dialog";
-import { NextActionsSection } from "@/components/placement/next-actions-section";
+import {
+	NextActionsSection,
+	type NextActionsSectionHandle,
+} from "@/components/placement/next-actions-section";
 import { SatisfactionTree } from "@/components/placements/satisfaction-tree";
 const DocumentIntelligenceDialog = dynamic(
 	() =>
@@ -444,11 +448,6 @@ function ComplianceItemRow({
 			<div className="flex-1 min-w-0">
 				<div className="flex items-center gap-2">
 					<span className="text-sm">{item.name}</span>
-					{item.faHandled && (
-						<span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
-							Screening
-						</span>
-					)}
 					{evidenceType && (
 						<span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
 							{EVIDENCE_TYPE_SHORT[evidenceType] || evidenceType}
@@ -593,6 +592,7 @@ function ComplianceDetailPanel({
 	profileId,
 	onVerified,
 	ordered,
+	onInitiateScreening,
 }: {
 	item: ComplianceItem | null;
 	element: ElementDefinition | null;
@@ -603,6 +603,7 @@ function ComplianceDetailPanel({
 	profileId: string;
 	onVerified?: () => void;
 	ordered?: boolean;
+	onInitiateScreening?: () => void;
 }) {
 	const [docDialogOpen, setDocDialogOpen] = useState(false);
 	const [activeLeafSlug, setActiveLeafSlug] = useState<string | null>(null);
@@ -809,12 +810,24 @@ function ComplianceDetailPanel({
 				!hasEvidence &&
 				element &&
 				element.evidenceType !== "document" && (
-					<div className="rounded-md border border-border bg-muted/30 px-3 py-2">
-						<p className="text-xs text-muted-foreground">
-							<span className="font-medium text-foreground">Required:</span>{" "}
-							{EVIDENCE_TYPE_LABELS[element.evidenceType] || element.evidenceType}{" "}
-							needed to fulfil this requirement.
-						</p>
+					<div className="space-y-2">
+						<div className="rounded-md border border-border bg-muted/30 px-3 py-2">
+							<p className="text-xs text-muted-foreground">
+								<span className="font-medium text-foreground">Required:</span>{" "}
+								{EVIDENCE_TYPE_LABELS[element.evidenceType] || element.evidenceType}{" "}
+								needed to fulfil this requirement.
+							</p>
+						</div>
+						{item.faHandled && onInitiateScreening && (
+							<Button
+								size="sm"
+								className="w-full"
+								onClick={onInitiateScreening}
+							>
+								Initiate Background Screening
+								<ArrowUpRight className="size-3.5 ml-1" />
+							</Button>
+						)}
 					</div>
 				)}
 
@@ -1004,6 +1017,7 @@ export default function PlacementDetailPage() {
 	const [data, setData] = useState<PlacementData | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const nextActionsRef = useRef<NextActionsSectionHandle>(null);
 
 	const refreshData = useCallback(async () => {
 		try {
@@ -1285,6 +1299,7 @@ export default function PlacementDetailPage() {
 
 			{/* Next Actions */}
 			<NextActionsSection
+				ref={nextActionsRef}
 				tasks={data.tasks}
 				screeningItems={data.compliance.items.filter((i) => i.faHandled)}
 				placement={{
@@ -1340,6 +1355,9 @@ export default function PlacementDetailPage() {
 							profileId={placement.profileId}
 							onVerified={refreshData}
 							ordered={!!selectedItemSlug && orderedSlugs.has(selectedItemSlug)}
+							onInitiateScreening={() =>
+								nextActionsRef.current?.initiateScreening()
+							}
 						/>
 					</div>
 				</div>
