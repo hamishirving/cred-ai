@@ -53,6 +53,7 @@ export async function GET(
 			roleSlug: placement.roleSlug,
 			jurisdiction: placement.jurisdiction || "florida",
 			facilityType: placement.facilityType,
+			workNodeId: placement.workNodeId,
 			isLapseDeal: placement.dealType === "lapse",
 		};
 

@@ -34,6 +34,20 @@ export interface VerificationRules {
 }
 
 /**
+ * Boolean tree describing how a compliance element can be satisfied.
+ *
+ * Leaves reference other ComplianceElements by slug (within the same
+ * organisation). `ALL` requires every child to be met; `ANY` requires at
+ * least one child to be met. Nesting is unbounded.
+ *
+ * Null on an element = use flat single-element evaluation (legacy).
+ */
+export type SatisfactionLogic =
+	| { op: "ALL"; children: SatisfactionLogic[] }
+	| { op: "ANY"; children: SatisfactionLogic[] }
+	| { op: "ELEMENT"; slug: string };
+
+/**
  * ComplianceElements define individual compliance requirements.
  *
  * Examples: DBS Check, Right to Work, NMC Registration, Passport
@@ -107,8 +121,15 @@ export const complianceElements = pgTable("compliance_elements", {
 	/** Whether evidence must match placement jurisdiction */
 	jurisdictionRequired: boolean("jurisdiction_required").notNull().default(false),
 
-	/** Other elements this can substitute for */
+	/** Other elements this can substitute for (legacy, inert) */
 	substitutes: jsonb("substitutes").$type<string[]>(),
+
+	/**
+	 * Optional boolean tree describing alternative satisfaction paths across
+	 * other elements. Null = this element is satisfied in isolation via its
+	 * own evidence (legacy behaviour).
+	 */
+	satisfactionLogic: jsonb("satisfaction_logic").$type<SatisfactionLogic>(),
 
 	/** Integration key for external checks (e.g., "nmc", "gmc", "dbs") */
 	integrationKey: text("integration_key"),

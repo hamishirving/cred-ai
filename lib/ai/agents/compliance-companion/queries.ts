@@ -332,6 +332,7 @@ async function getComplianceItemsForProfile(
 				excludeJurisdictions: null,
 				jurisdictionRequired: false,
 				substitutes: null,
+				satisfactionLogic: null,
 				grantsSkillIds: null,
 				customFields: null,
 				isActive: true,

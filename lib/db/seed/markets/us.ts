@@ -8,6 +8,20 @@ import type { NewComplianceElement, NewCompliancePackage, NewRole } from "../../
 import type { NewAcceptableDocument } from "../../schema";
 
 /**
+ * Spec for a seeded assignment rule. Resolved to IDs at seed time.
+ */
+export interface SeedAssignmentRule {
+	name: string;
+	description?: string;
+	packageSlug: string;
+	/** Match a specific work node by name (hierarchy-aware at resolve time) */
+	specificWorkNodeName?: string;
+	roleSlug?: string;
+	workNodeTypeName?: string;
+	jurisdictions?: string[];
+}
+
+/**
  * US Compliance Element definitions.
  */
 export const usComplianceElements: Omit<NewComplianceElement, "organisationId">[] = [
@@ -600,6 +614,183 @@ export const usComplianceElements: Omit<NewComplianceElement, "organisationId">[
 			aiConfidenceThreshold: 85,
 		},
 	},
+
+	// ==========================================================================
+	// Trinity Health facility layer — MMR immunity (AND/OR satisfaction tree)
+	// ==========================================================================
+	// The leaves below are referenced by the `mmr-immunity` parent element's
+	// satisfactionLogic. Each leaf captures a single piece of evidence; the
+	// parent combines them into a boolean tree of acceptable paths.
+
+	{
+		name: "MMR Titer — Measles IgG",
+		slug: "titer-measles-igg",
+		description: "Positive IgG titer confirming measles immunity",
+		category: "health",
+		scope: "placement",
+		evidenceType: "document",
+		fulfilmentProvider: "candidate",
+		expiryDays: null,
+		verificationRules: { validationMode: "ai_human", aiConfidenceThreshold: 85 },
+	},
+	{
+		name: "MMR Titer — Mumps IgG",
+		slug: "titer-mumps-igg",
+		description: "Positive IgG titer confirming mumps immunity",
+		category: "health",
+		scope: "placement",
+		evidenceType: "document",
+		fulfilmentProvider: "candidate",
+		expiryDays: null,
+		verificationRules: { validationMode: "ai_human", aiConfidenceThreshold: 85 },
+	},
+	{
+		name: "MMR Titer — Rubella IgG",
+		slug: "titer-rubella-igg",
+		description: "Positive IgG titer confirming rubella immunity",
+		category: "health",
+		scope: "placement",
+		evidenceType: "document",
+		fulfilmentProvider: "candidate",
+		expiryDays: null,
+		verificationRules: { validationMode: "ai_human", aiConfidenceThreshold: 85 },
+	},
+	{
+		name: "MMR Vaccine — Dose 1",
+		slug: "mmr-dose-1",
+		description: "First dose of combined MMR vaccine",
+		category: "health",
+		scope: "placement",
+		evidenceType: "document",
+		fulfilmentProvider: "candidate",
+		expiryDays: null,
+		verificationRules: { validationMode: "ai_human", aiConfidenceThreshold: 85 },
+	},
+	{
+		name: "MMR Vaccine — Dose 2",
+		slug: "mmr-dose-2",
+		description: "Second dose of combined MMR vaccine (≥28 days after dose 1)",
+		category: "health",
+		scope: "placement",
+		evidenceType: "document",
+		fulfilmentProvider: "candidate",
+		expiryDays: null,
+		verificationRules: { validationMode: "ai_human", aiConfidenceThreshold: 85 },
+	},
+	{
+		name: "Measles Vaccine",
+		slug: "measles-vax",
+		description: "Standalone measles vaccine record",
+		category: "health",
+		scope: "placement",
+		evidenceType: "document",
+		fulfilmentProvider: "candidate",
+		expiryDays: null,
+		verificationRules: { validationMode: "ai_human", aiConfidenceThreshold: 85 },
+	},
+	{
+		name: "Mumps Vaccine",
+		slug: "mumps-vax",
+		description: "Standalone mumps vaccine record",
+		category: "health",
+		scope: "placement",
+		evidenceType: "document",
+		fulfilmentProvider: "candidate",
+		expiryDays: null,
+		verificationRules: { validationMode: "ai_human", aiConfidenceThreshold: 85 },
+	},
+	{
+		name: "Rubella Vaccine",
+		slug: "rubella-vax",
+		description: "Standalone rubella vaccine record",
+		category: "health",
+		scope: "placement",
+		evidenceType: "document",
+		fulfilmentProvider: "candidate",
+		expiryDays: null,
+		verificationRules: { validationMode: "ai_human", aiConfidenceThreshold: 85 },
+	},
+	{
+		name: "MMR — Negative or Equivalent Titer Result",
+		slug: "mmr-negative-titer",
+		description: "Negative/equivocal titer prompting booster pathway",
+		category: "health",
+		scope: "placement",
+		evidenceType: "document",
+		fulfilmentProvider: "candidate",
+		expiryDays: null,
+		verificationRules: { validationMode: "ai_human", aiConfidenceThreshold: 85 },
+	},
+	{
+		name: "MMR Booster Vaccine",
+		slug: "mmr-booster",
+		description: "Booster MMR vaccine following a negative/equivocal titer",
+		category: "health",
+		scope: "placement",
+		evidenceType: "document",
+		fulfilmentProvider: "candidate",
+		expiryDays: null,
+		verificationRules: { validationMode: "ai_human", aiConfidenceThreshold: 85 },
+	},
+	{
+		name: "Signed Trinity MMR Declination Form",
+		slug: "mmr-declination-form",
+		description: "Trinity Health declination form (medical/religious)",
+		category: "health",
+		scope: "placement",
+		evidenceType: "form",
+		fulfilmentProvider: "candidate",
+		expiryDays: null,
+		verificationRules: { validationMode: "human_required" },
+	},
+	{
+		name: "MMR Immunity",
+		slug: "mmr-immunity",
+		description:
+			"MMR immunity, satisfied by titers (3x IgG), dose series (1+2), individual component vaccines, negative titer + booster, or a signed declination.",
+		category: "health",
+		scope: "placement",
+		evidenceType: "document",
+		fulfilmentProvider: "candidate",
+		expiryDays: null,
+		verificationRules: { validationMode: "ai_human", aiConfidenceThreshold: 85 },
+		satisfactionLogic: {
+			op: "ANY",
+			children: [
+				{
+					op: "ALL",
+					children: [
+						{ op: "ELEMENT", slug: "titer-measles-igg" },
+						{ op: "ELEMENT", slug: "titer-mumps-igg" },
+						{ op: "ELEMENT", slug: "titer-rubella-igg" },
+					],
+				},
+				{
+					op: "ALL",
+					children: [
+						{ op: "ELEMENT", slug: "mmr-dose-1" },
+						{ op: "ELEMENT", slug: "mmr-dose-2" },
+					],
+				},
+				{
+					op: "ALL",
+					children: [
+						{ op: "ELEMENT", slug: "measles-vax" },
+						{ op: "ELEMENT", slug: "mumps-vax" },
+						{ op: "ELEMENT", slug: "rubella-vax" },
+					],
+				},
+				{
+					op: "ALL",
+					children: [
+						{ op: "ELEMENT", slug: "mmr-negative-titer" },
+						{ op: "ELEMENT", slug: "mmr-booster" },
+					],
+				},
+				{ op: "ELEMENT", slug: "mmr-declination-form" },
+			],
+		},
+	},
 ];
 
 /**
@@ -673,6 +864,14 @@ export const usPackageTemplates: Omit<NewCompliancePackage, "organisationId">[] 
 		category: "screening",
 		version: 1,
 	},
+	{
+		name: "Trinity Health — Facility Layer",
+		slug: "trinity-health-facility-layer",
+		description:
+			"Trinity Health-specific requirements (MMR immunity with alternative satisfaction paths)",
+		category: "facility",
+		version: 1,
+	},
 ];
 
 /**
@@ -735,7 +934,22 @@ export const usPackageContents: Record<string, string[]> = {
 		"cms-compliance-training",
 		"unit-competency",
 	],
+	"trinity-health-facility-layer": ["mmr-immunity"],
 };
+
+/**
+ * Assignment rules seeded for US organisations. Rules are resolved to IDs at
+ * seed time (package, work node, role, work node type all looked up by name).
+ */
+export const usAssignmentRules: SeedAssignmentRule[] = [
+	{
+		name: "Trinity Health Facility Layer",
+		description:
+			"Applies MMR immunity (AND/OR satisfaction tree) to any placement at Trinity Health or a descendant work node.",
+		packageSlug: "trinity-health-facility-layer",
+		specificWorkNodeName: "Trinity Health",
+	},
+];
 
 /**
  * US Role templates.

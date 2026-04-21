@@ -2131,6 +2131,8 @@ export interface CompliancePackageAssignments {
 	roleIds: string[];
 	jurisdictions: string[];
 	workNodeTypeIds: string[];
+	/** Specific work nodes (locations) this package is bound to via rules */
+	specificWorkNodes: Array<{ id: string; name: string }>;
 }
 
 export interface CompliancePackageWithDetails extends CompliancePackage {
@@ -2175,9 +2177,12 @@ export async function getCompliancePackagesWithDetailsByOrganisationId({
 				roleId: assignmentRules.roleId,
 				jurisdictions: assignmentRules.jurisdictions,
 				workNodeTypeId: assignmentRules.workNodeTypeId,
+				specificWorkNodeId: assignmentRules.specificWorkNodeId,
+				specificWorkNodeName: workNodes.name,
 				isActive: assignmentRules.isActive,
 			})
 			.from(assignmentRules)
+			.leftJoin(workNodes, eq(workNodes.id, assignmentRules.specificWorkNodeId))
 			.where(eq(assignmentRules.organisationId, organisationId)),
 	]);
 
@@ -2205,12 +2210,23 @@ export async function getCompliancePackagesWithDetailsByOrganisationId({
 			roleIds: [],
 			jurisdictions: [],
 			workNodeTypeIds: [],
+			specificWorkNodes: [],
 		};
 		if (row.roleId && !current.roleIds.includes(row.roleId)) {
 			current.roleIds.push(row.roleId);
 		}
 		if (row.workNodeTypeId && !current.workNodeTypeIds.includes(row.workNodeTypeId)) {
 			current.workNodeTypeIds.push(row.workNodeTypeId);
+		}
+		if (
+			row.specificWorkNodeId &&
+			row.specificWorkNodeName &&
+			!current.specificWorkNodes.some((n) => n.id === row.specificWorkNodeId)
+		) {
+			current.specificWorkNodes.push({
+				id: row.specificWorkNodeId,
+				name: row.specificWorkNodeName,
+			});
 		}
 		for (const jurisdiction of row.jurisdictions ?? []) {
 			if (!current.jurisdictions.includes(jurisdiction)) {
@@ -2227,6 +2243,7 @@ export async function getCompliancePackagesWithDetailsByOrganisationId({
 			roleIds: [],
 			jurisdictions: [],
 			workNodeTypeIds: [],
+			specificWorkNodes: [],
 		},
 	}));
 }
@@ -2265,6 +2282,34 @@ export async function getWorkNodeTypesByOrganisationId({
 		.from(workNodeTypes)
 		.where(eq(workNodeTypes.organisationId, organisationId))
 		.orderBy(asc(workNodeTypes.level), asc(workNodeTypes.name));
+}
+
+export async function getWorkNodesByOrganisationId({
+	organisationId,
+}: {
+	organisationId: string;
+}): Promise<
+	Array<{
+		id: string;
+		name: string;
+		typeId: string;
+		parentId: string | null;
+		jurisdiction: string | null;
+	}>
+> {
+	return db
+		.select({
+			id: workNodes.id,
+			name: workNodes.name,
+			typeId: workNodes.typeId,
+			parentId: workNodes.parentId,
+			jurisdiction: workNodes.jurisdiction,
+		})
+		.from(workNodes)
+		.where(
+			and(eq(workNodes.organisationId, organisationId), eq(workNodes.isActive, true)),
+		)
+		.orderBy(asc(workNodes.name));
 }
 
 // ============================================

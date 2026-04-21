@@ -9,6 +9,7 @@ import {
 	getOrganisationById,
 	getRolesByOrganisationId,
 	getWorkNodeTypesByOrganisationId,
+	getWorkNodesByOrganisationId,
 } from "@/lib/db/queries";
 import {
 	ukFacilityPackages,
@@ -54,13 +55,14 @@ export default async function ComplianceSettingsPage() {
 		);
 	}
 
-	const [org, packages, elements, orgRoles, orgWorkNodeTypes] =
+	const [org, packages, elements, orgRoles, orgWorkNodeTypes, orgWorkNodes] =
 		await Promise.all([
 			getOrganisationById({ id: organisationId }),
 			getCompliancePackagesWithDetailsByOrganisationId({ organisationId }),
 			getComplianceElementsByOrganisationId({ organisationId }),
 			getRolesByOrganisationId({ organisationId }),
 			getWorkNodeTypesByOrganisationId({ organisationId }),
+			getWorkNodesByOrganisationId({ organisationId }),
 		]);
 
 	if (!org) {
@@ -133,6 +135,14 @@ export default async function ComplianceSettingsPage() {
 		slug: type.slug,
 		level: type.level,
 	}));
+	const typeNameById = new Map(orgWorkNodeTypes.map((t) => [t.id, t.name]));
+	const serialisedWorkNodes = orgWorkNodes.map((node) => ({
+		id: node.id,
+		name: node.name,
+		typeName: typeNameById.get(node.typeId) ?? null,
+		parentId: node.parentId,
+		jurisdiction: node.jurisdiction,
+	}));
 
 	// Available jurisdictions and facility types from market config
 	const jurisdictions = Object.keys(jurisdictionPackages);
@@ -162,6 +172,7 @@ export default async function ComplianceSettingsPage() {
 				roles={serialisedRoles}
 				elements={serialisedElements}
 				workNodeTypes={serialisedWorkNodeTypes}
+				workNodes={serialisedWorkNodes}
 				jurisdictions={jurisdictions}
 				facilityTypes={facilityTypes}
 				rolePackageMapping={rolePackageMapping}

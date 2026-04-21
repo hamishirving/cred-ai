@@ -1,0 +1,3 @@
+ALTER TABLE "compliance_elements" ADD COLUMN "satisfaction_logic" jsonb;--> statement-breakpoint
+ALTER TABLE "assignment_rules" ADD COLUMN "specific_work_node_id" uuid;--> statement-breakpoint
+ALTER TABLE "assignment_rules" ADD CONSTRAINT "assignment_rules_specific_work_node_id_work_nodes_id_fk" FOREIGN KEY ("specific_work_node_id") REFERENCES "public"."work_nodes"("id") ON DELETE no action ON UPDATE no action;

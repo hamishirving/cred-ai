@@ -17,6 +17,7 @@ import {
 import { organisations } from "./organisations";
 import { compliancePackages } from "./compliance-packages";
 import { roles } from "./roles";
+import { workNodes } from "./work-nodes";
 import { workNodeTypes } from "./work-node-types";
 
 /**
@@ -53,6 +54,13 @@ export const assignmentRules = pgTable("assignment_rules", {
 
 	/** Match specific work node type (e.g., assign to all Hospital placements) */
 	workNodeTypeId: uuid("work_node_type_id").references(() => workNodeTypes.id),
+
+	/**
+	 * Match a specific work node (e.g., "Trinity Health" parent).
+	 * Hierarchy-aware: if set, rule matches any placement whose workNode is this
+	 * node or a descendant. Null = no specific-facility constraint.
+	 */
+	specificWorkNodeId: uuid("specific_work_node_id").references(() => workNodes.id),
 
 	/** Match specific jurisdictions */
 	jurisdictions: jsonb("jurisdictions").$type<string[]>(),
