@@ -18,7 +18,9 @@ import {
 	packageElements,
 	roles,
 	workNodeTypes,
+	workNodes,
 } from "@/lib/db/schema";
+import type { SatisfactionLogic } from "@/lib/db/schema/compliance-elements";
 import {
 	ukFacilityPackages,
 	ukJurisdictionPackages,
@@ -61,6 +63,8 @@ export interface PlacementContext {
 	jurisdiction: string;
 	/** Facility type (e.g. "hospital") — derived from work node type */
 	facilityType: string;
+	/** Specific work node id for the placement (enables facility-layer rules) */
+	workNodeId?: string | null;
 	/** Whether this is a lapse deal (inactive > 90 days) */
 	isLapseDeal?: boolean;
 	/** Whether the state requires statewide OIG/SAM */
@@ -90,6 +94,8 @@ export interface ResolvedElement {
 	faHandled: boolean;
 	/** Who is expected to fulfil this requirement */
 	fulfilmentProvider: string;
+	/** Optional boolean tree of alternative satisfaction paths */
+	satisfactionLogic?: SatisfactionLogic | null;
 }
 
 export interface RequirementGroup {
@@ -152,6 +158,29 @@ export interface PlacementComplianceItem {
 	evidenceExtractedData: Record<string, unknown> | null;
 	/** Structured external-check results (e.g. registry lookups) */
 	evidenceCheckResult: Record<string, unknown> | null;
+	/** The satisfaction tree (if this element uses AND/OR logic) */
+	satisfactionLogic?: SatisfactionLogic | null;
+	/** The branch that was matched to produce the status (if a tree was evaluated) */
+	matchedPath?: SatisfactionLogic | null;
+	/** Per-leaf status map for UI to colour individual leaves in the tree */
+	leafStatuses?: Record<string, PlacementComplianceItem["status"]>;
+	/** Per-leaf display name so the UI can label leaves in the tree */
+	leafNames?: Record<string, string>;
+	/**
+	 * Full per-leaf details so the UI can wire leaves to the document dialog
+	 * (status, best evidence record, file path, stored verification data, …).
+	 */
+	leaves?: Array<{
+		slug: string;
+		name: string;
+		status: PlacementComplianceItem["status"];
+		evidenceId: string | null;
+		evidenceFilePath: string | null;
+		evidenceFileName: string | null;
+		evidenceMimeType: string | null;
+		evidenceExtractedData: Record<string, unknown> | null;
+		evidenceCheckResult: Record<string, unknown> | null;
+	}>;
 }
 
 // ============================================
@@ -233,6 +262,7 @@ export async function resolvePlacementRequirements(
 					packageId: assignmentRules.packageId,
 					roleId: assignmentRules.roleId,
 					workNodeTypeId: assignmentRules.workNodeTypeId,
+					specificWorkNodeId: assignmentRules.specificWorkNodeId,
 					jurisdictions: assignmentRules.jurisdictions,
 				})
 				.from(assignmentRules)
@@ -258,11 +288,38 @@ export async function resolvePlacementRequirements(
 				.map((row) => row.id),
 		);
 
+		// Walk parentId chain up from the placement's workNode so a rule bound to
+		// "Trinity Health" also applies to "Trinity Health Dallas".
+		const ancestorWorkNodeIds = new Set<string>();
+		if (context.workNodeId) {
+			const nodeRows = await db
+				.select({
+					id: workNodes.id,
+					parentId: workNodes.parentId,
+				})
+				.from(workNodes)
+				.where(eq(workNodes.organisationId, organisationId));
+			const parentById = new Map(nodeRows.map((n) => [n.id, n.parentId]));
+			let current: string | null = context.workNodeId;
+			const guard = new Set<string>();
+			while (current && !guard.has(current)) {
+				ancestorWorkNodeIds.add(current);
+				guard.add(current);
+				current = parentById.get(current) ?? null;
+			}
+		}
+
 		const matchedRules = rules.filter((rule) => {
 			if (rule.roleId && (!roleId || rule.roleId !== roleId)) return false;
 			if (
 				rule.workNodeTypeId &&
 				!matchingWorkNodeTypeIds.has(rule.workNodeTypeId)
+			) {
+				return false;
+			}
+			if (
+				rule.specificWorkNodeId &&
+				!ancestorWorkNodeIds.has(rule.specificWorkNodeId)
 			) {
 				return false;
 			}
@@ -365,6 +422,7 @@ export async function resolvePlacementRequirements(
 				fulfilmentProvider: complianceElements.fulfilmentProvider,
 				onlyJurisdictions: complianceElements.onlyJurisdictions,
 				excludeJurisdictions: complianceElements.excludeJurisdictions,
+				satisfactionLogic: complianceElements.satisfactionLogic,
 			})
 			.from(packageElements)
 			.innerJoin(
@@ -399,6 +457,7 @@ export async function resolvePlacementRequirements(
 					fulfilmentProvider: complianceElements.fulfilmentProvider,
 					onlyJurisdictions: complianceElements.onlyJurisdictions,
 					excludeJurisdictions: complianceElements.excludeJurisdictions,
+					satisfactionLogic: complianceElements.satisfactionLogic,
 				})
 				.from(complianceElements)
 				.where(
@@ -437,6 +496,7 @@ export async function resolvePlacementRequirements(
 				expiryWarningDays: el.expiryWarningDays,
 				faHandled: el.fulfilmentProvider === "external_provider",
 				fulfilmentProvider: el.fulfilmentProvider,
+				satisfactionLogic: el.satisfactionLogic ?? null,
 			};
 		});
 
@@ -534,6 +594,68 @@ const STATUS_PRIORITY: Record<string, number> = {
 };
 
 /**
+ * Collapse the full item-status set to the three-state vocabulary used by the
+ * boolean-tree evaluator: met / pending / missing.
+ */
+type TreeLeafStatus = "met" | "pending" | "missing";
+function collapseStatus(
+	status: PlacementComplianceItem["status"],
+): TreeLeafStatus {
+	if (status === "met") return "met";
+	if (status === "missing" || status === "expired") return "missing";
+	// pending | requires_review | expiring all count as "in progress"
+	return "pending";
+}
+
+/** Walk a satisfaction tree and collect all ELEMENT leaf slugs. */
+function collectLeafSlugs(node: SatisfactionLogic, out: Set<string>): void {
+	if (node.op === "ELEMENT") {
+		out.add(node.slug);
+		return;
+	}
+	for (const child of node.children) collectLeafSlugs(child, out);
+}
+
+/**
+ * Recursively evaluate a satisfaction tree against a per-slug status map.
+ *
+ * Returns the overall status plus the subtree that most directly satisfies
+ * (or fails to satisfy) the requirement — used by the UI to highlight the
+ * branch the candidate's evidence is on.
+ */
+function evaluateSatisfactionLogic(
+	node: SatisfactionLogic,
+	leafStatusBySlug: Map<string, TreeLeafStatus>,
+): { status: TreeLeafStatus; matchedBranch: SatisfactionLogic } {
+	if (node.op === "ELEMENT") {
+		const status = leafStatusBySlug.get(node.slug) ?? "missing";
+		return { status, matchedBranch: node };
+	}
+
+	const childResults = node.children.map((child) =>
+		evaluateSatisfactionLogic(child, leafStatusBySlug),
+	);
+
+	if (node.op === "ALL") {
+		const missing = childResults.some((r) => r.status === "missing");
+		const pending = childResults.some((r) => r.status === "pending");
+		const status: TreeLeafStatus = missing
+			? "missing"
+			: pending
+				? "pending"
+				: "met";
+		return { status, matchedBranch: node };
+	}
+
+	// ANY: prefer a met child, else the most-advanced pending child, else fail.
+	const met = childResults.find((r) => r.status === "met");
+	if (met) return { status: "met", matchedBranch: met.matchedBranch };
+	const pending = childResults.find((r) => r.status === "pending");
+	if (pending) return { status: "pending", matchedBranch: pending.matchedBranch };
+	return { status: "missing", matchedBranch: node };
+}
+
+/**
  * Check a candidate's compliance against resolved placement requirements.
  *
  * For each required element, finds the best evidence record and determines
@@ -593,8 +715,16 @@ export async function checkPlacementCompliance(
 		};
 	}
 
-	// 3. Fetch all evidence for this profile in one query
-	const slugs = allElements.map((e) => e.element.slug);
+	// 3. Fetch all evidence for this profile in one query.
+	// Expand the slug set to include leaf slugs referenced by any
+	// satisfactionLogic tree so we can evaluate them against evidence too.
+	const slugSet = new Set<string>(allElements.map((e) => e.element.slug));
+	for (const { element } of allElements) {
+		if (element.satisfactionLogic) {
+			collectLeafSlugs(element.satisfactionLogic, slugSet);
+		}
+	}
+	const slugs = [...slugSet];
 	const elementRows = await db
 		.select()
 		.from(complianceElements)
@@ -605,6 +735,7 @@ export async function checkPlacementCompliance(
 			),
 		);
 	const elementIdMap = new Map(elementRows.map((e) => [e.slug, e.id]));
+	const elementBySlug = new Map(elementRows.map((e) => [e.slug, e]));
 
 	const elementIds = [...elementIdMap.values()];
 	const evidenceRows =
@@ -646,12 +777,103 @@ export async function checkPlacementCompliance(
 
 	// 4. Build compliance items
 	const now = new Date();
+
+	// Compute status for a single (element, evidence) pair. Pulled out so tree
+	// leaves can reuse the same logic as package-level elements.
+	const computeStatus = (
+		expiryWarningDays: number | null,
+		ev: (typeof evidenceRows)[number] | undefined,
+	): PlacementComplianceItem["status"] => {
+		if (!ev) return "missing";
+		if (ev.status === "approved") {
+			if (ev.expiresAt && ev.expiresAt <= now) return "expired";
+			if (
+				ev.expiresAt &&
+				expiryWarningDays &&
+				ev.expiresAt.getTime() - now.getTime() <=
+					expiryWarningDays * 24 * 60 * 60 * 1000
+			) {
+				return "expiring";
+			}
+			return "met";
+		}
+		if (ev.status === "expired") return "expired";
+		if (ev.status === "requires_review") return "requires_review";
+		if (ev.status === "pending" || ev.status === "processing") return "pending";
+		return "missing";
+	};
+
+	// Per-slug leaf status for tree evaluation.
+	const leafStatusBySlug = new Map<string, TreeLeafStatus>();
+	for (const slug of slugs) {
+		const row = elementBySlug.get(slug);
+		const id = elementIdMap.get(slug);
+		const ev = id ? bestEvidence.get(id) : undefined;
+		const status = computeStatus(row?.expiryWarningDays ?? null, ev);
+		leafStatusBySlug.set(slug, collapseStatus(status));
+	}
+
 	const items: PlacementComplianceItem[] = allElements.map(
 		({ element, packageSlug, packageReason }) => {
 			const elementId = elementIdMap.get(element.slug);
 			const ev = elementId ? bestEvidence.get(elementId) : undefined;
 
-			if (!ev) {
+			// Base item (flat element, no tree). Status derives from the element's
+			// own evidence.
+			let status = computeStatus(element.expiryWarningDays, ev);
+			let matchedPath: SatisfactionLogic | null = null;
+			let leafStatuses: Record<string, PlacementComplianceItem["status"]> | undefined;
+			let leafNames: Record<string, string> | undefined;
+			let leaves: PlacementComplianceItem["leaves"];
+
+			// If the element declares a satisfaction tree, evaluate it and let the
+			// tree drive the overall status. The element's own evidence is ignored
+			// in this path — the tree's leaf elements are what matter.
+			if (element.satisfactionLogic) {
+				const leafSlugs = new Set<string>();
+				collectLeafSlugs(element.satisfactionLogic, leafSlugs);
+				leafStatuses = {};
+				leafNames = {};
+				leaves = [];
+				for (const leafSlug of leafSlugs) {
+					const leafRow = elementBySlug.get(leafSlug);
+					const leafId = elementIdMap.get(leafSlug);
+					const leafEv = leafId ? bestEvidence.get(leafId) : undefined;
+					const leafStatus = computeStatus(
+						leafRow?.expiryWarningDays ?? null,
+						leafEv,
+					);
+					leafStatuses[leafSlug] = leafStatus;
+					if (leafRow?.name) leafNames[leafSlug] = leafRow.name;
+					leaves.push({
+						slug: leafSlug,
+						name: leafRow?.name ?? leafSlug,
+						status: leafStatus,
+						evidenceId: leafEv?.id ?? null,
+						evidenceFilePath: leafEv?.filePath ?? null,
+						evidenceFileName: leafEv?.fileName ?? null,
+						evidenceMimeType: leafEv?.mimeType ?? null,
+						evidenceExtractedData:
+							(leafEv?.extractedData as Record<string, unknown> | null) ??
+							null,
+						evidenceCheckResult:
+							(leafEv?.checkResult as Record<string, unknown> | null) ?? null,
+					});
+				}
+				const result = evaluateSatisfactionLogic(
+					element.satisfactionLogic,
+					leafStatusBySlug,
+				);
+				matchedPath = result.matchedBranch;
+				status =
+					result.status === "met"
+						? "met"
+						: result.status === "pending"
+							? "pending"
+							: "missing";
+			}
+
+			if (!ev && !element.satisfactionLogic) {
 				return {
 					slug: element.slug,
 					name: element.name,
@@ -671,42 +893,16 @@ export async function checkPlacementCompliance(
 					evidenceVerifiedAt: null,
 					evidenceFilePath: null,
 					evidenceFileName: null,
-						evidenceMimeType: null,
-						evidenceExtractedData: null,
-						evidenceCheckResult: null,
-					};
-				}
-
-			// Determine carry-forward: candidate-scoped items with approved evidence
-			// that were created before any current placement are carry-forward
-			const isCarryForward =
-				element.scope === "candidate" && ev.status === "approved";
-
-			// Determine effective status
-			let status: PlacementComplianceItem["status"];
-			if (ev.status === "approved") {
-				if (ev.expiresAt && ev.expiresAt <= now) {
-					status = "expired";
-				} else if (
-					ev.expiresAt &&
-					element.expiryWarningDays &&
-					ev.expiresAt.getTime() - now.getTime() <=
-						element.expiryWarningDays * 24 * 60 * 60 * 1000
-				) {
-					status = "expiring";
-				} else {
-					status = "met";
-				}
-			} else if (ev.status === "expired") {
-				status = "expired";
-			} else if (ev.status === "requires_review") {
-				status = "requires_review";
-			} else if (ev.status === "pending" || ev.status === "processing") {
-				status = "pending";
-			} else {
-				// rejected or unknown
-				status = "missing";
+					evidenceMimeType: null,
+					evidenceExtractedData: null,
+					evidenceCheckResult: null,
+					satisfactionLogic: null,
+					matchedPath: null,
+				};
 			}
+
+			const isCarryForward =
+				element.scope === "candidate" && ev?.status === "approved";
 
 			return {
 				slug: element.slug,
@@ -716,23 +912,27 @@ export async function checkPlacementCompliance(
 				fulfilmentProvider: element.fulfilmentProvider,
 				status,
 				carryForward: isCarryForward && status === "met",
-				expiresAt: ev.expiresAt,
-				evidenceId: ev.id,
-				evidenceStatus: ev.status,
+				expiresAt: ev?.expiresAt ?? null,
+				evidenceId: ev?.id ?? null,
+				evidenceStatus: ev?.status ?? null,
 				packageSlug,
 				packageReason,
-				evidenceSource: ev.source,
-				evidenceVerificationStatus: ev.verificationStatus,
-				evidenceIssuedAt: ev.issuedAt,
-				evidenceVerifiedAt: ev.verifiedAt,
-				evidenceFilePath: ev.filePath,
-				evidenceFileName: ev.fileName,
-				evidenceMimeType: ev.mimeType,
-				evidenceExtractedData: ev.extractedData as Record<
-					string,
-					unknown
-				> | null,
-				evidenceCheckResult: ev.checkResult as Record<string, unknown> | null,
+				evidenceSource: ev?.source ?? null,
+				evidenceVerificationStatus: ev?.verificationStatus ?? null,
+				evidenceIssuedAt: ev?.issuedAt ?? null,
+				evidenceVerifiedAt: ev?.verifiedAt ?? null,
+				evidenceFilePath: ev?.filePath ?? null,
+				evidenceFileName: ev?.fileName ?? null,
+				evidenceMimeType: ev?.mimeType ?? null,
+				evidenceExtractedData:
+					(ev?.extractedData as Record<string, unknown> | null) ?? null,
+				evidenceCheckResult:
+					(ev?.checkResult as Record<string, unknown> | null) ?? null,
+				satisfactionLogic: element.satisfactionLogic ?? null,
+				matchedPath,
+				leafStatuses,
+				leafNames,
+				leaves,
 			};
 		},
 	);

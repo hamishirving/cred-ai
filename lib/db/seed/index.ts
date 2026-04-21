@@ -17,6 +17,7 @@ import {
 	complianceElements,
 	compliancePackages,
 	packageElements,
+	assignmentRules,
 	users,
 	orgMemberships,
 	profiles,
@@ -42,6 +43,7 @@ import {
 	usPackageContents,
 	usRoles,
 	usAcceptableDocuments,
+	usAssignmentRules,
 } from "./markets";
 import {
 	meridianCandidates,
@@ -303,6 +305,20 @@ Sign off as: "The Oakwood Care Team"`,
 				parent: "Texas",
 				jurisdiction: "texas",
 				address: "5323 Harry Hines Blvd, Dallas, TX 75390",
+			},
+			{
+				name: "Trinity Health",
+				type: "Hospital",
+				parent: "Texas",
+				jurisdiction: "texas",
+				address: "20555 Victor Pkwy, Livonia, MI 48152",
+			},
+			{
+				name: "Trinity Health Dallas",
+				type: "Unit",
+				parent: "Trinity Health",
+				jurisdiction: "texas",
+				address: "5200 Harry Hines Blvd, Dallas, TX 75235",
 			},
 			{ name: "Florida", type: "State", jurisdiction: "florida" },
 			{
@@ -743,6 +759,38 @@ Sign off as: "${config.name} Credentialing Team"`),
 	}
 	console.log(`   ✓ Created ${packageTemplates.length} compliance packages`);
 
+	// 6b. Create assignment rules (US only for now — Trinity Health facility layer)
+	if (config.market === "us") {
+		let ruleCount = 0;
+		for (const ruleSpec of usAssignmentRules) {
+			const packageId = packageMap.get(ruleSpec.packageSlug);
+			if (!packageId) continue;
+			const specificWorkNodeId = ruleSpec.specificWorkNodeName
+				? nodeMap.get(ruleSpec.specificWorkNodeName)
+				: null;
+			const roleId = ruleSpec.roleSlug ? roleMap.get(ruleSpec.roleSlug) : null;
+			const workNodeTypeId = ruleSpec.workNodeTypeName
+				? typeMap.get(ruleSpec.workNodeTypeName)
+				: null;
+			// Skip rules whose referenced nodes/roles don't exist in this org.
+			if (ruleSpec.specificWorkNodeName && !specificWorkNodeId) continue;
+			await db.insert(assignmentRules).values({
+				organisationId: org.id,
+				packageId,
+				name: ruleSpec.name,
+				description: ruleSpec.description ?? null,
+				roleId: roleId ?? null,
+				workNodeTypeId: workNodeTypeId ?? null,
+				specificWorkNodeId: specificWorkNodeId ?? null,
+				jurisdictions: ruleSpec.jurisdictions ?? null,
+			});
+			ruleCount++;
+		}
+		if (ruleCount > 0) {
+			console.log(`   ✓ Created ${ruleCount} assignment rules`);
+		}
+	}
+
 	// 7. Create pipeline
 	const [pipeline] = await db
 		.insert(pipelines)
@@ -898,7 +946,7 @@ Sign off as: "${config.name} Credentialing Team"`),
 				startDateDays: 35,
 			},
 			"natasha.smith@email.com": {
-				workNodeName: "UnityPoint Health Des Moines",
+				workNodeName: "Trinity Health Dallas",
 				roleSlug: "travel-rn",
 				status: "onboarding",
 				dealType: "standard",
@@ -941,6 +989,65 @@ Sign off as: "${config.name} Credentialing Team"`),
 					})
 					.returning();
 				placementId = pl.id;
+
+				// Trinity Health MMR demo: inject partial evidence across the
+				// satisfactionLogic leaves so the evaluator picks the "doses"
+				// branch as the most-advanced pending path.
+				if (candidateConfig.profile.email === "natasha.smith@email.com") {
+					const mmrLeafEvidence: Array<{
+						slug: string;
+						status:
+							| "pending"
+							| "processing"
+							| "requires_review"
+							| "approved"
+							| "rejected"
+							| "expired";
+						verificationStatus:
+							| "unverified"
+							| "auto_verified"
+							| "human_verified"
+							| "external_verified";
+					}> = [
+						{
+							slug: "mmr-dose-1",
+							status: "approved",
+							verificationStatus: "human_verified",
+						},
+						{
+							slug: "mmr-dose-2",
+							status: "requires_review",
+							verificationStatus: "unverified",
+						},
+						{
+							slug: "titer-measles-igg",
+							status: "approved",
+							verificationStatus: "human_verified",
+						},
+					];
+					for (const leaf of mmrLeafEvidence) {
+						const leafElementId = elementMap.get(leaf.slug);
+						if (!leafElementId) continue;
+						await db.insert(evidence).values({
+							organisationId: org.id,
+							complianceElementId: leafElementId,
+							profileId: profile.id,
+							placementId: pl.id,
+							evidenceType: "document",
+							source: "user_upload",
+							status: leaf.status,
+							verificationStatus: leaf.verificationStatus,
+							dataOwnership: "organisation",
+							issuedAt: daysFromNow(-randomInt(10, 90)),
+							expiresAt: null,
+							verifiedAt:
+								leaf.status === "approved"
+									? daysFromNow(-randomInt(1, 10))
+									: null,
+						});
+						evidenceCount++;
+					}
+				}
 			}
 		} else {
 			const workNodeNames = config.workNodes

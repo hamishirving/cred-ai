@@ -32,6 +32,7 @@ export interface PackageData {
 		roleIds: string[];
 		jurisdictions: string[];
 		workNodeTypeIds: string[];
+		specificWorkNodes: Array<{ id: string; name: string }>;
 	};
 }
 
@@ -59,12 +60,21 @@ export interface WorkNodeTypeData {
 	level: number;
 }
 
+export interface WorkNodeData {
+	id: string;
+	name: string;
+	typeName: string | null;
+	parentId: string | null;
+	jurisdiction: string | null;
+}
+
 interface ComplianceSettingsProps {
 	organisationId: string;
 	packages: PackageData[];
 	roles: RoleData[];
 	elements: ComplianceElementData[];
 	workNodeTypes: WorkNodeTypeData[];
+	workNodes: WorkNodeData[];
 	jurisdictions: string[];
 	facilityTypes: string[];
 	rolePackageMapping: Record<string, string[]>;
@@ -76,6 +86,7 @@ export function ComplianceSettings({
 	roles,
 	elements,
 	workNodeTypes,
+	workNodes,
 	jurisdictions,
 	facilityTypes,
 	rolePackageMapping,
@@ -100,6 +111,7 @@ export function ComplianceSettings({
 					roles={roles}
 					elements={elements}
 					workNodeTypes={workNodeTypes}
+					workNodes={workNodes}
 					jurisdictions={jurisdictions}
 					rolePackageMapping={rolePackageMapping}
 				/>

@@ -39,6 +39,7 @@ import {
 } from "@/components/candidate/activity-timeline";
 import { FacilityDetailDialog } from "@/components/facility/facility-detail-dialog";
 import { NextActionsSection } from "@/components/placement/next-actions-section";
+import { SatisfactionTree } from "@/components/placements/satisfaction-tree";
 const DocumentIntelligenceDialog = dynamic(
 	() =>
 		import("@/components/placement/document-intelligence-dialog").then(
@@ -72,19 +73,26 @@ interface PlacementDetail {
 	notes: string | null;
 }
 
+type ItemStatus =
+	| "met"
+	| "expiring"
+	| "expired"
+	| "pending"
+	| "requires_review"
+	| "missing";
+
+type SatisfactionLogic =
+	| { op: "ALL"; children: SatisfactionLogic[] }
+	| { op: "ANY"; children: SatisfactionLogic[] }
+	| { op: "ELEMENT"; slug: string };
+
 interface ComplianceItem {
 	slug: string;
 	name: string;
 	category: string | null;
 	faHandled: boolean;
 	fulfilmentProvider: string;
-	status:
-		| "met"
-		| "expiring"
-		| "expired"
-		| "pending"
-		| "requires_review"
-		| "missing";
+	status: ItemStatus;
 	carryForward: boolean;
 	expiresAt: string | null;
 	evidenceId: string | null;
@@ -100,6 +108,21 @@ interface ComplianceItem {
 	evidenceMimeType: string | null;
 	evidenceExtractedData: Record<string, unknown> | null;
 	evidenceCheckResult: Record<string, unknown> | null;
+	satisfactionLogic?: SatisfactionLogic | null;
+	matchedPath?: SatisfactionLogic | null;
+	leafStatuses?: Record<string, ItemStatus>;
+	leafNames?: Record<string, string>;
+	leaves?: Array<{
+		slug: string;
+		name: string;
+		status: ItemStatus;
+		evidenceId: string | null;
+		evidenceFilePath: string | null;
+		evidenceFileName: string | null;
+		evidenceMimeType: string | null;
+		evidenceExtractedData: Record<string, unknown> | null;
+		evidenceCheckResult: Record<string, unknown> | null;
+	}>;
 }
 
 interface ComplianceSummary {
@@ -316,6 +339,7 @@ function getSourceFromReason(reason: string): string {
 	if (reason.startsWith("role:")) return "role";
 	if (reason.startsWith("state:")) return "state";
 	if (reason.startsWith("facility:")) return "facility";
+	if (reason.startsWith("assignment:")) return "facility";
 	if (reason.startsWith("conditional:")) return "federal";
 	return "federal";
 }
@@ -329,6 +353,8 @@ function getReasonLabel(reason: string): string {
 	}
 	if (reason.startsWith("facility:"))
 		return `Required by ${reason.split(":")[1]}`;
+	if (reason.startsWith("assignment:"))
+		return `Applied by ${reason.slice("assignment:".length)}`;
 	if (reason.includes("lapse-deal"))
 		return "Required for lapse deals (OIG/SAM)";
 	if (reason.includes("state-mandate")) return "Required by state mandate";
@@ -583,6 +609,11 @@ function ComplianceDetailPanel({
 	ordered?: boolean;
 }) {
 	const [docDialogOpen, setDocDialogOpen] = useState(false);
+	const [activeLeafSlug, setActiveLeafSlug] = useState<string | null>(null);
+	const activeLeaf =
+		activeLeafSlug && item?.leaves
+			? item.leaves.find((l) => l.slug === activeLeafSlug) ?? null
+			: null;
 
 	if (!item) {
 		return (
@@ -620,6 +651,25 @@ function ComplianceDetailPanel({
 				<p className="text-sm text-muted-foreground leading-relaxed">
 					{element.description}
 				</p>
+			)}
+
+			{/* Satisfaction logic tree */}
+			{item.satisfactionLogic && (
+				<div className="space-y-2 border-t border-border pt-4">
+					<h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+						Satisfaction paths
+					</h4>
+					<SatisfactionTree
+						logic={item.satisfactionLogic}
+						matchedPath={item.matchedPath ?? undefined}
+						leafStatuses={item.leafStatuses}
+						elementNames={item.leafNames}
+						onLeafClick={(slug) => setActiveLeafSlug(slug)}
+					/>
+					<p className="text-[10px] text-muted-foreground pt-1">
+						Click a requirement to upload or view its evidence.
+					</p>
+				</div>
 			)}
 
 			{/* Requirement definition */}
@@ -704,7 +754,7 @@ function ComplianceDetailPanel({
 						</div>
 					)}
 
-					{item.evidenceFilePath ? (
+					{item.satisfactionLogic ? null : item.evidenceFilePath ? (
 						<Button
 							size="sm"
 							className="w-full mt-2"
@@ -742,48 +792,77 @@ function ComplianceDetailPanel({
 			)}
 
 			{/* Upload & verify for elements without evidence */}
-			{!hasEvidence && element?.evidenceType === "document" && (
-				<div className="border-t border-border pt-4">
-					<Button
-						variant="outline"
-						size="sm"
-						className="w-full"
-						onClick={() => setDocDialogOpen(true)}
-					>
-						<Upload className="size-3 mr-1.5" />
-						Upload & Verify
-					</Button>
-				</div>
-			)}
+			{!item.satisfactionLogic &&
+				!hasEvidence &&
+				element?.evidenceType === "document" && (
+					<div className="border-t border-border pt-4">
+						<Button
+							variant="outline"
+							size="sm"
+							className="w-full"
+							onClick={() => setDocDialogOpen(true)}
+						>
+							<Upload className="size-3 mr-1.5" />
+							Upload & Verify
+						</Button>
+					</div>
+				)}
 
 			{/* Missing item guidance */}
-			{!hasEvidence && element && element.evidenceType !== "document" && (
-				<div className="rounded-md border border-border bg-muted/30 px-3 py-2">
-					<p className="text-xs text-muted-foreground">
-						<span className="font-medium text-foreground">Required:</span>{" "}
-						{EVIDENCE_TYPE_LABELS[element.evidenceType] || element.evidenceType}{" "}
-						needed to fulfil this requirement.
-					</p>
-				</div>
+			{!item.satisfactionLogic &&
+				!hasEvidence &&
+				element &&
+				element.evidenceType !== "document" && (
+					<div className="rounded-md border border-border bg-muted/30 px-3 py-2">
+						<p className="text-xs text-muted-foreground">
+							<span className="font-medium text-foreground">Required:</span>{" "}
+							{EVIDENCE_TYPE_LABELS[element.evidenceType] || element.evidenceType}{" "}
+							needed to fulfil this requirement.
+						</p>
+					</div>
+				)}
+
+			{/* Unified document intelligence dialog (parent element). */}
+			{!item.satisfactionLogic && (
+				<DocumentIntelligenceDialog
+					open={docDialogOpen}
+					onOpenChange={setDocDialogOpen}
+					placementId={placementId}
+					organisationId={organisationId}
+					profileId={profileId}
+					elementSlug={item.slug}
+					elementName={item.name}
+					existingFilePath={item.evidenceFilePath}
+					existingFileName={item.evidenceFileName}
+					existingMimeType={item.evidenceMimeType}
+					existingExtractedData={item.evidenceExtractedData}
+					existingCheckResult={item.evidenceCheckResult}
+					existingEvidenceId={item.evidenceId}
+					onVerified={onVerified}
+				/>
 			)}
 
-			{/* Unified document intelligence dialog */}
-			<DocumentIntelligenceDialog
-				open={docDialogOpen}
-				onOpenChange={setDocDialogOpen}
-				placementId={placementId}
-				organisationId={organisationId}
-				profileId={profileId}
-				elementSlug={item.slug}
-				elementName={item.name}
-				existingFilePath={item.evidenceFilePath}
-				existingFileName={item.evidenceFileName}
-				existingMimeType={item.evidenceMimeType}
-				existingExtractedData={item.evidenceExtractedData}
-				existingCheckResult={item.evidenceCheckResult}
-				existingEvidenceId={item.evidenceId}
-				onVerified={onVerified}
-			/>
+			{/* Per-leaf document dialog for satisfaction-tree elements. */}
+			{activeLeaf && (
+				<DocumentIntelligenceDialog
+					open={!!activeLeafSlug}
+					onOpenChange={(next) => {
+						if (!next) setActiveLeafSlug(null);
+					}}
+					placementId={placementId}
+					organisationId={organisationId}
+					profileId={profileId}
+					elementSlug={activeLeaf.slug}
+					elementName={activeLeaf.name}
+					existingFilePath={activeLeaf.evidenceFilePath}
+					existingFileName={activeLeaf.evidenceFileName}
+					existingMimeType={activeLeaf.evidenceMimeType}
+					existingExtractedData={activeLeaf.evidenceExtractedData}
+					existingCheckResult={activeLeaf.evidenceCheckResult}
+					existingEvidenceId={activeLeaf.evidenceId}
+					onVerified={onVerified}
+				/>
+			)}
 		</Card>
 	);
 }

@@ -22,6 +22,7 @@ import type {
 	ComplianceElementData,
 	PackageData,
 	RoleData,
+	WorkNodeData,
 	WorkNodeTypeData,
 } from "./compliance-settings";
 import { PackageDetailModal } from "./package-detail-modal";
@@ -88,6 +89,7 @@ interface PackageBrowserProps {
 	roles: RoleData[];
 	elements: ComplianceElementData[];
 	workNodeTypes: WorkNodeTypeData[];
+	workNodes: WorkNodeData[];
 	jurisdictions: string[];
 	rolePackageMapping: Record<string, string[]>;
 }
@@ -98,6 +100,7 @@ export function PackageBrowser({
 	roles,
 	elements,
 	workNodeTypes,
+	workNodes,
 	jurisdictions,
 	rolePackageMapping,
 }: PackageBrowserProps) {
@@ -364,26 +367,60 @@ export function PackageBrowser({
 												</div>
 											</div>
 
-											<div className="mt-3 flex gap-3 flex-wrap text-xs">
-												<div className="rounded-md bg-muted/50 px-2 py-1">
-													Roles:{" "}
-													{assignedRoleNames.length > 0
-														? assignedRoleNames.join(", ")
-														: "None"}
-												</div>
-												<div className="rounded-md bg-muted/50 px-2 py-1 capitalize">
-													Jurisdictions:{" "}
-													{pkg.assignments.jurisdictions.length > 0
-														? pkg.assignments.jurisdictions.join(", ")
-														: "None"}
-												</div>
-												<div className="rounded-md bg-muted/50 px-2 py-1">
-													Facilities:{" "}
-													{assignedWorkNodeTypeNames.length > 0
-														? assignedWorkNodeTypeNames.join(", ")
-														: "None"}
-												</div>
-											</div>
+											{(() => {
+												const chips: React.ReactNode[] = [];
+												if (assignedRoleNames.length > 0) {
+													chips.push(
+														<div
+															key="roles"
+															className="rounded-md bg-muted/50 px-2 py-1"
+														>
+															Roles: {assignedRoleNames.join(", ")}
+														</div>,
+													);
+												}
+												if (pkg.assignments.jurisdictions.length > 0) {
+													chips.push(
+														<div
+															key="jur"
+															className="rounded-md bg-muted/50 px-2 py-1 capitalize"
+														>
+															Jurisdictions:{" "}
+															{pkg.assignments.jurisdictions.join(", ")}
+														</div>,
+													);
+												}
+												if (assignedWorkNodeTypeNames.length > 0) {
+													chips.push(
+														<div
+															key="ftype"
+															className="rounded-md bg-muted/50 px-2 py-1"
+														>
+															Facility types:{" "}
+															{assignedWorkNodeTypeNames.join(", ")}
+														</div>,
+													);
+												}
+												if (pkg.assignments.specificWorkNodes.length > 0) {
+													chips.push(
+														<div
+															key="fspec"
+															className="rounded-md bg-[color-mix(in_srgb,var(--positive)_12%,transparent)] text-[var(--positive)] px-2 py-1 font-medium"
+														>
+															Location:{" "}
+															{pkg.assignments.specificWorkNodes
+																.map((n) => n.name)
+																.join(", ")}
+														</div>,
+													);
+												}
+												if (chips.length === 0) return null;
+												return (
+													<div className="mt-3 flex gap-3 flex-wrap text-xs">
+														{chips}
+													</div>
+												);
+											})()}
 										</div>
 									);
 								})}

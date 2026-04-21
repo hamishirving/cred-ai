@@ -9,6 +9,7 @@ const assignmentsSchema = z.object({
 	roleIds: z.array(z.string().uuid()).default([]),
 	jurisdictions: z.array(z.string()).default([]),
 	workNodeTypeIds: z.array(z.string().uuid()).default([]),
+	specificWorkNodeIds: z.array(z.string().uuid()).default([]),
 });
 
 export const packageUpsertSchema = z.object({
@@ -41,7 +42,8 @@ export function hasAnyAssignments(
 	return (
 		assignments.roleIds.length > 0 ||
 		assignments.jurisdictions.length > 0 ||
-		assignments.workNodeTypeIds.length > 0
+		assignments.workNodeTypeIds.length > 0 ||
+		assignments.specificWorkNodeIds.length > 0
 	);
 }
 
@@ -98,6 +100,7 @@ export function buildEditorAssignmentRules({
 		roleId?: string;
 		jurisdictions?: string[];
 		workNodeTypeId?: string;
+		specificWorkNodeId?: string;
 	}> = [];
 
 	for (const roleId of assignments.roleIds) {
@@ -128,6 +131,16 @@ export function buildEditorAssignmentRules({
 			name: `${PACKAGE_EDITOR_RULE_PREFIX}facility:${workNodeTypeId}`,
 			description: "Managed by compliance package editor (facility assignment)",
 			workNodeTypeId,
+		});
+	}
+
+	for (const specificWorkNodeId of assignments.specificWorkNodeIds) {
+		rows.push({
+			organisationId,
+			packageId,
+			name: `${PACKAGE_EDITOR_RULE_PREFIX}location:${specificWorkNodeId}`,
+			description: "Managed by compliance package editor (specific location)",
+			specificWorkNodeId,
 		});
 	}
 

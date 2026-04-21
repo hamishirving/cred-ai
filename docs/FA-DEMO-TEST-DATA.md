@@ -225,3 +225,28 @@ Recommended order for the Medsol deep dive:
 4. **Gap Analyzer** with Peter Walsh (lapse deal). Shows the worst case, auto-escalation to Package #2 with FACIS sanctions.
 
 5. **Gap Analyzer** with Lexie Chen (reassignment). Shows worker passport carrying forward from TX, only CA-specific gaps.
+
+## Compliance Logic Layers (Satisfaction Trees + Facility Rules)
+
+Demonstrates two extensions to the compliance engine:
+
+- **Satisfaction logic** — a single element can be satisfied by any of several alternative evidence paths, expressed as an AND/OR tree on `compliance_elements.satisfaction_logic` (jsonb). The resolver picks the most-advanced matching branch and the UI renders the tree with the matched path highlighted.
+- **Facility-layer assignment rules** — an assignment rule can pin a package to a specific work node via `assignment_rules.specific_work_node_id`. The resolver walks the placement's work-node parent chain, so a rule on "Trinity Health" also fires for descendants like "Trinity Health Dallas".
+
+### How to view
+
+1. Open Natasha Smith's placement (`natasha.smith@email.com`, seeded at Trinity Health Dallas).
+2. Scroll the compliance requirements list past Federal Core / RN Package / Hospital Package.
+3. Open the **Trinity Health — Facility Layer** group (seeded from the facility rule above).
+4. Click **MMR Immunity** — the detail panel shows the satisfaction tree with branches for titers / dose series / component vaccines / declination, with the seeded "dose 1 + dose 2" branch marked as the matched path.
+
+### Key files
+
+- Schema: `lib/db/schema/compliance-elements.ts` (`satisfaction_logic`), `lib/db/schema/assignment-rules.ts` (`specific_work_node_id`)
+- Resolver: `lib/compliance/resolve-requirements.ts` (ancestor walk, branch evaluation)
+- UI: `components/placements/satisfaction-tree.tsx`, rendered in `app/(app)/placements/[id]/page.tsx`
+- Seed: `lib/db/seed/markets/us.ts` (mmr-immunity + leaves + facility-layer package/rule), `lib/db/seed/index.ts` (Natasha's partial evidence injection)
+
+### Troubleshooting
+
+If the Trinity Health Facility Layer group doesn't appear, run `npx tsx scripts/diag-satisfaction.ts` — it verifies the element, package, work nodes, assignment rule, and Natasha's placement are all wired up.
