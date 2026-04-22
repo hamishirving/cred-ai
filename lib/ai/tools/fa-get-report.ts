@@ -9,7 +9,7 @@ import { z } from "zod";
 import { getFAClient } from "@/lib/api/first-advantage/client";
 
 export const faGetReport = tool({
-	description: `Get a report link for a completed First Advantage screening.
+	description: `Get a report link for a completed background screening.
 Returns a URL to the full screening report. Only works for completed screenings.`,
 
 	inputSchema: z.object({

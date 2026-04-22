@@ -133,7 +133,7 @@ export function FAScreeningTool({
 		return (
 			<ToolLoading
 				toolCallId={toolCallId}
-				toolName="FA Screening Status"
+				toolName="Screening Status"
 				state={state}
 				input={input}
 			/>

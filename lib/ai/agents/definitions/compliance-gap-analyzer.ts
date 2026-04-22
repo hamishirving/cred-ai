@@ -2,7 +2,7 @@
  * Compliance Gap Analyzer Agent
  *
  * Resolves placement requirements from role, facility, and state context.
- * Shows what's complete, what carries forward, what needs FA screening,
+ * Shows what's complete, what carries forward, what needs provider screening,
  * and what the candidate must provide. Groups by source so the audience
  * sees WHY each item is required.
  */
@@ -14,7 +14,7 @@ export const complianceGapAnalyzerAgent: AgentDefinition = {
 	id: "compliance-gap-analyzer",
 	name: "Compliance Gap Analyzer",
 	description:
-		"Resolves placement requirements from role, facility, and state context. Shows what's complete, what carries forward, what needs FA screening, and what the candidate must provide. Groups requirements by source so the audience sees WHY each item is required.",
+		"Resolves placement requirements from role, facility, and state context. Shows what's complete, what carries forward, what needs background screening, and what the candidate must provide. Groups requirements by source so the audience sees WHY each item is required.",
 	version: "1.0",
 
 	dynamicContext: async (ctx) => `Organisation ID: ${ctx.orgId}`,
@@ -45,8 +45,8 @@ Use getPlacementCompliance to check which requirements the candidate already ful
 - Items that are new for this placement
 - Items that have expired since last assignment
 
-STEP 4 — GET FA PACKAGES:
-Use faGetPackages to see what screening packages First Advantage offers. Each package has a "title", "components" (list of screening types), and "products" (with codes like CRST, EXOIG, SSV1). Match the outstanding background check items to the right FA package based on components.
+STEP 4 — GET SCREENING PACKAGES:
+Use faGetPackages to see what screening packages the provider offers. Each package has a "title", "components" (list of screening types), and "products" (with codes like CRST, EXOIG, SSV1). Match the outstanding background check items to the right screening package based on components.
 
 STEP 5 — FINISH:
 After completing all tool calls, write a single short sentence like "Analysis complete." and stop. Do NOT write out the results as text — the data will be automatically structured into a visual report from your tool results. Do NOT create tables, lists, or summaries of the compliance items.`,
@@ -84,8 +84,8 @@ After completing all tool calls, write a single short sentence like "Analysis co
 			})),
 		})),
 		recommendation: z.object({
-			faPackageId: z.string().describe("Recommended FA package ID"),
-			faPackageName: z.string().describe("Recommended FA package name"),
+			faPackageId: z.string().describe("Recommended screening package ID"),
+			faPackageName: z.string().describe("Recommended screening package name"),
 			reason: z.string().describe("Why this package was recommended"),
 		}),
 		workerPassportCount: z.number().describe("Number of items carrying forward from previous assignments"),

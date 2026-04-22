@@ -81,13 +81,13 @@ async function ensureCandidateMeetsPackageRequirements({
 }
 
 export const faInitiateScreening = tool({
-	description: `Initiate a background screening through First Advantage.
+	description: `Initiate a background screening through the background screening provider.
 Requires a candidate ID (from faCreateCandidate) and a package ID (from faSelectPackage).
 Also requires organisationId and profileId for DB persistence. The placement is auto-resolved.
 Returns the screening ID for status tracking.
 
 For drug/health screenings, provide drugScreening with the candidate's sex and address.
-FA uses the address to route the candidate to the nearest collection clinic.`,
+The provider uses the address to route the candidate to the nearest collection clinic.`,
 
 	inputSchema: z.object({
 		candidateId: z.string().describe("FA candidate ID from faCreateCandidate"),

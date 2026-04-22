@@ -64,7 +64,18 @@ export async function POST(
 		});
 
 		if (existingScreenings.length > 0 && existingScreenings[0].faCandidateId) {
-			faCandidateId = existingScreenings[0].faCandidateId;
+			// FA's PUT /candidates/:id doesn't persist SSN updates, so a candidate
+			// created without one can't be retrofitted. Check and recreate if needed.
+			const existing = await client.getCandidate(
+				existingScreenings[0].faCandidateId,
+			);
+			if (existing.ssn) {
+				faCandidateId = existing.id;
+			} else {
+				const candidate = await client.createCandidate(candidatePayload);
+				faCandidateId = candidate.id;
+				createdNewCandidate = true;
+			}
 		} else {
 			try {
 				const candidate = await client.createCandidate(candidatePayload);

@@ -1155,7 +1155,7 @@ export const usAcceptableDocuments: Record<
 			acceptanceCriteria:
 				"Drug screen must test for all 13 required analytes: Amphetamines (including Methamphetamine), Barbiturates, Benzodiazepines, Cocaine Metabolites, Marijuana, Methadone, Opiates (Codeine, Morphine), Phencyclidine, Propoxyphene, Fentanyl, Meperidine, Oxycodone, and Tramadol. Result must show Negative for all analytes. Any non-negative result (Positive, Dilute, or Invalid) requires review. Negative Dilute results require immediate recollection. Lab name, collection date, and MRO certification must be visible. FA product code DHS90007 covers all 13 analytes.",
 			clinicianGuidance:
-				"Your drug screen will be ordered through First Advantage and routed to a clinic near you. The test covers 13 substances. You'll receive clinic details via email.",
+				"Your drug screen will be ordered through our background screening partner and routed to a clinic near you. The test covers 13 substances. You'll receive clinic details via email.",
 		},
 	],
 	"covid-vaccination": [

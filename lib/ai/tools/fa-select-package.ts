@@ -10,7 +10,7 @@ import { z } from "zod";
 import { selectFAPackage } from "@/lib/api/first-advantage/package-selector";
 
 export const faSelectPackage = tool({
-  description: `Select the correct First Advantage screening package for a placement.
+  description: `Select the correct background screening package for a placement.
 Returns the package ID, name, tier (1 or 2), whether it includes drug/health, and the reason.
 
 IMPORTANT: Always call this tool to determine the package. Do not reason about

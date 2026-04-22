@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
-import faIcon from "@/app/FA-icon.png";
+import { forwardRef, useImperativeHandle, useState } from "react";
 import { toast } from "@/components/toast";
 import { streamAgentExecution } from "@/lib/ai/agents/stream-agent-execution";
 import {
@@ -147,9 +145,11 @@ const DELEGABLE_CATEGORIES = new Set([
 // Task classification
 // ============================================
 
-/** Detect FA screening tasks */
+/** Detect background screening tasks */
 const isFaTask = (task: PlacementTask) =>
-	task.category === "general" && task.title.startsWith("Initiate FA screening");
+	task.category === "general" &&
+	(task.title.startsWith("Initiate background screening") ||
+		task.title.startsWith("Initiate FA screening"));
 
 /** Detect screening-related escalation tasks */
 const isScreeningEscalation = (task: PlacementTask) =>
@@ -254,11 +254,6 @@ function ScreeningItemRow({
 			<div className="flex-1 min-w-0">
 				<div className="flex items-center gap-2">
 					<span className="text-sm truncate">{item.name}</span>
-					<Image
-						src={faIcon}
-						alt="First Advantage"
-						className="size-4 shrink-0"
-					/>
 				</div>
 				{item.expiresAt && (
 					<p className="text-[10px] text-muted-foreground mt-0.5">
@@ -287,15 +282,25 @@ function ScreeningItemRow({
 // Component
 // ============================================
 
-export function NextActionsSection({
-	tasks: initialTasks,
-	screeningItems,
-	placement,
-	context,
-	candidateAddress,
-	facilityDrugTestRequirements = [],
-	onRefresh,
-}: NextActionsSectionProps) {
+export interface NextActionsSectionHandle {
+	initiateScreening: () => void;
+}
+
+export const NextActionsSection = forwardRef<
+	NextActionsSectionHandle,
+	NextActionsSectionProps
+>(function NextActionsSection(
+	{
+		tasks: initialTasks,
+		screeningItems,
+		placement,
+		context,
+		candidateAddress,
+		facilityDrugTestRequirements = [],
+		onRefresh,
+	},
+	ref,
+) {
 	const [tasks, setTasks] = useState(initialTasks);
 	const [submittingScreening, setSubmittingScreening] = useState(false);
 	const [checkingStatus, setCheckingStatus] = useState(false);
@@ -306,6 +311,12 @@ export function NextActionsSection({
 		executionId: string;
 		agentName: string;
 	} | null>(null);
+
+	useImperativeHandle(ref, () => ({
+		initiateScreening: () => {
+			void handleInitiateScreening();
+		},
+	}));
 
 	// Only show pending + in_progress tasks
 	const activeTasks = tasks.filter(
@@ -779,7 +790,6 @@ export function NextActionsSection({
 						className="text-xs gap-1.5 h-6"
 					>
 						{hasActiveDohsOrder ? "Order Additional D&OHS" : "Order D&OHS"}
-						<Image src={faIcon} alt="FA" className="size-3.5" />
 					</Button>
 				)}
 				{faTask && faTask.status === "in_progress" && (
@@ -817,7 +827,7 @@ export function NextActionsSection({
 							</>
 						) : (
 							<>
-								Initiate FA Screening
+								Initiate Background Screening
 								<ArrowUpRight className="size-3" />
 							</>
 						)}
@@ -929,4 +939,4 @@ export function NextActionsSection({
 			/>
 		</Card>
 	);
-}
+});

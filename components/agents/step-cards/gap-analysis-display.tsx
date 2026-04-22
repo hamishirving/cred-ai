@@ -72,7 +72,7 @@ const SOURCE_ICONS: Record<string, typeof Shield> = {
 };
 
 const HANDLER_CONFIG: Record<string, { label: string; variant: "neutral" | "info" | "warning" }> = {
-	fa: { label: "FA", variant: "info" },
+	fa: { label: "Screening", variant: "info" },
 	candidate: { label: "Candidate", variant: "warning" },
 	facility: { label: "Facility", variant: "neutral" },
 	credentially: { label: "Cred", variant: "info" },

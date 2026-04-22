@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
-import faIcon from "@/app/FA-icon.png";
 import { MapPin, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -100,7 +98,7 @@ export function DHSOrderDialog({
 
 			toast({
 				type: "success",
-				description: `${selectedCodes.size} D&OHS item${selectedCodes.size !== 1 ? "s" : ""} ordered via First Advantage`,
+				description: `${selectedCodes.size} D&OHS item${selectedCodes.size !== 1 ? "s" : ""} ordered with the screening provider`,
 			});
 			onOpenChange(false);
 			onOrderComplete();
@@ -123,7 +121,6 @@ export function DHSOrderDialog({
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2 text-base">
 						Order D&OHS Items
-						<Image src={faIcon} alt="First Advantage" className="size-5" />
 					</DialogTitle>
 					<DialogDescription className="text-xs">
 						Select drug, health, and occupational screening items for {candidateName}

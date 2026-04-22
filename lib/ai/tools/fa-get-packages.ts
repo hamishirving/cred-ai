@@ -9,7 +9,7 @@ import { z } from "zod";
 import { getFAClient } from "@/lib/api/first-advantage/client";
 
 export const faGetPackages = tool({
-	description: `List available First Advantage screening packages.
+	description: `List available background screening packages.
 Returns all packages configured for this account with their screening components.
 Use this to show the client what screening options are available.`,
 

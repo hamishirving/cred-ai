@@ -151,11 +151,6 @@ function PackageGroup({
 										Carry-forward
 									</span>
 								)}
-								{item.faHandled && (
-									<span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
-										FA
-									</span>
-								)}
 								<Badge
 									variant={statusVariant(item.status)}
 									className="text-xs capitalize"

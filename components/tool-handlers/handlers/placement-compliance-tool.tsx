@@ -120,7 +120,7 @@ function statusLabel(status: ComplianceItem["status"]): string {
 
 function handlerLabel(item: ComplianceItem): string | null {
 	if (item.status === "met") return null;
-	if (item.faHandled) return "FA";
+	if (item.faHandled) return "Screening";
 	// Facility/placement-scoped items are typically candidate or Credentially
 	if (item.packageSlug?.includes("facility") || item.packageSlug?.includes("hospital")) return "Candidate";
 	return "Credentially";
@@ -207,7 +207,7 @@ export function PlacementComplianceTool({
 					{carryForwardCount > 0 && (
 						<span>{carryForwardCount} carry forward</span>
 					)}
-					{faNeeded > 0 && <span>{faNeeded} need FA</span>}
+					{faNeeded > 0 && <span>{faNeeded} need screening</span>}
 					{summary.missing > 0 && (
 						<span>{summary.missing} missing</span>
 					)}
@@ -280,7 +280,7 @@ export function PlacementComplianceTool({
 												{handler && (
 													<Badge
 														variant={
-															handler === "FA"
+															handler === "Screening"
 																? "warning"
 																: handler === "Candidate"
 																	? "neutral"
