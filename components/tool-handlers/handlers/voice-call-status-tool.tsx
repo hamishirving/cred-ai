@@ -13,6 +13,7 @@ interface TranscriptMessage {
 
 interface VoiceCallStatusOutput {
 	data?: {
+		callId?: string;
 		status?: string;
 		outcome?: string;
 		endedReason?: string;
@@ -123,7 +124,7 @@ export function VoiceCallStatusTool({
 				</p>
 			) : null}
 
-			{output.data.recordingUrl ? (
+			{output.data.recordingUrl && output.data.callId ? (
 				<div className="flex items-center gap-2 rounded-md border bg-muted/30 p-2">
 					<Volume2 className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
 					<audio
@@ -131,7 +132,10 @@ export function VoiceCallStatusTool({
 						preload="metadata"
 						className="h-8 w-full [&::-webkit-media-controls-panel]:bg-transparent"
 					>
-						<source src={output.data.recordingUrl} type="audio/mpeg" />
+						<source
+							src={`/api/voice/calls/${output.data.callId}/recording`}
+							type="audio/wav"
+						/>
 						<track kind="captions" label="No captions available" />
 					</audio>
 				</div>
