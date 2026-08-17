@@ -95,6 +95,7 @@ Returns transcript and captured data when complete. Only call this once — it h
 
 					return {
 						data: {
+							callId: voiceCall?.id,
 							status: finalResult.status,
 							outcome: finalResult.outcome,
 							endedReason: finalResult.endedReason,
@@ -112,8 +113,10 @@ Returns transcript and captured data when complete. Only call this once — it h
 
 			// Timed out — return last known status
 			const finalResult = await getVapiCallStatus(vapiCallId);
+			const timedOutCall = await getVoiceCallByVapiId({ vapiCallId });
 			return {
 				data: {
+					callId: timedOutCall?.id,
 					status: finalResult.status,
 					outcome: finalResult.outcome ?? "timeout",
 					endedReason: finalResult.endedReason,

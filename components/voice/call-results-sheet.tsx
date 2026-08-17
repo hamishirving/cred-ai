@@ -37,6 +37,7 @@ interface CallResultsSheetProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	artifact: CallArtifact | null;
+	callId: string | null;
 	candidateName: string;
 	workHistoryJobTitle: string;
 	workHistoryCompanyName: string;
@@ -85,6 +86,7 @@ export function CallResultsSheet({
 	open,
 	onOpenChange,
 	artifact,
+	callId,
 	candidateName,
 	workHistoryJobTitle,
 	workHistoryCompanyName,
@@ -308,8 +310,8 @@ export function CallResultsSheet({
 						</Card>
 					)}
 
-					{/* Audio Recording */}
-					{artifact.recordingUrl && (
+					{/* Audio Recording — always served fresh through the authenticated proxy */}
+					{artifact.recordingUrl && callId && (
 						<Card>
 							<CardHeader>
 								<CardTitle className="text-base">Call Recording</CardTitle>
@@ -317,14 +319,17 @@ export function CallResultsSheet({
 							</CardHeader>
 							<CardContent className="space-y-4">
 								<audio controls className="w-full">
-									<source src={artifact.recordingUrl} type="audio/mpeg" />
+									<source
+										src={`/api/voice/calls/${callId}/recording`}
+										type="audio/wav"
+									/>
 									<track kind="captions" label="No captions available" />
 									Your browser does not support the audio element.
 								</audio>
 								<Button variant="outline" size="sm" asChild>
 									<a
-										href={artifact.recordingUrl}
-										download={`${candidateName.replace(/\s+/g, "_")}_recording.mp3`}
+										href={`/api/voice/calls/${callId}/recording`}
+										download={`${candidateName.replace(/\s+/g, "_")}_recording.wav`}
 										target="_blank"
 										rel="noopener noreferrer"
 									>

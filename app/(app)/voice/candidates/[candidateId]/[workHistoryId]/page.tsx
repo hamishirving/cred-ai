@@ -335,6 +335,7 @@ export default function VerifyWorkHistoryPage({ params }: VerifyPageProps) {
 				open={showResults}
 				onOpenChange={setShowResults}
 				artifact={artifact}
+				callId={callId}
 				candidateName={candidate.name}
 				workHistoryJobTitle={workHistory.jobTitle}
 				workHistoryCompanyName={workHistory.companyName}
