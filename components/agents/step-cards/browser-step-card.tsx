@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
 	Globe,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { AgentStep, BrowserAction } from "@/lib/ai/agents/types";
+import { BrowserScreenshot } from "@/components/agents/browser-screenshot";
 import { SessionReplay } from "@/components/agents/session-replay";
 
 function ActionIcon({ type }: { type: string }) {
@@ -65,22 +66,6 @@ interface BrowserStepCardProps {
 	isActive?: boolean;
 }
 
-async function resolveScreenshotUrl(action: BrowserAction): Promise<string | null> {
-	if (action.screenshotUrl) return action.screenshotUrl;
-	if (!action.screenshotPath) return null;
-
-	try {
-		const res = await fetch(
-			`/api/documents/signed-url?path=${encodeURIComponent(action.screenshotPath)}`,
-		);
-		if (!res.ok) return null;
-		const data = (await res.json()) as { url?: string };
-		return data.url || null;
-	} catch {
-		return null;
-	}
-}
-
 export function BrowserStepCard({
 	step,
 	liveViewUrl,
@@ -129,44 +114,6 @@ export function BrowserStepCard({
 				: null,
 		[browserActions],
 	);
-	const [latestScreenshotUrl, setLatestScreenshotUrl] = useState<string | null>(
-		null,
-	);
-	const [isScreenshotLoading, setIsScreenshotLoading] = useState(false);
-
-	useEffect(() => {
-		let cancelled = false;
-
-		async function loadScreenshot() {
-			if (!latestAction) {
-				setLatestScreenshotUrl(null);
-				setIsScreenshotLoading(false);
-				return;
-			}
-
-			const hasScreenshotSource = !!(
-				latestAction.screenshotUrl || latestAction.screenshotPath
-			);
-			if (!hasScreenshotSource) {
-				setLatestScreenshotUrl(null);
-				setIsScreenshotLoading(false);
-				return;
-			}
-
-			setLatestScreenshotUrl(null);
-			setIsScreenshotLoading(true);
-			const url = await resolveScreenshotUrl(latestAction);
-			if (!cancelled) {
-				setLatestScreenshotUrl(url);
-				setIsScreenshotLoading(false);
-			}
-		}
-
-		void loadScreenshot();
-		return () => {
-			cancelled = true;
-		};
-	}, [latestAction]);
 
 	return (
 		<Card className="shadow-none border-border/50">
@@ -228,34 +175,11 @@ export function BrowserStepCard({
 												<Loader2 className="size-3 animate-spin shrink-0 ml-auto" />
 											)}
 										</div>
-										{(latestScreenshotUrl || isScreenshotLoading) && (
-											<div className="rounded border border-border/50 bg-muted/20 aspect-[16/10] overflow-hidden">
-												{latestScreenshotUrl ? (
-													<a
-														href={latestScreenshotUrl}
-														target="_blank"
-														rel="noopener noreferrer"
-														className="block h-full"
-													>
-														{/* eslint-disable-next-line @next/next/no-img-element */}
-														<img
-															src={latestScreenshotUrl}
-															alt="Browser action screenshot"
-															className="w-full h-full object-cover"
-														/>
-													</a>
-												) : (
-													<div className="h-full flex items-center justify-center gap-2 text-xs text-muted-foreground">
-														<Loader2 className="size-3 animate-spin" />
-														Loading screenshot...
-													</div>
-												)}
-											</div>
-										)}
 									</motion.div>
 								</AnimatePresence>
 							</div>
 						)}
+						<BrowserScreenshot browserActions={browserActions} />
 
 						{/* Error */}
 						{hasError && (

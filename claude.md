@@ -122,6 +122,7 @@ Located in `lib/ai/tools/`. 25+ tools organised by function:
 - Server Components by default, only add "use client" when needed
 - Tools render results directly in UI, keep AI responses brief after tool calls
 - Never modify `components/ui/` directly, extend via composition
+- Codex reviews use `codex exec` per `.claude/codex-review.md` (not `codex exec review`)
 
 ## Design Principles
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
 	Loader2,
 	Globe,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { AgentStep, BrowserAction } from "@/lib/ai/agents/types";
+import { BrowserScreenshot } from "./browser-screenshot";
 import { ToolStepCard } from "./step-cards/tool-step-card";
 import { ReasoningStepCard } from "./step-cards/reasoning-step-card";
 import { BrowserStepCard } from "./step-cards/browser-step-card";
@@ -114,22 +115,6 @@ function PreviewActionIcon({ type }: { type: string }) {
 	return <Globe className="size-3" />;
 }
 
-async function resolveScreenshotUrl(action: BrowserAction): Promise<string | null> {
-	if (action.screenshotUrl) return action.screenshotUrl;
-	if (!action.screenshotPath) return null;
-
-	try {
-		const res = await fetch(
-			`/api/documents/signed-url?path=${encodeURIComponent(action.screenshotPath)}`,
-		);
-		if (!res.ok) return null;
-		const data = (await res.json()) as { url?: string };
-		return data.url || null;
-	} catch {
-		return null;
-	}
-}
-
 /**
  * Reorder steps so text steps appear before tool-call steps
  * within the same step index. The AI SDK emits tool calls first,
@@ -173,45 +158,6 @@ export function ExecutionTimeline({
 				: null,
 		[browserActions],
 	);
-	const [previewScreenshotUrl, setPreviewScreenshotUrl] = useState<string | null>(
-		null,
-	);
-	const [isPreviewScreenshotLoading, setIsPreviewScreenshotLoading] =
-		useState(false);
-
-	useEffect(() => {
-		let cancelled = false;
-
-		async function loadPreviewScreenshot() {
-			if (!latestPreviewAction) {
-				setPreviewScreenshotUrl(null);
-				setIsPreviewScreenshotLoading(false);
-				return;
-			}
-
-			const hasScreenshotSource = !!(
-				latestPreviewAction.screenshotUrl || latestPreviewAction.screenshotPath
-			);
-			if (!hasScreenshotSource) {
-				setPreviewScreenshotUrl(null);
-				setIsPreviewScreenshotLoading(false);
-				return;
-			}
-
-			setPreviewScreenshotUrl(null);
-			setIsPreviewScreenshotLoading(true);
-			const url = await resolveScreenshotUrl(latestPreviewAction);
-			if (!cancelled) {
-				setPreviewScreenshotUrl(url);
-				setIsPreviewScreenshotLoading(false);
-			}
-		}
-
-		void loadPreviewScreenshot();
-		return () => {
-			cancelled = true;
-		};
-	}, [latestPreviewAction]);
 
 	return (
 		<div className="flex flex-col gap-3">
@@ -274,34 +220,10 @@ export function ExecutionTimeline({
 												{formatPreviewAction(latestPreviewAction)}
 											</span>
 										</div>
-										{(previewScreenshotUrl ||
-											isPreviewScreenshotLoading) && (
-											<div className="rounded border border-border/50 bg-muted/20 aspect-[16/10] overflow-hidden">
-												{previewScreenshotUrl ? (
-													<a
-														href={previewScreenshotUrl}
-														target="_blank"
-														rel="noopener noreferrer"
-														className="block h-full"
-													>
-														{/* eslint-disable-next-line @next/next/no-img-element */}
-														<img
-															src={previewScreenshotUrl}
-															alt="Browser action screenshot"
-															className="w-full h-full object-cover"
-														/>
-													</a>
-												) : (
-													<div className="h-full flex items-center justify-center gap-2 text-xs text-muted-foreground">
-														<Loader2 className="size-3 animate-spin" />
-														Loading screenshot...
-													</div>
-												)}
-											</div>
-										)}
 									</motion.div>
 								)}
 							</AnimatePresence>
+							<BrowserScreenshot browserActions={browserActions} />
 						</div>
 					</div>
 				)}

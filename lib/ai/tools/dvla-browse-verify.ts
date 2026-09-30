@@ -11,6 +11,7 @@ import { z } from "zod";
 import { chromium } from "playwright-core";
 import Browserbase from "@browserbasehq/sdk";
 import type { BrowserAction } from "@/lib/ai/agents/types";
+import { captureAndUploadScreenshot } from "@/lib/ai/tools/screenshot-uploader";
 
 /** XPath selectors for DVLA input form */
 const INPUT_SELECTORS = {
@@ -283,11 +284,23 @@ function parsePenalties(text: string): {
 /** Callback for streaming browser actions */
 export type BrowserActionCallback = (action: BrowserAction) => void;
 
+export type DvlaBrowseVerifyContext = {
+	onAction?: BrowserActionCallback;
+	agentId?: string;
+	executionId?: string;
+	organisationId?: string;
+	executionInput?: Record<string, unknown>;
+};
+
+function readString(value: unknown): string | undefined {
+	return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
 /**
  * Create a DVLA verification tool instance.
- * Accepts an optional onAction callback for real-time action streaming.
+ * Accepts an optional context for real-time action streaming with screenshots.
  */
-export function createDvlaBrowseVerify(onAction?: BrowserActionCallback) {
+export function createDvlaBrowseVerify(context?: DvlaBrowseVerifyContext) {
 	return tool({
 		description: `Navigates to the GOV.UK View Driving Licence portal, enters licence credentials, and extracts structured verification data.
 Used for verifying UK driving licences against the DVLA official portal.
@@ -319,12 +332,10 @@ When to use:
 				.describe("URL of the DVLA portal (defaults to GOV.UK portal)"),
 		}),
 
-		execute: async ({
-			licenceNumber,
-			niNumber,
-			postcode,
-			url,
-		}): Promise<
+		execute: async (
+			{ licenceNumber, niNumber, postcode, url },
+			{ abortSignal },
+		): Promise<
 			| {
 					data: {
 						result: {
@@ -336,6 +347,7 @@ When to use:
 						liveViewUrl: string;
 						browserSessionId: string;
 						verified: boolean;
+						screenshotPaths: string[];
 					};
 			  }
 			| { error: string }
@@ -357,14 +369,56 @@ When to use:
 			let bb: Browserbase | null = null;
 			let bbSessionId: string | null = null;
 			let actionIndex = 0;
+			let page: import("playwright-core").Page | null = null;
 
-			const emit = (type: string, reasoning: string, action?: string) => {
-				if (!onAction) return;
-				onAction({
-					index: actionIndex++,
+			// The SDK waits for running tools before it can abort the run, so on
+			// timeout close the browser to make any in-flight Playwright call reject
+			const closeOnAbort = () => {
+				void browser?.close().catch(() => {});
+			};
+			abortSignal?.addEventListener("abort", closeOnAbort, { once: true });
+			const screenshotPaths: string[] = [];
+			const organisationId =
+				readString(context?.executionInput?.organisationId) ||
+				context?.organisationId;
+			const profileId = readString(context?.executionInput?.profileId);
+
+			// Screenshots only when the page visibly changed, to stay inside the route's time budget
+			const emit = async (
+				type: string,
+				reasoning: string,
+				action?: string,
+				{ screenshot = true }: { screenshot?: boolean } = {},
+			) => {
+				const nextIndex = actionIndex++;
+				let screenshotPath: string | undefined;
+				let screenshotUrl: string | undefined;
+
+				if (page && screenshot) {
+					const captured = await captureAndUploadScreenshot({
+						page,
+						agentId: context?.agentId,
+						executionId: context?.executionId,
+						actionIndex: nextIndex,
+						organisationId,
+						profileId,
+					});
+					screenshotPath = captured.screenshotPath;
+					screenshotUrl = captured.screenshotUrl;
+					if (screenshotPath) {
+						screenshotPaths.push(screenshotPath);
+					}
+				}
+
+				if (!context?.onAction) return;
+
+				context.onAction({
+					index: nextIndex,
 					type,
 					reasoning,
 					action,
+					screenshotPath,
+					screenshotUrl,
 					timestamp: new Date().toISOString(),
 				});
 			};
@@ -386,19 +440,19 @@ When to use:
 				const liveViewUrl = debugInfo.debuggerFullscreenUrl;
 				console.log("[dvlaBrowseVerify] Live view URL:", liveViewUrl);
 
-				emit("browser-ready", "Browser session initialised", liveViewUrl);
+				await emit("browser-ready", "Browser session initialised", liveViewUrl);
 
 				// 3. Connect Playwright via CDP
 				browser = await chromium.connectOverCDP(session.connectUrl);
 				const defaultContext = browser.contexts()[0];
-				const page = defaultContext.pages()[0] || (await defaultContext.newPage());
+				page = defaultContext.pages()[0] || (await defaultContext.newPage());
 
 				// 4. Navigate to DVLA portal
 				const portalUrl = url || "https://www.viewdrivingrecord.service.gov.uk/driving-record/licence-number";
 				console.log("[dvlaBrowseVerify] Navigating to:", portalUrl);
 				await page.goto(portalUrl, { waitUntil: "networkidle", timeout: 30000 });
 				console.log("[dvlaBrowseVerify] Page loaded");
-				emit("navigate", "Navigated to DVLA portal", portalUrl);
+				await emit("navigate", "Navigated to DVLA portal", portalUrl);
 
 				// 5. Handle cookie banner if present
 				try {
@@ -406,8 +460,8 @@ When to use:
 					const cookieVisible = await cookieButton.isVisible().catch(() => false);
 					if (cookieVisible) {
 						await cookieButton.click();
-						emit("click", "Dismissed cookie banner", "accept cookies");
 						await page.waitForTimeout(500);
+						await emit("click", "Dismissed cookie banner", "accept cookies", { screenshot: false });
 					}
 				} catch {
 					// Cookie banner might not be present
@@ -419,19 +473,19 @@ When to use:
 				await licenceInput.waitFor({ state: "visible", timeout: 15000 });
 				console.log("[dvlaBrowseVerify] Found licence input, filling...");
 				await licenceInput.fill(licenceNumber);
-				emit("type", `Entered licence number: ${licenceNumber.slice(0, 4)}****`, "licence number");
+				await emit("type", `Entered licence number: ${licenceNumber.slice(0, 4)}****`, "licence number", { screenshot: false });
 
 				// 7. Fill NI number (cleaned of spaces)
 				console.log("[dvlaBrowseVerify] Filling NI number...");
 				const niInput = page.locator(INPUT_SELECTORS.niNumber);
 				await niInput.fill(cleanNiNumber);
-				emit("type", `Entered NI number: ${cleanNiNumber.slice(0, 2)}****`, "NI number");
+				await emit("type", `Entered NI number: ${cleanNiNumber.slice(0, 2)}****`, "NI number", { screenshot: false });
 
 				// 8. Fill postcode
 				console.log("[dvlaBrowseVerify] Filling postcode...");
 				const postcodeInput = page.locator(INPUT_SELECTORS.postcode);
 				await postcodeInput.fill(postcode);
-				emit("type", `Entered postcode: ${postcode}`, "postcode");
+				await emit("type", `Entered postcode: ${postcode}`, "postcode", { screenshot: false });
 
 				// 9. Check consent checkbox
 				console.log("[dvlaBrowseVerify] Looking for checkbox...");
@@ -440,7 +494,7 @@ When to use:
 				console.log("[dvlaBrowseVerify] Checkbox visible:", checkboxVisible);
 				if (checkboxVisible) {
 					await checkbox.check();
-					emit("click", "Checked consent checkbox", "consent");
+					await emit("click", "Checked consent checkbox", "consent");
 				}
 
 				// 10. Click submit
@@ -448,16 +502,20 @@ When to use:
 				const submitBtn = page.locator(INPUT_SELECTORS.submit);
 				await submitBtn.click();
 				console.log("[dvlaBrowseVerify] Submitted form");
-				emit("click", "Submitted verification form", "submit");
 
 				// Wait for results page to load
 				console.log("[dvlaBrowseVerify] Waiting for results page...");
 				await page.waitForLoadState("networkidle", { timeout: 30000 });
 				await page.waitForTimeout(2000);
 				console.log("[dvlaBrowseVerify] Results page loaded");
+				await emit("click", "Submitted verification form", "submit");
 
 				// Check for error messages
-				const errorMessage = await page.locator('.govuk-error-summary, .error-summary').textContent().catch(() => null);
+				// count() doesn't auto-wait; textContent() would block for 30s when no error is shown
+				const errorSummary = page.locator(".govuk-error-summary, .error-summary").first();
+				const errorMessage = (await errorSummary.count()) > 0
+					? await errorSummary.textContent()
+					: null;
 				console.log("[dvlaBrowseVerify] Error message:", errorMessage);
 				if (errorMessage) {
 					return {
@@ -466,7 +524,7 @@ When to use:
 				}
 
 				// 11. Extract "Your details" tab data using GOV.UK summary list structure
-				emit("extract", "Extracting driver details from Your details tab", "your details");
+				await emit("extract", "Extracting driver details from Your details tab", "your details", { screenshot: false });
 
 				const yourDetailsData = await extractSummaryListData(page, "main");
 				console.log("[dvlaBrowseVerify] Your details data:", yourDetailsData);
@@ -477,7 +535,6 @@ When to use:
 				console.log("[dvlaBrowseVerify] Parsed licence:", licence);
 
 				// 12. Navigate to "Vehicles you can drive" tab
-				emit("navigate", "Navigating to Vehicles tab", "vehicles tab");
 
 				let vehiclesText = "";
 				try {
@@ -496,11 +553,12 @@ When to use:
 							if (showAllVisible) {
 								await showAllBtn.click();
 								await page.waitForTimeout(500);
-								emit("click", "Expanded all vehicle sections", "show all");
 							}
 						} catch {
 							// Show all button might not exist
 						}
+
+						await emit("navigate", "Opened Vehicles tab", "vehicles tab");
 
 						// Get vehicles content
 						const vehiclesContent = page.locator(RESULT_SELECTORS.vehiclesWrapper);
@@ -513,11 +571,10 @@ When to use:
 					vehiclesText = "";
 				}
 
-				emit("extract", "Extracted vehicle entitlements", "entitlements");
+				await emit("extract", "Extracted vehicle entitlements", "entitlements", { screenshot: false });
 				const entitlements = parseEntitlements(vehiclesText);
 
 				// 13. Navigate to "Penalties and disqualifications" tab
-				emit("navigate", "Navigating to Penalties tab", "penalties tab");
 
 				let penaltiesText = "";
 				try {
@@ -528,6 +585,7 @@ When to use:
 						await penaltiesTab.click();
 						await page.waitForLoadState("networkidle");
 						await page.waitForTimeout(1000);
+						await emit("navigate", "Opened Penalties tab", "penalties tab");
 
 						// Get penalties content
 						penaltiesText = await page.locator("main").textContent() || "";
@@ -536,7 +594,7 @@ When to use:
 					penaltiesText = "";
 				}
 
-				emit("extract", "Extracted penalties information", "penalties");
+				await emit("extract", "Extracted penalties information", "penalties", { screenshot: false });
 				const { endorsements, totalPoints } = parsePenalties(penaltiesText);
 
 				// 14. Build final result
@@ -554,8 +612,8 @@ When to use:
 					totalPoints,
 				};
 
-				emit("complete", `Verification complete: ${verified ? "Valid licence" : "Verification issues found"}`,
-					`${entitlements.length} entitlements, ${totalPoints} points`);
+				await emit("complete", `Verification complete: ${verified ? "Valid licence" : "Verification issues found"}`,
+					`${entitlements.length} entitlements, ${totalPoints} points`, { screenshot: false });
 
 				console.log("[dvlaBrowseVerify] SUCCESS - returning result");
 
@@ -580,6 +638,7 @@ When to use:
 						liveViewUrl,
 						browserSessionId: sessionId,
 						verified,
+						screenshotPaths,
 					},
 				};
 			} catch (error) {
@@ -588,6 +647,7 @@ When to use:
 					error: `DVLA verification failed: ${error instanceof Error ? error.message : "Unknown error"}`,
 				};
 			} finally {
+				abortSignal?.removeEventListener("abort", closeOnAbort);
 				console.log("[dvlaBrowseVerify] Entering finally block");
 				if (browser) {
 					try {

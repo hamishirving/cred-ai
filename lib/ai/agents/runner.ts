@@ -429,6 +429,9 @@ export async function executeAgent(
 		// Build invocation message
 		const userMessage = buildInvocationMessage(agent, ctx.input);
 
+		let streamError: unknown;
+		let aborted = false;
+
 		const result = streamText({
 			model: myProvider.languageModel("chat-model"),
 			system,
@@ -440,6 +443,9 @@ export async function executeAgent(
 				chunkMs: 120_000, // Increased for long-running browser tools
 			},
 			stopWhen: stepCountIs(agent.constraints.maxSteps),
+			onAbort: () => {
+				aborted = true;
+			},
 			onStepFinish: async (event) => {
 				stepIndex++;
 				console.log(`[agent-runner] onStepFinish #${stepIndex}, toolCalls:`, event.toolCalls?.length || 0);
@@ -508,8 +514,21 @@ export async function executeAgent(
 			},
 		});
 
-		// Consume the stream to trigger execution
-		await result.consumeStream();
+		// Consume the stream to trigger execution. consumeStream swallows errors,
+		// so capture them and fail the run rather than finalising it as completed.
+		await result.consumeStream({
+			onError: (error) => {
+				streamError = error;
+			},
+		});
+		if (aborted) {
+			throw new Error(
+				`Agent timed out after ${agent.constraints.maxExecutionTime / 1000}s`,
+			);
+		}
+		if (streamError) {
+			throw streamError;
+		}
 
 		// Completion guard: if required tools were skipped, run a short follow-up pass.
 		// This prevents early termination before critical side effects (e.g. draftEmail).
@@ -517,6 +536,8 @@ export async function executeAgent(
 		let completionPasses = 0;
 		while (missingRequiredTools.length > 0 && completionPasses < 2) {
 			completionPasses++;
+			let followupError: unknown;
+			let followupAborted = false;
 			console.warn(
 				"[agent-runner] Missing required tool calls, running completion pass:",
 				{ agentId: agent.id, missingRequiredTools, pass: completionPasses },
@@ -542,6 +563,9 @@ export async function executeAgent(
 					chunkMs: 60_000,
 				},
 				stopWhen: stepCountIs(8),
+				onAbort: () => {
+					followupAborted = true;
+				},
 				onStepFinish: async (event) => {
 					stepIndex++;
 					const stepTimestamp = new Date().toISOString();
@@ -589,7 +613,17 @@ export async function executeAgent(
 				},
 			});
 
-			await followupResult.consumeStream();
+			await followupResult.consumeStream({
+				onError: (error) => {
+					followupError = error;
+				},
+			});
+			if (followupAborted) {
+				throw new Error("Agent completion pass timed out after 60s");
+			}
+			if (followupError) {
+				throw followupError;
+			}
 			missingRequiredTools = getMissingRequiredTools(agent, ctx, steps);
 		}
 
@@ -668,7 +702,7 @@ export async function executeAgent(
 	} catch (error) {
 		// Mark as failed in DB
 		if (executionId) {
-			updateAgentExecution({
+			await updateAgentExecution({
 				id: executionId,
 				status: "failed",
 				steps,

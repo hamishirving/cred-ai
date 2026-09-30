@@ -71,7 +71,7 @@ End with a summary: licence status, key categories (C, C+E, D), total points, an
 
 	constraints: {
 		maxSteps: 15,
-		maxExecutionTime: 90000, // 90s - longer timeout for multi-tab scraping
+		maxExecutionTime: 110000, // 110s - multi-tab scraping with screenshots, under the route's 120s maxDuration
 	},
 
 	trigger: {
