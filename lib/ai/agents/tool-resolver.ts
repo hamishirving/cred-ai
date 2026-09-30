@@ -158,9 +158,13 @@ export function resolveTools(
 
 		// Context-aware factory for dvlaBrowseVerify
 		if (name === "dvlaBrowseVerify" && callbacks?.onBrowserAction) {
-			resolved[name] = createDvlaBrowseVerify(
-				callbacks.onBrowserAction,
-			) as Tool;
+			resolved[name] = createDvlaBrowseVerify({
+				onAction: callbacks.onBrowserAction,
+				agentId: callbacks.agentId,
+				executionId: callbacks.executionId,
+				organisationId: callbacks.organisationId,
+				executionInput: callbacks.executionInput,
+			}) as Tool;
 			continue;
 		}
 
