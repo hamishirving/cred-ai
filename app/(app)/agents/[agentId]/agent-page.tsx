@@ -160,7 +160,7 @@ function createRunColumns(agentId: string): ColumnDef<AgentExecution>[] {
 // =============================================================================
 
 const PAGE_SIZE = 10;
-const DEFAULT_TEST_PHONE_NUMBER = "+44778078141";
+const DEFAULT_TEST_PHONE_NUMBER = "+447780781414";
 
 interface AgentPageProps {
 	agent: SerializedAgentDefinition;
